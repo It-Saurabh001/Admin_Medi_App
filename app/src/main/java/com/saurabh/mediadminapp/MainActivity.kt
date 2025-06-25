@@ -14,15 +14,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.saurabh.mediadminapp.ui.screens.nav.NavApp
 import com.saurabh.mediadminapp.ui.theme.MediAdminAppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val viewModel = viewModels<MyViewModel>()
+            val viewModel : MyViewModel by viewModels()
             MediAdminAppTheme {
-                NavApp(viewModel.value)
+                NavApp(viewModel)
             }
         }
     }

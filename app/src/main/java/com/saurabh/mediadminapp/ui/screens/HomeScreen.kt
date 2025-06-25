@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -28,7 +27,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -45,11 +43,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
-import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.screens.nav.UserSettingsRoutes
 import com.saurabh.mediadminapp.utils.IsApprovedUserState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,21 +60,8 @@ fun HomeScreen(viewModel: MyViewModel,navController: NavController){
         viewModel.getAllUsers()
 
     }
-    Scaffold (modifier = Modifier.fillMaxSize(),
-        topBar = { TopAppBar(
-            title = {Text(
-                text = "Admin Management",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )},
-        actions = {
-            IconButton(onClick = {}) {
-                Icon(imageVector = Icons.Default.Menu, contentDescription = "Admin Setting")
-            }
-        }
-        )
-        }
+    Scaffold (
+        modifier = Modifier.fillMaxSize(),
 
         ){innerpadding->
 
@@ -148,9 +132,9 @@ fun EachUserCard(userItem: UserItem, userApprovalState : State<Map<String , IsAp
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                         ),
-                        modifier = Modifier.fillMaxWidth(0.5f)
+                        modifier = Modifier.fillMaxWidth(0.5f).padding(16.dp)
                     )
-                    HorizontalScrollableText(userItem.user_id , style = TextStyle(
+                    HorizontalScrollableText(userItem.user_id , modifier = Modifier.padding(16.dp),style = TextStyle(
                         color = Color.Gray,
                         fontSize = 12.sp
                     ))
@@ -206,7 +190,7 @@ fun EachUserCard(userItem: UserItem, userApprovalState : State<Map<String , IsAp
                 .padding(top = 5.dp, end = 5.dp),
                 horizontalAlignment = AbsoluteAlignment.Right,
                 verticalArrangement = Arrangement.Top) {
-                IconButton(onClick = {navController.navigate(Routes.UserSettingsRoutes(userItem.user_id))}   // navigation just call the class defined in the routes
+                IconButton(onClick = {navController.navigate(UserSettingsRoutes.invoke(userItem.user_id))}   // navigation just call the class defined in the routes
                 ) {
                     Icon(imageVector = Icons.Default.Settings, contentDescription = "User Setting")
                 }
@@ -227,7 +211,7 @@ fun HorizontalScrollableText(text: String,  style: TextStyle = TextStyle.Default
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(scrollState)
-            .padding(16.dp),
+            ,
         style=style
 
     )

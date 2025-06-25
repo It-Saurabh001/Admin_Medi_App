@@ -6,22 +6,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,7 +32,8 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
-import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.screens.nav.HomeRoutes
+import com.saurabh.mediadminapp.ui.screens.nav.UpdateUserDetailsRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,8 +54,8 @@ fun UserSettingScreen(user_id : String, viewModel: MyViewModel,navController: Na
             viewModel.resetDeleteUserState()
 
             // Navigate first, then fetch updated data on the home screen
-            navController.navigate(Routes.HomeRoutes) {
-                popUpTo(Routes.HomeRoutes) { inclusive = true }
+            navController.navigate(HomeRoutes()) {
+                popUpTo(HomeRoutes()) { inclusive = true }
             }
         }
     }
@@ -72,30 +70,7 @@ fun UserSettingScreen(user_id : String, viewModel: MyViewModel,navController: Na
     }
 
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "User Detail Management",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigate(Routes.HomeRoutes) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Home"
-                        )
-                    }
-                }
-            )
-
-
-        },
-    ) { innerpadding ->
+    Scaffold(){ innerpadding ->
 
         when {
             usersState.value.isLoading -> {
@@ -132,6 +107,8 @@ fun UserSettingScreen(user_id : String, viewModel: MyViewModel,navController: Na
                         user = user,
                         isDeleting = deleteState.isLoading,
                         onDeleteClick = { viewModel.deleteUser(user.user_id) },
+                        navController = navController,
+                        viewModel,
                         modifier = Modifier.padding(innerpadding)
                     )
                 } else {
@@ -147,12 +124,6 @@ fun UserSettingScreen(user_id : String, viewModel: MyViewModel,navController: Na
                 }
             }
         }
-//                    val users = state.value.success!!.users
-//                    val user = users.find { it.user_id == user_id }
-//                    if(user!=null) {
-//                        SpecificUser(user, viewModel = viewModel,navController = navController,modifier = Modifier.padding(innerpadding))
-//                    }
-
 
     }
 
@@ -163,36 +134,10 @@ fun SpecificUser(
     user: UserItem,
     isDeleting: Boolean,
     onDeleteClick: () -> Unit,
+    navController: NavController,
+    viewModel: MyViewModel,
     modifier: Modifier
 ) {
-//fun SpecificUser(user : UserItem, viewModel: MyViewModel,navController: NavController,modifier: Modifier) {
-//    val deleteState = viewModel.deleteUserState.collectAsState().value
-//    val context = LocalContext.current
-//
-//    LaunchedEffect(key1 = deleteState.success) {
-//    // Handle deletion Success
-//        if(deleteState.success != null && !deleteState.isLoading && deleteState.error == null){
-//            Toast.makeText(context, deleteState.success.message, Toast.LENGTH_LONG).show()
-//
-//
-//
-//            viewModel.resetDeleteUserState()
-//           // fetch updated list
-////            viewModel.getAllUsers()
-//            // navigate back using popup instead direct navigation
-//            navController.navigate(Routes.HomeRoutes){
-//                popUpTo(Routes.HomeRoutes){inclusive = true}
-//            }
-//        }
-//    }
-//    // Handle deletion error
-//    if(deleteState.error != null && !deleteState.isLoading){
-//        Log.d("TAG", "SpecificUser: error : ${deleteState.error}")
-//        Toast.makeText(context, deleteState.error, Toast.LENGTH_LONG).show()
-//        viewModel.resetDeleteUserState()
-//    }
-
-
     val userDetails = listOf(
         "ID" to user.id.toString(),
         "User ID" to user.user_id.toString(),
@@ -203,8 +148,7 @@ fun SpecificUser(
         "Phone Number" to user.phone_number.toString(),
         "Email" to user.email.toString(),
         "Pin Code" to user.pin_code.toString(),
-        "Address" to user.address.toString(),
-
+        "Address" to user.address.toString()
         )
 
     Column(
@@ -241,24 +185,27 @@ fun SpecificUser(
                 HorizontalDivider()
             }
             item {
+                Spacer(modifier = Modifier.height(30.dp))
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     Button(
-                        onClick =
-//                        {
-//                        viewModel.deleteUser(user.user_id)
-//                    },
-                            onDeleteClick,
+                        onClick = onDeleteClick,
                         enabled = !isDeleting
                     ) {
                         Text(text = if (isDeleting) "Deleting..." else "Delete Button")
+                    }
+                    Spacer(modifier = Modifier.height(25.dp))
+                    Button(
+                        onClick = {navController.navigate(UpdateUserDetailsRoutes.invoke(user.user_id))},
+                        enabled = !isDeleting
+                    ) {
+                        Text(text = "Update Details")
                     }
                 }
             }
         }
     }
 }
-
