@@ -109,6 +109,29 @@ fun getTopBarForRoute(route : String?,navController : NavController) : @Composab
 
             }
         }
+        route?.contains("AddProductRoutes") == true -> {
+            {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "Add Product",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Product"
+                            )
+                        }
+                    }
+                )
+
+            }
+        }
         route?.contains("specificProductRoutes") == true -> {
             {
                 TopAppBar(

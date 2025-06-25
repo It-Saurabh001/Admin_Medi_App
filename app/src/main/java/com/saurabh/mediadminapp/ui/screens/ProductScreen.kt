@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -59,18 +60,35 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
             }
         }
     ){ innerpadding->
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 1.dp),
+            thickness = 1.dp
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerpadding)
+        ) {
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 1.dp),
+                thickness = 1.dp
+            )
+            when{
+                productState.value.isLoading->{
+                    LoadingScreen(modifier = Modifier.padding(innerpadding))
+                }
+                productState.value.error !=null->{
+                    Log.d("TAG", "ProductScreen: error :-> ${productState.value.error}")
+                    ErrorScreen(errorMessage = productState.value.error.toString(), modifier = Modifier.padding(innerpadding))
+                }
+                productState.value.success != null->{
+                    ProductListScreen(productState.value.success!!.products,navController, modifier = Modifier.padding(innerpadding))
 
-        when{
-            productState.value.isLoading->{
-                LoadingScreen(modifier = Modifier.padding(innerpadding))
-            }
-            productState.value.error !=null->{
-                Log.d("TAG", "ProductScreen: error :-> ${productState.value.error}")
-                ErrorScreen(errorMessage = productState.value.error.toString(), modifier = Modifier.padding(innerpadding))
-            }
-            productState.value.success != null->{
-                ProductListScreen(productState.value.success!!.products,navController, modifier = Modifier.padding(innerpadding))
-
+                }
             }
         }
     }

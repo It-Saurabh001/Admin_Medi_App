@@ -30,7 +30,13 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
         viewModel.getSpecificProduct(productId)
     }
 
-    Scaffold(){ innerpadding ->
+    Scaffold { innerpadding ->
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 1.dp),
+            thickness = 1.dp
+        )
 
         when {
             productstate.value.isLoading -> {
@@ -61,7 +67,7 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
             productstate.value.success != null -> {
                 val productItem = productstate.value.success?.product
                 if (productItem != null) {
-                    EachProduct(productItem,navController)
+                    EachProduct(productItem, navController)
                 } else {
                     // Handle case when user is not found
                     Box(
@@ -83,13 +89,6 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
 
 @Composable
 fun EachProduct(productItem: ProductItem, navController: NavController) {
-
-//    ElevatedCard (modifier = Modifier
-//        .fillMaxWidth()
-//        .padding(vertical = 4.dp)
-//        .clickable(onClick = {navController.navigate(SpecificProductRoutes.invoke(productItem.Product_id))}),
-//        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)){
-
         Column (modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             ) {

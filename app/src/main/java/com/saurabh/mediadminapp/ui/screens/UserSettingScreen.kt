@@ -71,58 +71,77 @@ fun UserSettingScreen(user_id : String, viewModel: MyViewModel,navController: Na
 
 
     Scaffold(){ innerpadding ->
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 1.dp),
+            thickness = 1.dp
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerpadding)
+        ) {
+            HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 1.dp),
+                thickness = 1.dp
+            )
 
-        when {
-            usersState.value.isLoading -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerpadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-
-            usersState.value.error != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerpadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Error loading user data", fontSize = 18.sp)
-                        Text(usersState.value.error.toString(), fontSize = 14.sp, color = Color.Red)
-                    }
-                }
-            }
-
-            usersState.value.success != null -> {
-                val users = usersState.value.success?.users
-                val user = users?.find { it.user_id == user_id }
-
-                if (user != null) {
-                    SpecificUser(
-                        user = user,
-                        isDeleting = deleteState.isLoading,
-                        onDeleteClick = { viewModel.deleteUser(user.user_id) },
-                        navController = navController,
-                        viewModel,
-                        modifier = Modifier.padding(innerpadding)
-                    )
-                } else {
-                    // Handle case when user is not found
+            when {
+                usersState.value.isLoading -> {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(innerpadding),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("User not found or has been deleted", fontSize = 18.sp)
+                        CircularProgressIndicator()
+                    }
+                }
+
+                usersState.value.error != null -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerpadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Error loading user data", fontSize = 18.sp)
+                            Text(usersState.value.error.toString(), fontSize = 14.sp, color = Color.Red)
+                        }
+                    }
+                }
+
+                usersState.value.success != null -> {
+                    val users = usersState.value.success?.users
+                    val user = users?.find { it.user_id == user_id }
+
+                    if (user != null) {
+                        SpecificUser(
+                            user = user,
+                            isDeleting = deleteState.isLoading,
+                            onDeleteClick = { viewModel.deleteUser(user.user_id) },
+                            navController = navController,
+                            viewModel,
+                            modifier = Modifier.padding(innerpadding)
+                        )
+                    } else {
+                        // Handle case when user is not found
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerpadding),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("User not found or has been deleted", fontSize = 18.sp)
+                        }
                     }
                 }
             }
+
         }
 
     }
