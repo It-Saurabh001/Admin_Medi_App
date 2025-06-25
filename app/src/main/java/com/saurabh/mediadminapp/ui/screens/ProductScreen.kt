@@ -3,6 +3,7 @@ package com.saurabh.mediadminapp.ui.screens
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,7 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,41 +55,47 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
     }
 
     Scaffold (
-       modifier = Modifier.fillMaxSize(),
+//       modifier = Modifier.fillMaxSize(),
         floatingActionButton = {
             FloatingActionButton(onClick = {navController.navigate(AddProductRoutes.route)}) {
                 Icon(Icons.Default.Add, contentDescription = "Add Product")
             }
         }
     ){ innerpadding->
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerpadding)
-        ) {
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 1.dp),
-                thickness = 1.dp
-            )
-            when{
-                productState.value.isLoading->{
-                    LoadingScreen(modifier = Modifier.padding(innerpadding))
-                }
-                productState.value.error !=null->{
-                    Log.d("TAG", "ProductScreen: error :-> ${productState.value.error}")
-                    ErrorScreen(errorMessage = productState.value.error.toString(), modifier = Modifier.padding(innerpadding))
-                }
-                productState.value.success != null->{
-                    ProductListScreen(productState.value.success!!.products,navController, modifier = Modifier.padding(innerpadding))
 
+
+        when{
+            productState.value.isLoading->{
+                Box(
+                    modifier = Modifier.padding(innerpadding)
+                        .fillMaxSize()
+
+                ) {
+                    LoadingScreen(modifier = Modifier)
+                }
+            }
+            productState.value.error !=null->{
+                Box(
+                    modifier = Modifier.padding(innerpadding)
+                        .fillMaxSize()
+
+                ) {
+                    Log.d("TAG", "ProductScreen: error :-> ${productState.value.error}")
+                    ErrorScreen(
+                        errorMessage = productState.value.error.toString(),
+                    )
+                }
+            }
+            productState.value.success != null->{
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+
+                ) {
+                    ProductListScreen(
+                        productState.value.success!!.products,
+                        navController,
+                    )
                 }
             }
         }
@@ -96,10 +104,11 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
 
 @Composable
 fun ProductListScreen(products : List<ProductItem>,navController: NavController,modifier: Modifier = Modifier) {
-    Column(
+    Box(
         // it shows all products in list
         modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.Top
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -116,7 +125,7 @@ fun ProductListScreen(products : List<ProductItem>,navController: NavController,
 
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
 @Composable
 fun PreviewProductListScreen() {
     val sampleProducts = listOf(
@@ -190,4 +199,55 @@ fun PreviewEachProductCard() {
         stock = 20
     )
     EachProductCard(productItem = sampleProduct, navController = rememberNavController())
+}
+
+
+
+@Preview(showBackground = true)
+@Composable
+fun ProductScreenSimplePreview() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
+    ) {
+        HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 1.dp),
+            thickness = 1.dp
+        )
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp)
+        ) {
+            items(5) { index ->
+                ElevatedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.fillMaxWidth(0.5f)) {
+                            Text(
+                                text = "Id: P00${index + 1}",
+                                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                                modifier = Modifier.padding(13.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Text(
+                                text = "Name: Product ${index + 1}",
+                                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp),
+                                modifier = Modifier.padding(13.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

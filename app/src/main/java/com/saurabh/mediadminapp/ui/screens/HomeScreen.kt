@@ -54,62 +54,6 @@ import com.saurabh.mediadminapp.ui.screens.nav.UserSettingsRoutes
 import com.saurabh.mediadminapp.utils.IsApprovedUserState
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Preview(showBackground = true,)
-@Composable
-fun HomeScreenSimplePreview() {
-    Scaffold (
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "Admin Management",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 9.dp)
-                    )
-                },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(imageVector = Icons.Default.Menu, contentDescription = "Admin Setting")
-                    }
-                }
-            )
-        }
-    ){
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(it),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp)
-        ) {
-            items(5) { index ->
-                Text(
-                    text = "User Card Preview #${index + 1}",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color(0xFFF5F5F5))
-                        .padding(16.dp)
-                )
-            }
-        }
-    }
-}
-}
 
 
 
@@ -128,16 +72,9 @@ fun HomeScreen(viewModel: MyViewModel,navController: NavController){
 //        modifier = Modifier.fillMaxSize(),
 
         ){innerpadding->
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
-
         when {
             state.value.isLoading ->{
-                    LoadingScreen(modifier = Modifier.padding(innerpadding))
+                    LoadingScreen(modifier = Modifier)
             }
             state.value.error != null->{
                 Log.d("TAG", "HomeScreen:  error :-> ${state.value.error}")
@@ -149,7 +86,7 @@ fun HomeScreen(viewModel: MyViewModel,navController: NavController){
                     users = state.value.success!!.users,
                     userApprovalState = isApproved,
                     onApprovalToggle = viewModel::isApprovedUser,
-                    modifier = Modifier.padding(innerpadding).background(Color(0xFFBF360C)),
+                    modifier = Modifier.background(Color(0xFFBF360C)),
                     navController= navController
 
                 )

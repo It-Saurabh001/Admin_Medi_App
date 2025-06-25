@@ -31,19 +31,11 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
     }
 
     Scaffold { innerpadding ->
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
-
         when {
             productstate.value.isLoading -> {
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerpadding),
+                        .fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -72,8 +64,7 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
                     // Handle case when user is not found
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerpadding),
+                            .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text("Product not found or has been deleted", fontSize = 18.sp)

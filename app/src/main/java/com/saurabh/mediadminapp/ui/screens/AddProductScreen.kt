@@ -59,12 +59,7 @@ fun AddProductScreen(viewModel: MyViewModel,navController: NavController,modifie
     }
 
     Scaffold { innerpadding->
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
+
         Column(
             modifier = Modifier
                 .padding(innerpadding)
@@ -132,63 +127,4 @@ private fun validateInput(name: String, price: String, category: String, stock: 
             stock.isNotBlank() &&
             price.toDoubleOrNull() != null &&
             stock.toIntOrNull() != null
-}
-
-@Preview(showBackground = true)
-@Composable
-fun AddProductScreenSimplePreview() {
-    Scaffold { innerpadding->
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(innerpadding)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text(text = "Name") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text(text = "Price") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text(text = "Category") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text(text = "Stock") }
-        )
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        )
-        Button(
-            onClick = {},
-            modifier = Modifier
-                .fillMaxWidth(0.5f)
-                .padding(16.dp)
-        ) {
-            Text(text = "Add Product")
-        }
-    }}
 }
