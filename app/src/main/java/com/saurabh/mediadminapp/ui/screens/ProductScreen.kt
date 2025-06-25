@@ -79,6 +79,7 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
 @Composable
 fun ProductListScreen(products : List<ProductItem>,navController: NavController,modifier: Modifier = Modifier) {
     Column(
+        // it shows all products in list
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
