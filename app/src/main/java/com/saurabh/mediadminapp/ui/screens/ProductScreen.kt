@@ -40,10 +40,10 @@ import com.saurabh.mediadminapp.ui.screens.nav.SpecificProductRoutes
 fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
     val productState = viewModel.getAllProduct.collectAsState()
     val currentState = navController.currentBackStackEntry
-     LaunchedEffect(currentState) {
-         val refresh = currentState?.savedStateHandle?.get<Boolean>("refresh_screen") == true
-         if (refresh) {
-            viewModel.getAllProduct()
+    LaunchedEffect(currentState) {
+        val refresh = currentState?.savedStateHandle?.get<Boolean>("refresh_screen") == true
+        if (refresh) {
+            viewModel.getAllProduct(force = true)
             currentState.savedStateHandle.remove<Boolean>("refresh_screen")
         }
     }
@@ -173,34 +173,3 @@ fun PreviewEachProductCard() {
     )
     EachProductCard(productItem = sampleProduct, navController = rememberNavController())
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

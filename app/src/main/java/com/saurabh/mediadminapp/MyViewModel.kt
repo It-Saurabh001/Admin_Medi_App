@@ -105,20 +105,20 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
         }
     }
 
-    fun getAllProduct(){
-        if(_getAllProduct.value.success != null && !_getAllProduct.value.isLoading && _getAllProduct.value.error == null ) return
-
+    fun getAllProduct(force: Boolean = false){
+        if(!force && _getAllProduct.value.success != null && !_getAllProduct.value.isLoading && _getAllProduct.value.error == null ) return
+//        if(_getAllProductState.value.isLoading ) return  // only skip if already loading  not reload if already loaded means no recomposeition of screens
         viewModelScope.launch(Dispatchers.IO) {
-            _getAllProduct.value = GetAllProductState(isLoading = true)
-            repository.getAllProduct().collect {
+            _getAllProduct.value= GetAllProductState(isLoading = true)
+            repository.getAllProduct().collect{
                 when(it){
                     is ResultState.Loading ->{
-                        _getAllProduct.value = GetAllProductState(isLoading = true)
+                        _getAllProduct.value= GetAllProductState(isLoading = true)
                     }
                     is ResultState.Error ->{
-                        _getAllProduct.value = GetAllProductState(error = it.exception.message)
+                        _getAllProduct.value = GetAllProductState(error =  it.exception.message)
                     }
-                    is ResultState.Success ->{
+                    is ResultState.Success -> {
                         _getAllProduct.value = GetAllProductState(success = it.data, isLoading = false)
                     }
                 }

@@ -84,31 +84,27 @@ fun AddProductScreen(viewModel: MyViewModel,navController: NavController,modifie
                 .fillMaxWidth()
                 .padding(16.dp))
 
-            Button(onClick = {
-                if (validateInput(name.value, price.value, category.value, stock.value)){
-                    viewModel.addProduct(
-                        name.value,
-                        price.value.toDouble(),
-                        category.value,
-                        stock.value.toInt()
-                    )
-                }else{
-                    Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_LONG).show()
-                }
-                Log.d("TAG", "AddProductScreen: ${response.value.success?.message}")
-            },
+            Button(
+                onClick = {
+                    if (validateInput(name.value, price.value, category.value, stock.value)){
+                        viewModel.addProduct(
+                            name.value,
+                            price.value.toDouble(),
+                            category.value,
+                            stock.value.toInt()
+                        )
+                    }else{
+                        Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_LONG).show()
+                    }
+                    Log.d("TAG", "AddProductScreen: ${response.value.success?.message}")
+                },
                 enabled = !response.value.isLoading,
                 modifier = Modifier.fillMaxWidth()
-
             ) {
                 Text(text = "Add Product")
-
             }
             if(response.value.isLoading){
                 LoadingScreen()
-            }
-            else{
-                Text("Add Product")
             }
         }
     }
@@ -122,7 +118,3 @@ private fun validateInput(name: String, price: String, category: String, stock: 
             price.toDoubleOrNull() != null &&
             stock.toIntOrNull() != null
 }
-
-
-
-
