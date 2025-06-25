@@ -41,8 +41,7 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
     val productState = viewModel.getAllProduct.collectAsState()
     val currentState = navController.currentBackStackEntry
      LaunchedEffect(currentState) {
-         val refresh = currentState?.savedStateHandle?.get<Boolean>("refresh_screen") ?: false
-
+         val refresh = currentState?.savedStateHandle?.get<Boolean>("refresh_screen") == true
          if (refresh) {
             viewModel.getAllProduct()
             currentState.savedStateHandle.remove<Boolean>("refresh_screen")
@@ -127,15 +126,12 @@ fun PreviewProductListScreen() {
             stock = 10
         )
     )
-
     val navController = rememberNavController()
-
     ProductListScreen(products = sampleProducts, navController = navController)
 }
 
 @Composable
 fun EachProductCard(productItem: ProductItem, navController: NavController) {
-
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)
@@ -149,8 +145,6 @@ fun EachProductCard(productItem: ProductItem, navController: NavController) {
                     ),
                     modifier = Modifier.fillMaxWidth().padding(13.dp)
                 )
-
-
             }
             Column(modifier = Modifier.fillMaxWidth()) {
                 HorizontalScrollableText(
