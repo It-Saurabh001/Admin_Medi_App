@@ -6,12 +6,17 @@ import com.saurabh.mediadminapp.network.response.GetAllUserResponse
 import com.saurabh.mediadminapp.common.ResultState
 import com.saurabh.mediadminapp.network.ApiProvider
 import com.saurabh.mediadminapp.network.ApiServices
+import com.saurabh.mediadminapp.network.response.ApproveOrderResponse
+import com.saurabh.mediadminapp.network.response.DeleteOrderResponse
 import com.saurabh.mediadminapp.network.response.DeleteProductResponse
 import com.saurabh.mediadminapp.network.response.DeleteUserResponse
 import com.saurabh.mediadminapp.network.response.GetAddProductResponse
+import com.saurabh.mediadminapp.network.response.GetAllOrdersResponse
 import com.saurabh.mediadminapp.network.response.GetAllProductResponse
 import com.saurabh.mediadminapp.network.response.GetSpecificProductResponse
+import com.saurabh.mediadminapp.network.response.GetUsersOrdersResponse
 import com.saurabh.mediadminapp.network.response.IsApproveUserResponse
+import com.saurabh.mediadminapp.network.response.UpdateOrderResponse
 import com.saurabh.mediadminapp.network.response.UpdateProductResponse
 import com.saurabh.mediadminapp.network.response.UpdateUserResponse
 import kotlinx.coroutines.flow.Flow
@@ -73,6 +78,21 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
             emit(ResultState.Error(e))
         }
     }
+    suspend fun getAllOrders(): Flow<ResultState<GetAllOrdersResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.getAllOrders()
+            if(response.isSuccessful && response.body() != null){
+                emit(ResultState.Success(response.body()!!))
+                Log.d("TAG", "getAllOrders: repository : ${ResultState.Success(response.body())}")
+            }else{
+                emit(ResultState.Error(Exception(response.errorBody()?.string())))
+                Log.d("TAG", "getAllOrders: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+            }
+        }catch (e: Exception){
+            emit(ResultState.Error(e))
+        }
+    }
     suspend fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null): Flow<ResultState<UpdateProductResponse>> = flow {
         emit(ResultState.Loading)
         try {
@@ -89,14 +109,78 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
         }
 
     }
+    suspend fun getUserOrders(userId: String): Flow<ResultState<GetUsersOrdersResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.getUserOrders(userId)
+            if(response.isSuccessful && response.body() != null){
+                emit(ResultState.Success(response.body()!!))
+                Log.d("TAG", "getUserOrders: repository : ${ResultState.Success(response.body())}")
+            }else{
+                emit(ResultState.Error(Exception(response.errorBody()?.string())))
+                Log.d("TAG", "getUserOrders: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+            }
+        }catch (e: Exception){
+            emit(ResultState.Error(e))
+        }
+    }
+    suspend fun updateOrder(orderId: String, isApproved: Boolean? = null, quantity: Int?= null, price: Float?=null, total_amount: Float?=null, product_name: String?=null, message: String?=null): Flow<ResultState<UpdateOrderResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.updateOrder(orderId, isApproved, quantity, price, total_amount, product_name, message)
+            if(response.isSuccessful && response.body() != null){
+                emit(ResultState.Success(response.body()!!))
+                Log.d("TAG", "updateOrder: repository : ${ResultState.Success(response.body())}")
+            }else{
+                emit(ResultState.Error(Exception(response.errorBody()?.string())))
+                Log.d("TAG", "updateOrder: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+            }
+        }catch (e: Exception){
+            emit(ResultState.Error(e))
+        }
+    }
+
+    suspend fun deleteOrder(orderId: String): Flow<ResultState<DeleteOrderResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.deleteOrder(orderId)
+            if(response.isSuccessful && response.body() != null){
+                emit(ResultState.Success(response.body()!!))
+                Log.d("TAG", "deleteOrder: repository : ${ResultState.Success(response.body())}")
+            }else{
+                emit(ResultState.Error(Exception(response.errorBody()?.string())))
+                Log.d("TAG", "deleteOrder: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+            }
+        }catch (e: Exception){
+            emit(ResultState.Error(e))
+        }
+    }
+
+    suspend fun approveOrder(orderId: String, isApproved: Boolean): Flow<ResultState<ApproveOrderResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.approveOrder(orderId, isApproved)
+            if(response.isSuccessful && response.body() != null){
+                emit(ResultState.Success(response.body()!!))
+                Log.d("TAG", "approveOrder: repository : ${ResultState.Success(response.body())}")
+            }else{
+                emit(ResultState.Error(Exception(response.errorBody()?.string())))
+                Log.d("TAG", "approveOrder: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+            }
+        }catch (e: Exception){
+            emit(ResultState.Error(e))
+        }
+    }
+
     suspend fun deleteProduct(productId: String): Flow<ResultState<DeleteProductResponse>> = flow {
         emit(ResultState.Loading)
         try {
             val response = apiServices.deleteProduct(productId)
             if(response.isSuccessful && response.body() != null){
                 emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "deleteProduct: repository : $${emit(ResultState.Error(Exception(response.body().toString())))}")
-            }else{
+                Log.d("TAG", "deleteProduct: repository : $${ResultState.Success(response.body())}")
+            }
+            else{
                 emit(ResultState.Error(Exception(response.errorBody()?.string())))
             }
         }
@@ -104,6 +188,7 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
             emit(ResultState.Error(e))
         }
     }
+
 
     suspend fun getSpecificProduct(productId: String): Flow<ResultState<GetSpecificProductResponse>> = flow {
         emit(ResultState.Loading)
@@ -182,4 +267,5 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
             emit(ResultState.Error(e))
         }
     }
+
 }

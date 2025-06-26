@@ -74,10 +74,27 @@ object AddProductRoutes{
     const val route = "AddProductRoutes"
     operator fun invoke(viewModel: MyViewModel, navController: NavHostController) = route
 }
+
+@Serializable
 class UpdateProductRoutes(val productId: String){
     companion object {
         const val route = "updateProductRoutes/{productId}"
         operator fun invoke(productId: String) = "updateProductRoutes/$productId"
+    }
+}
+
+@Serializable
+class OrderDetailRoutes(val orderId: String){
+    companion object {
+        const val route = "orderDetailRoutes/{orderId}"
+        operator fun invoke(orderId: String) = "orderDetailRoutes/$orderId"
+    }
+}
+@Serializable
+class EachUserOrderRoutes(val orderId: String){
+    companion object {
+        const val route = "orderDetailRoutes/{orderId}"
+        operator fun invoke(orderId: String) = "orderDetailRoutes/$orderId"
     }
 }
 

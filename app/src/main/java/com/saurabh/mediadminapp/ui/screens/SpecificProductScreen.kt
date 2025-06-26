@@ -29,7 +29,6 @@ import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.ProductItem
 import com.saurabh.mediadminapp.ui.screens.nav.UpdateProductRoutes
-import com.saurabh.mediadminapp.ui.screens.nav.UserSettingsRoutes
 
 @Composable
 fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navController: NavController) {

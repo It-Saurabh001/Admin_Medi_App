@@ -5,12 +5,17 @@ import androidx.lifecycle.viewModelScope
 import com.saurabh.mediadminapp.common.ResultState
 import com.saurabh.mediadminapp.repository.Repository
 import com.saurabh.mediadminapp.utils.AddProductState
+import com.saurabh.mediadminapp.utils.ApproveOrderState
+import com.saurabh.mediadminapp.utils.DeleteOrderState
 import com.saurabh.mediadminapp.utils.DeleteProductState
 import com.saurabh.mediadminapp.utils.DeleteUserState
+import com.saurabh.mediadminapp.utils.GetAllOrdersState
 import com.saurabh.mediadminapp.utils.GetAllProductState
 import com.saurabh.mediadminapp.utils.GetAllUserState
 import com.saurabh.mediadminapp.utils.GetSpecificProductState
+import com.saurabh.mediadminapp.utils.GetUsersOrderState
 import com.saurabh.mediadminapp.utils.IsApprovedUserState
+import com.saurabh.mediadminapp.utils.UpdateOrderState
 import com.saurabh.mediadminapp.utils.UpdateProductState
 import com.saurabh.mediadminapp.utils.UpdateUserState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -50,6 +55,21 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
 
     private var _updateUserState = MutableStateFlow(UpdateUserState())
     val updateUserState = _updateUserState.asStateFlow()
+
+    private var _getAllOrderState = MutableStateFlow(GetAllOrdersState())
+    val getAllOrderState = _getAllOrderState.asStateFlow()
+
+    private var _getUsersOrdersState = MutableStateFlow(GetUsersOrderState())
+    val getUsersOrdersState = _getUsersOrdersState.asStateFlow()
+
+    private var _deleteOrderState = MutableStateFlow(DeleteOrderState())
+    val deleteOrderState = _deleteOrderState.asStateFlow()
+
+    private var _approveState = MutableStateFlow(ApproveOrderState())
+    val approveState = _approveState.asStateFlow()
+
+    private var _updateOrderState = MutableStateFlow(UpdateOrderState())
+    val updateOrderState = _updateOrderState.asStateFlow()
 
     fun deleteUser(userId: String){
         // prevent form duplicate operation
@@ -99,6 +119,118 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
                     }
                     is ResultState.Success -> {
                         _getAllUserState.value = GetAllUserState(success = it.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun getAllOrders() {
+        if (_getAllOrderState.value.success != null && !_getAllOrderState.value.isLoading && _getAllOrderState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _getAllOrderState.value = GetAllOrdersState(isLoading = true)
+            repository.getAllOrders().collect { order ->
+                when (order) {
+                    is ResultState.Loading -> {
+                        _getAllOrderState.value = GetAllOrdersState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _getAllOrderState.value = GetAllOrdersState(error = order.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _getAllOrderState.value = GetAllOrdersState(success = order.data, isLoading = false)
+                    }
+                }
+            }
+        }
+
+
+    }
+
+    fun getUsersOrders(userId: String) {
+        if (_getUsersOrdersState.value.success != null && !_getUsersOrdersState.value.isLoading && _getUsersOrdersState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _getUsersOrdersState.value = GetUsersOrderState(isLoading = true)
+            repository.getUserOrders(userId).collect {
+                when (it) {
+                    is ResultState.Loading -> {
+                        _getUsersOrdersState.value = GetUsersOrderState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _getUsersOrdersState.value = GetUsersOrderState(error = it.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _getUsersOrdersState.value = GetUsersOrderState(success = it.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun deleteOrder(orderId: String) {
+        if (_deleteOrderState.value.success != null && !_deleteOrderState.value.isLoading && _deleteOrderState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _deleteOrderState.value = DeleteOrderState(isLoading = true)
+            repository.deleteOrder(orderId).collect { order ->
+                when (order) {
+                    is ResultState.Loading -> {
+                        _deleteOrderState.value = DeleteOrderState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _deleteOrderState.value = DeleteOrderState(error = order.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _deleteOrderState.value = DeleteOrderState(success = order.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun approveOrder(orderId: String, isApproved: Boolean) {
+        if (_approveState.value.success != null && !_approveState.value.isLoading && _approveState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _approveState.value = ApproveOrderState(isLoading = true)
+            repository.approveOrder(orderId, isApproved).collect { order ->
+                when (order) {
+                    is ResultState.Loading -> {
+                        _approveState.value = ApproveOrderState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _approveState.value = ApproveOrderState(error = order.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _approveState.value = ApproveOrderState(success = order.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateOrder(
+        orderId: String,
+        isApproved: Boolean? = null,
+        quantity: Int? = null,
+        price: Float? = null
+    ) {
+        if (_updateOrderState.value.success != null && !_updateOrderState.value.isLoading && _updateOrderState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _updateOrderState.value = UpdateOrderState(isLoading = true)
+            repository.updateOrder(orderId, isApproved, quantity, price).collect { order ->
+                when (order) {
+                    is ResultState.Loading -> {
+                        _updateOrderState.value = UpdateOrderState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _updateOrderState.value = UpdateOrderState(error = order.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _updateOrderState.value = UpdateOrderState(success = order.data, isLoading = false)
                     }
                 }
             }

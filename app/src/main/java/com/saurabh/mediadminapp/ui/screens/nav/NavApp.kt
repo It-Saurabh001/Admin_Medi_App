@@ -163,7 +163,7 @@ fun NavApp(viewModel: MyViewModel) {
 
 
                 composable(OrdersRoutes.route) {
-                    OrderDetailsScreen()
+                    OrderDetailsScreen(viewModel,navController)
                 }
                 composable(HistoryRoutes.route) {
                     HistoryScreen()

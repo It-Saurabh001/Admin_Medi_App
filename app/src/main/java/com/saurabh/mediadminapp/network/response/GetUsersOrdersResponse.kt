@@ -2,6 +2,6 @@ package com.saurabh.mediadminapp.network.response
 
 data class GetUsersOrdersResponse(
     val message: String,
-    val order: List<OrderX>,
+    val order: List<Order>,
     val status: Int
 )
