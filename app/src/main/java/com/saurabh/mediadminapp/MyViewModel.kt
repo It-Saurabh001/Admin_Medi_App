@@ -301,6 +301,15 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
         _addProductState.value = AddProductState()
 
     }
+    fun clearUpdateProductState(){
+        _updateProductState.value = UpdateProductState()
+    }
+    fun clearGetSpecificProductState(){
+        _getSpecificProductState.value = GetSpecificProductState()
+    }
+    fun clearDeleteProductState(){
+        _deleteProductState.value = DeleteProductState()
+    }
 
 
 }

@@ -192,6 +192,7 @@ fun getTopBarForRoute(route : String?,navController : NavController) : @Composab
 
             }
         }
+
         route?.contains("specificProductRoutes") == true -> {
             {
                 Column {
@@ -224,6 +225,36 @@ fun getTopBarForRoute(route : String?,navController : NavController) : @Composab
                 }
 
 
+            }
+        }
+        route?.contains("updateProductRoutes") == true -> {
+            {
+                Column {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Update Product Details",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Product"
+                                )
+                            }
+                        }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 1.dp),
+                        thickness = 1.dp
+                    )
+                }
             }
         }
         route?.startsWith("userdetailsroutes") == true->{

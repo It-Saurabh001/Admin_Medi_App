@@ -36,6 +36,7 @@ import com.saurabh.mediadminapp.ui.screens.HomeScreen
 import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.ProductScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificProductScreen
+import com.saurabh.mediadminapp.ui.screens.UpdateProductScreen
 import com.saurabh.mediadminapp.ui.screens.UpdateUserDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.UserSettingScreen
 import com.saurabh.mediadminapp.utils.getTopBarForRoute
@@ -133,8 +134,6 @@ fun NavApp(viewModel: MyViewModel) {
                     composable(
                         route = ProductRoutes.route)
                     {
-//                        backStackEntry -> // we have to get user_id from backStackentry
-//                        val userId = backStackEntry.arguments?.getString("userId")!!
                         ProductScreen(viewModel, navController)
                     }
                     composable(
@@ -148,6 +147,14 @@ fun NavApp(viewModel: MyViewModel) {
                         route = AddProductRoutes.route)
                     {
                         AddProductScreen(viewModel,navController)
+                    }
+                    composable(
+                        route = UpdateProductRoutes.route,
+                        arguments = listOf(navArgument("productId"){ type = NavType.StringType })
+                    ) {
+                        backStackEntry ->
+                        val productId = backStackEntry.arguments?.getString("productId")!!
+                        UpdateProductScreen(productId, viewModel, navController)
                     }
 
                 }

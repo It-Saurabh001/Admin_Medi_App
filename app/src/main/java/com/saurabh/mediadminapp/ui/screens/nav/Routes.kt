@@ -74,6 +74,13 @@ object AddProductRoutes{
     const val route = "AddProductRoutes"
     operator fun invoke(viewModel: MyViewModel, navController: NavHostController) = route
 }
+class UpdateProductRoutes(val productId: String){
+    companion object {
+        const val route = "updateProductRoutes/{productId}"
+        operator fun invoke(productId: String) = "updateProductRoutes/$productId"
+    }
+}
+
 
 
 //}

@@ -125,38 +125,7 @@ fun ProductListScreen(products : List<ProductItem>,navController: NavController,
 
 }
 
-//@Preview(showBackground = true)
-@Composable
-fun PreviewProductListScreen() {
-    val sampleProducts = listOf(
-        ProductItem(
-            Product_id = "P001",
-            category = "Electronics",
-            id = 101,
-            name = "Smartphone",
-            price = 49999.99,
-            stock = 25
-        ),
-        ProductItem(
-            Product_id = "P002",
-            category = "Books",
-            id = 102,
-            name = "Kotlin for Android Developers",
-            price = 799.0,
-            stock = 100
-        ),
-        ProductItem(
-            Product_id = "P003",
-            category = "Appliances",
-            id = 103,
-            name = "Air Conditioner",
-            price = 35999.0,
-            stock = 10
-        )
-    )
-    val navController = rememberNavController()
-    ProductListScreen(products = sampleProducts, navController = navController)
-}
+
 
 @Composable
 fun EachProductCard(productItem: ProductItem, navController: NavController) {
@@ -187,67 +156,4 @@ fun EachProductCard(productItem: ProductItem, navController: NavController) {
     }
 }
 
-//@Preview(showBackground = true)
-@Composable
-fun PreviewEachProductCard() {
-    val sampleProduct = ProductItem(
-        id = 1,
-        Product_id = "ID1234",
-        name = "Sample Item",
-        category = "Category A",
-        price = 199.99,
-        stock = 20
-    )
-    EachProductCard(productItem = sampleProduct, navController = rememberNavController())
-}
 
-
-
-@Preview(showBackground = true)
-@Composable
-fun ProductScreenSimplePreview() {
-    Column(
-        modifier = Modifier
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp)
-        ) {
-            items(5) { index ->
-                ElevatedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-                ) {
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.fillMaxWidth(0.5f)) {
-                            Text(
-                                text = "Id: P00${index + 1}",
-                                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp),
-                                modifier = Modifier.padding(13.dp)
-                            )
-                        }
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            Text(
-                                text = "Name: Product ${index + 1}",
-                                style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 18.sp),
-                                modifier = Modifier.padding(13.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
