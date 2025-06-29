@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.utils
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -18,14 +19,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.saurabh.mediadminapp.ui.screens.nav.HomeRoutes
+import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.ui.screens.nav.ProductRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun getTopBarForRoute(route : String?,navController : NavController) : @Composable () -> Unit {
+fun getTopBarForRoute(route: String?, navController: NavController, viewModel: MyViewModel) : @Composable () -> Unit {
+
     return when{
-        route?.contains("HomeRoutes") == true->{
+        route?.contains("HomeRoutes") == true ->{
             {
                 Column {
                     TopAppBar(title = {Text(
@@ -104,7 +106,7 @@ fun getTopBarForRoute(route : String?,navController : NavController) : @Composab
 
             }
         }
-        route?.contains("OrdersRoutes") == true->{
+        route?.contains("ordersRoutes") == true->{
             {
                 Column {
                     TopAppBar(title = {Text(
@@ -257,10 +259,70 @@ fun getTopBarForRoute(route : String?,navController : NavController) : @Composab
                 }
             }
         }
-        route?.startsWith("userdetailsroutes") == true->{
-            {}
-
+        route?.contains("orderDetailRoutes") == true -> {
+            {
+                Column {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Each User Orders",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack()
+                            viewModel.clearGetUsersOrdersState()}
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "BackToOrderDetailScreen"
+                                )
+                            }
+                        }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 1.dp),
+                        thickness = 1.dp
+                    )
+                }
+            }
         }
+        route?.contains("specificOrderRoutes") == true -> {
+            {
+                Column {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Specific Order",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack()
+                            viewModel.clearGetOrderByIdState()}) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "BackToEachOrderScreen"
+                                )
+                            }
+                        }
+                    )
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 1.dp),
+                        thickness = 1.dp
+                    )
+                }
+            }
+        }
+
 
         else -> {{
             TopAppBar(
