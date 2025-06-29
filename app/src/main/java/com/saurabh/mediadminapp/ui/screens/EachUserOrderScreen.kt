@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,88 +17,116 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.Order
+import com.saurabh.mediadminapp.ui.screens.nav.SpecificOrderRoutes
+import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 
 @Composable
-fun EachUserOrderScreen(orderId: String,viewModel: MyViewModel,navController: NavController) {
+fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: NavController) {
+    BackHandler {
+        viewModel.clearGetUsersOrdersState()
+        navController.popBackStack()
+    }
     val response = viewModel.getUsersOrdersState.collectAsState()
+    LaunchedEffect(userId) {
+        viewModel.getUsersOrders(userId)
+    }
 
-    Scaffold { innerpadding->
-        when{
-            response.value.isLoading->{
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            }
-            response.value.error != null ->{
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerpadding),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Error loading Product data", fontSize = 18.sp)
-                        Text(response.value.error.toString(), fontSize = 14.sp)
-                    }
-                }
-            }
-            response.value.success != null ->{
-                val order = response.value.success!!.order
-                if (order != null){
-                    UserOrderListScreen(
-                        order,
-                        navController
-                    )
-                }
-                else{
+    DismissKeyboardOnTapScreen {
+        Scaffold { innerpadding->
+            when{
+                response.value.isLoading->{
                     Box(
                         modifier = Modifier
                             .fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("Product not found or has been deleted", fontSize = 18.sp)
+                        CircularProgressIndicator()
                     }
                 }
+                response.value.error != null ->{
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerpadding),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Error loading Product data", fontSize = 18.sp)
+                            Text(response.value.error.toString(), fontSize = 14.sp)
+                        }
+                    }
+                }
+                response.value.success != null ->{
+                    val order = response.value.success?.order
+                    if (order != null){
+                        UserOrderListScreen(
+                            order,
+                            navController,
+                            viewModel
+                        )
+                    }
+                    else{
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Product not found or has been deleted", fontSize = 18.sp)
+                        }
+                    }
+                }
+
+
             }
-
-
         }
     }
+
 
 
 }
 
 @Composable
-fun UserOrderListScreen(orders: List<Order>, navController: NavController) {
-    Box(
+fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewModel: MyViewModel) {
+    Column(
         // it shows all products in list
         modifier = Modifier.fillMaxSize(),
-//        horizontalAlignment = Alignment.CenterHorizontally,
-//        verticalArrangement = Arrangement.Top
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
     ) {
+        Text(
+            text = "Name: "+ orders.first().user_name,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items (orders){orderItem->
-                EachUserOrderCard(orderItem,  navController)
+                EachUserOrderCard(orderItem,  navController, onApprovalChange = {
+                    viewModel.updateOrder(orderItem.order_id, isApproved = it)
+
+                })
             }
         }
 
@@ -106,11 +135,11 @@ fun UserOrderListScreen(orders: List<Order>, navController: NavController) {
 
 
 @Composable
-fun EachUserOrderCard(order: Order, navController: NavController) {
+fun EachUserOrderCard(order: Order, navController: NavController,onApprovalChange: (Boolean) -> Unit = {}) {
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)
-        .clickable(onClick = {}),
+        .clickable(onClick = {navController.navigate(SpecificOrderRoutes.invoke(order.order_id))}),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)){
         Row (modifier = Modifier.fillMaxWidth()){
             Column (modifier = Modifier.fillMaxWidth(0.5f)){
@@ -120,6 +149,20 @@ fun EachUserOrderCard(order: Order, navController: NavController) {
                 ),
                     modifier = Modifier.fillMaxWidth().padding(13.dp)
                 )
+                Box(modifier = Modifier.fillMaxWidth()){
+                    Switch(             // switch is use as toggle button
+                        checked =order.isApproved ,
+                        onCheckedChange = {onApprovalChange},
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFFFFA500), // Orange
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = Color.LightGray
+                        ),
+                        enabled = true
+                    )
+                }
+
             }
             Column(modifier = Modifier.fillMaxWidth()) {
                 HorizontalScrollableText(
@@ -141,95 +184,3 @@ fun EachUserOrderCard(order: Order, navController: NavController) {
     }
 }
 
-
-@Composable
-fun EachOrder(order : Order, navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    )  {
-        Text(
-            text = "Id: "+order.id,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "OrderId: "+order.order_id,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "UserId: "+order.user_id,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "ProductId: "+order.product_id,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Product: "+order.product_name,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Category: "+order.category,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Price: "+order.price,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Quantity: "+order.quantity,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Total Amount: "+order.total_amount,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "User Name: "+order.user_name,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Approval: "+order.isApproved,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Date: "+order.date_of_order_creation,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        Text(
-            text = "Message: "+order.message,
-            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
-            modifier = Modifier.fillMaxWidth()
-        )
-        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-    }
-
-}

@@ -51,7 +51,7 @@ import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
 import com.saurabh.mediadminapp.ui.screens.nav.UserSettingsRoutes
-import com.saurabh.mediadminapp.utils.IsApprovedUserState
+import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
 
 
 

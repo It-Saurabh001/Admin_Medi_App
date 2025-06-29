@@ -13,6 +13,7 @@ import com.saurabh.mediadminapp.network.response.DeleteUserResponse
 import com.saurabh.mediadminapp.network.response.GetAddProductResponse
 import com.saurabh.mediadminapp.network.response.GetAllOrdersResponse
 import com.saurabh.mediadminapp.network.response.GetAllProductResponse
+import com.saurabh.mediadminapp.network.response.GetOrderByIdResponse
 import com.saurabh.mediadminapp.network.response.GetSpecificProductResponse
 import com.saurabh.mediadminapp.network.response.GetUsersOrdersResponse
 import com.saurabh.mediadminapp.network.response.IsApproveUserResponse
@@ -124,6 +125,23 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
             emit(ResultState.Error(e))
         }
     }
+
+    suspend fun getOrdersById(orderId: String): Flow<ResultState<GetOrderByIdResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.getOrderById(orderId)
+            if(response.isSuccessful && response.body() != null){
+                emit(ResultState.Success(response.body()!!))
+                Log.d("TAG", "getUserOrdersById: repository : ${ResultState.Success(response.body())}")
+            }else{
+                emit(ResultState.Error(Exception(response.errorBody()?.string())))
+                Log.d("TAG", "getUserOrdersById: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+            }
+        }catch (e: Exception){
+            emit(ResultState.Error(e))
+        }
+    }
+
     suspend fun updateOrder(orderId: String, isApproved: Boolean? = null, quantity: Int?= null, price: Float?=null, total_amount: Float?=null, product_name: String?=null, message: String?=null): Flow<ResultState<UpdateOrderResponse>> = flow {
         emit(ResultState.Loading)
         try {

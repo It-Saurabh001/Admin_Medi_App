@@ -49,7 +49,7 @@ import kotlinx.serialization.Serializable
 
     @Serializable
     object OrdersRoutes{
-        const val route = "OrdersRoutes"
+        const val route = "ordersRoutes"
         operator fun invoke() = route
     }
 
@@ -83,18 +83,20 @@ class UpdateProductRoutes(val productId: String){
     }
 }
 
+
 @Serializable
-class OrderDetailRoutes(val orderId: String){
+class EachUserOrderRoutes(val userId: String){
     companion object {
-        const val route = "orderDetailRoutes/{orderId}"
-        operator fun invoke(orderId: String) = "orderDetailRoutes/$orderId"
+        const val route = "orderDetailRoutes/{userId}"
+        operator fun invoke(userId: String) = "orderDetailRoutes/$userId"
     }
 }
+
 @Serializable
-class EachUserOrderRoutes(val orderId: String){
+class SpecificOrderRoutes(val orderId: String){
     companion object {
-        const val route = "orderDetailRoutes/{orderId}"
-        operator fun invoke(orderId: String) = "orderDetailRoutes/$orderId"
+        const val route = "specificOrderRoutes/{orderId}"
+        operator fun invoke(orderId: String) = "specificOrderRoutes/$orderId"
     }
 }
 

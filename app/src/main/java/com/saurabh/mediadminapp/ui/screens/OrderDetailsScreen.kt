@@ -17,12 +17,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +34,7 @@ import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.Order
 import com.saurabh.mediadminapp.ui.screens.nav.AddProductRoutes
+import com.saurabh.mediadminapp.ui.screens.nav.EachUserOrderRoutes
 import com.saurabh.mediadminapp.ui.screens.nav.SpecificProductRoutes
 
 @Composable
@@ -40,6 +43,12 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
 
     LaunchedEffect(key1 = Unit) {
         viewModel.getAllOrders()
+    }
+    LaunchedEffect(response.value.success) {
+        response.value.success?.let {
+            Log.d("TAG", "OrderDetailsScreen: ${it.message}")
+            viewModel.clearGetAllProductState()
+        }
     }
 
     Scaffold (
@@ -50,7 +59,6 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
         }
     ){
         innerpadding ->
-        Text(text = "Order Details Screen", modifier = Modifier.padding(innerpadding))
 
         when{
             response.value.isLoading ->{
@@ -80,6 +88,7 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
                         .fillMaxSize()
 
                 ) {
+
                     OrdersListScreen(
                         response.value.success!!.orders,
                         navController,
@@ -96,12 +105,13 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
 @Composable
 fun OrdersListScreen(orders: List<Order>, navController: NavController) {
 
-    Box(
+    Column(
         // it shows all products in list
         modifier = Modifier.fillMaxSize(),
 //        horizontalAlignment = Alignment.CenterHorizontally,
 //        verticalArrangement = Arrangement.Top
     ) {
+
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -120,7 +130,7 @@ fun EachOrderCard(order: Order, navController: NavController) {
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)
-        .clickable(onClick = {}),
+        .clickable(onClick = {navController.navigate(EachUserOrderRoutes.invoke(order.user_id))}),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)){
         Row (modifier = Modifier.fillMaxWidth()){
             Column (modifier = Modifier.fillMaxWidth(0.5f)){

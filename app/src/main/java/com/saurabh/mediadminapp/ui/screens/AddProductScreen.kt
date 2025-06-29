@@ -27,6 +27,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,66 +59,69 @@ fun AddProductScreen(viewModel: MyViewModel,navController: NavController,modifie
         }
     }
 
-    Scaffold { innerpadding->
+    DismissKeyboardOnTapScreen {
+        Scaffold { innerpadding->
 
-        Column(
-            modifier = Modifier
-                .padding(innerpadding)
-                .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = name.value,
-                onValueChange = { name.value = it },
-                label = { Text(text = "Name") })
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = price.value,
-                onValueChange = { price.value = it },
-                label = { Text(text = "price") })
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = category.value,
-                onValueChange = { category.value = it },
-                label = { Text(text = "category") })
-            Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
-                value = stock.value,
-                onValueChange = { stock.value = it },
-                label = { Text(text = "stock") })
-
-
-            HorizontalDivider(modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp))
-
-            Button(
-                onClick = {
-                    if (validateInput(name.value, price.value, category.value, stock.value)){
-                        viewModel.addProduct(
-                            name.value,
-                            price.value.toDouble(),
-                            category.value,
-                            stock.value.toInt()
-                        )
-                    }else{
-                        Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_LONG).show()
-                    }
-                    Log.d("TAG", "AddProductScreen: ${response.value.success?.message}")
-                },
-                enabled = !response.value.isLoading,
-                modifier = Modifier.fillMaxWidth(0.5f).padding(16.dp)
+            Column(
+                modifier = Modifier
+                    .padding(innerpadding)
+                    .fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(text = "Add Product")
-            }
-            if(response.value.isLoading){
-                LoadingScreen()
+
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = name.value,
+                    onValueChange = { name.value = it },
+                    label = { Text(text = "Name") })
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = price.value,
+                    onValueChange = { price.value = it },
+                    label = { Text(text = "price") })
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = category.value,
+                    onValueChange = { category.value = it },
+                    label = { Text(text = "category") })
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = stock.value,
+                    onValueChange = { stock.value = it },
+                    label = { Text(text = "stock") })
+
+
+                HorizontalDivider(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp))
+
+                Button(
+                    onClick = {
+                        if (validateInput(name.value, price.value, category.value, stock.value)){
+                            viewModel.addProduct(
+                                name.value,
+                                price.value.toDouble(),
+                                category.value,
+                                stock.value.toInt()
+                            )
+                        }else{
+                            Toast.makeText(context, "Please fill all the fields", Toast.LENGTH_LONG).show()
+                        }
+                        Log.d("TAG", "AddProductScreen: ${response.value.success?.message}")
+                    },
+                    enabled = !response.value.isLoading,
+                    modifier = Modifier.fillMaxWidth(0.5f).padding(16.dp)
+                ) {
+                    Text(text = "Add Product")
+                }
+                if(response.value.isLoading){
+                    LoadingScreen()
+                }
             }
         }
     }
+
 }
 
 private fun validateInput(name: String, price: String, category: String, stock: String): Boolean {

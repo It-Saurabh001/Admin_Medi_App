@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 import kotlinx.coroutines.flow.collectLatest
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -77,70 +79,73 @@ fun UpdateProductScreen(productId : String, viewModel: MyViewModel, navControlle
         }
     }
 
-    Scaffold { innerPadding ->
-        Column(
-            modifier = modifier
-                .padding(innerPadding)
-                .padding(16.dp),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Top
-        ) {
-            Text(text = "Update Product", modifier = Modifier.padding(bottom = 16.dp))
-            HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
-            if (productState.isLoading) {
-                Text("Loading product details...")
-            } else if (productState.error != null) {
-                Text("Error loading product: ${'$'}{productState.error}")
-            } else if (isInitialized) {
-                // Editable fields using TextField
-                TextField(
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Name") },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                )
-                TextField(
-                    value = price,
-                    onValueChange = { price = it },
-                    label = { Text("Price") },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                )
-                TextField(
-                    value = category,
-                    onValueChange = { category = it },
-                    label = { Text("Category") },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                )
-                TextField(
-                    value = stock,
-                    onValueChange = { stock = it },
-                    label = { Text("Stock") },
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        val priceDouble = price.toDoubleOrNull()
-                        val stockInt = stock.toIntOrNull()
-                        if (name.isNotBlank() && priceDouble != null && category.isNotBlank() && stockInt != null) {
-                            viewModel.updateProduct(
-                                productId = productId,
-                                name = name,
-                                price = priceDouble,
-                                category = category,
-                                stock = stockInt
-                            )
-                        }
-                    },
-                    enabled = !response.value.isLoading,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(if (response.value.isLoading) "Updating..." else "Update Product")
-                }
-                if (response.value.error != null) {
-                    Text(text = response.value.error ?: "", modifier = Modifier.padding(top = 8.dp))
+    DismissKeyboardOnTapScreen {
+        Scaffold { innerPadding ->
+            Column(
+                modifier = modifier
+                    .padding(innerPadding)
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.Top
+            ) {
+                Text(text = "Update Product", modifier = Modifier.padding(bottom = 16.dp))
+                HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+                if (productState.isLoading) {
+                    Text("Loading product details...")
+                } else if (productState.error != null) {
+                    Text("Error loading product: ${'$'}{productState.error}")
+                } else if (isInitialized) {
+                    // Editable fields using TextField
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Name") },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    )
+                    OutlinedTextField(
+                        value = price,
+                        onValueChange = { price = it },
+                        label = { Text("Price") },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    )
+                    OutlinedTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        label = { Text("Category") },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    )
+                    OutlinedTextField(
+                        value = stock,
+                        onValueChange = { stock = it },
+                        label = { Text("Stock") },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = {
+                            val priceDouble = price.toDoubleOrNull()
+                            val stockInt = stock.toIntOrNull()
+                            if (name.isNotBlank() && priceDouble != null && category.isNotBlank() && stockInt != null) {
+                                viewModel.updateProduct(
+                                    productId = productId,
+                                    name = name,
+                                    price = priceDouble,
+                                    category = category,
+                                    stock = stockInt
+                                )
+                            }
+                        },
+                        enabled = !response.value.isLoading,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (response.value.isLoading) "Updating..." else "Update Product")
+                    }
+                    if (response.value.error != null) {
+                        Text(text = response.value.error ?: "", modifier = Modifier.padding(top = 8.dp))
+                    }
                 }
             }
         }
     }
+
 }

@@ -4,20 +4,21 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saurabh.mediadminapp.common.ResultState
 import com.saurabh.mediadminapp.repository.Repository
-import com.saurabh.mediadminapp.utils.AddProductState
-import com.saurabh.mediadminapp.utils.ApproveOrderState
-import com.saurabh.mediadminapp.utils.DeleteOrderState
-import com.saurabh.mediadminapp.utils.DeleteProductState
-import com.saurabh.mediadminapp.utils.DeleteUserState
-import com.saurabh.mediadminapp.utils.GetAllOrdersState
-import com.saurabh.mediadminapp.utils.GetAllProductState
-import com.saurabh.mediadminapp.utils.GetAllUserState
-import com.saurabh.mediadminapp.utils.GetSpecificProductState
-import com.saurabh.mediadminapp.utils.GetUsersOrderState
-import com.saurabh.mediadminapp.utils.IsApprovedUserState
-import com.saurabh.mediadminapp.utils.UpdateOrderState
-import com.saurabh.mediadminapp.utils.UpdateProductState
-import com.saurabh.mediadminapp.utils.UpdateUserState
+import com.saurabh.mediadminapp.utils.ScreensState.AddProductState
+import com.saurabh.mediadminapp.utils.ScreensState.ApproveOrderState
+import com.saurabh.mediadminapp.utils.ScreensState.DeleteOrderState
+import com.saurabh.mediadminapp.utils.ScreensState.DeleteProductState
+import com.saurabh.mediadminapp.utils.ScreensState.DeleteUserState
+import com.saurabh.mediadminapp.utils.ScreensState.GetAllOrdersState
+import com.saurabh.mediadminapp.utils.ScreensState.GetAllProductState
+import com.saurabh.mediadminapp.utils.ScreensState.GetAllUserState
+import com.saurabh.mediadminapp.utils.ScreensState.GetOrderByIdState
+import com.saurabh.mediadminapp.utils.ScreensState.GetSpecificProductState
+import com.saurabh.mediadminapp.utils.ScreensState.GetUsersOrderState
+import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
+import com.saurabh.mediadminapp.utils.ScreensState.UpdateOrderState
+import com.saurabh.mediadminapp.utils.ScreensState.UpdateProductState
+import com.saurabh.mediadminapp.utils.ScreensState.UpdateUserState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +71,9 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
 
     private var _updateOrderState = MutableStateFlow(UpdateOrderState())
     val updateOrderState = _updateOrderState.asStateFlow()
+
+    private var _getOrderByIdState = MutableStateFlow(GetOrderByIdState())
+    val getOrderByIdState = _getOrderByIdState.asStateFlow()
 
     fun deleteUser(userId: String){
         // prevent form duplicate operation
@@ -163,6 +167,27 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
                     }
                     is ResultState.Success -> {
                         _getUsersOrdersState.value = GetUsersOrderState(success = it.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun getOrderById(orderId : String){
+        if(_getOrderByIdState.value.success != null && !_getOrderByIdState.value.isLoading && _getOrderByIdState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _getOrderByIdState.value = GetOrderByIdState(isLoading = true)
+            repository.getOrdersById(orderId).collect { order ->
+                when (order) {
+                    is ResultState.Loading -> {
+                        _getOrderByIdState.value = GetOrderByIdState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _getOrderByIdState.value = GetOrderByIdState(error = order.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _getOrderByIdState.value = GetOrderByIdState(success = order.data, isLoading = false)
                     }
                 }
             }
@@ -441,6 +466,15 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     }
     fun clearDeleteProductState(){
         _deleteProductState.value = DeleteProductState()
+    }
+    fun clearGetAllProductState(){
+        _getAllProduct.value = GetAllProductState()
+    }
+    fun clearGetUsersOrdersState(){
+        _getUsersOrdersState.value = GetUsersOrderState()  // reset the state to initial
+    }
+    fun clearGetOrderByIdState() {
+        _getOrderByIdState.value = GetOrderByIdState()  // reset the state to initial
     }
 
 
