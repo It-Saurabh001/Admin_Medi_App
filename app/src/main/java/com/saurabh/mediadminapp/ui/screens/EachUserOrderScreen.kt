@@ -138,27 +138,24 @@ fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewM
 
 
 @Composable
-fun EachUserOrderCard(
-    order: Order,
-    navController: NavController,
-    viewModel: MyViewModel
+fun EachUserOrderCard(order: Order,navController: NavController, viewModel: MyViewModel
 ) {
-
     val updateUserState = viewModel.updateOrderState.collectAsState()
-    var isApproved = rememberSaveable { mutableStateOf(order.isApproved) }
+    var isApproved by rememberSaveable (order.order_id){
+        mutableStateOf(order.isApproved == false) }
     val currentOrder = updateUserState.value[order.order_id]
     var  pendingToggle by rememberSaveable(order.order_id) {
         mutableStateOf(false)
     }
     LaunchedEffect(currentOrder?.success) {
         if (currentOrder?.success != null && pendingToggle) {
-            isApproved.value = !isApproved.value
+            isApproved = !isApproved
             pendingToggle = false
         }
     }
     LaunchedEffect(currentOrder?.error) {
         if (currentOrder?.error != null && pendingToggle) {
-            isApproved.value = !isApproved.value
+//            isApproved.value = !isApproved.value
             pendingToggle = false
         }
     }
@@ -181,7 +178,7 @@ fun EachUserOrderCard(
                 Box(modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center){
                     Switch(             // switch is use as toggle button
-                        checked = isApproved.value ,
+                        checked = isApproved ,
                         onCheckedChange = {
 
                             if (!isLoading){
