@@ -51,6 +51,9 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     private var _isApproved = MutableStateFlow<Map<String, IsApprovedUserState>>(emptyMap())
     val isApprovedUser = _isApproved.asStateFlow()
 
+    private var _updateOrderState = MutableStateFlow<Map<String, UpdateOrderState>>(emptyMap())
+    val updateOrderState = _updateOrderState.asStateFlow()
+
     private var _deleteUserState = MutableStateFlow(DeleteUserState())
     val deleteUserState = _deleteUserState.asStateFlow()
 
@@ -69,8 +72,7 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     private var _approveState = MutableStateFlow(ApproveOrderState())
     val approveState = _approveState.asStateFlow()
 
-    private var _updateOrderState = MutableStateFlow(UpdateOrderState())
-    val updateOrderState = _updateOrderState.asStateFlow()
+
 
     private var _getOrderByIdState = MutableStateFlow(GetOrderByIdState())
     val getOrderByIdState = _getOrderByIdState.asStateFlow()
@@ -215,52 +217,9 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
         }
     }
 
-    fun approveOrder(orderId: String, isApproved: Boolean) {
-        if (_approveState.value.success != null && !_approveState.value.isLoading && _approveState.value.error == null) return
 
-        viewModelScope.launch(Dispatchers.IO) {
-            _approveState.value = ApproveOrderState(isLoading = true)
-            repository.approveOrder(orderId, isApproved).collect { order ->
-                when (order) {
-                    is ResultState.Loading -> {
-                        _approveState.value = ApproveOrderState(isLoading = true)
-                    }
-                    is ResultState.Error -> {
-                        _approveState.value = ApproveOrderState(error = order.exception.message)
-                    }
-                    is ResultState.Success -> {
-                        _approveState.value = ApproveOrderState(success = order.data, isLoading = false)
-                    }
-                }
-            }
-        }
-    }
 
-    fun updateOrder(
-        orderId: String,
-        isApproved: Boolean? = null,
-        quantity: Int? = null,
-        price: Float? = null
-    ) {
-        if (_updateOrderState.value.success != null && !_updateOrderState.value.isLoading && _updateOrderState.value.error == null) return
 
-        viewModelScope.launch(Dispatchers.IO) {
-            _updateOrderState.value = UpdateOrderState(isLoading = true)
-            repository.updateOrder(orderId, isApproved, quantity, price).collect { order ->
-                when (order) {
-                    is ResultState.Loading -> {
-                        _updateOrderState.value = UpdateOrderState(isLoading = true)
-                    }
-                    is ResultState.Error -> {
-                        _updateOrderState.value = UpdateOrderState(error = order.exception.message)
-                    }
-                    is ResultState.Success -> {
-                        _updateOrderState.value = UpdateOrderState(success = order.data, isLoading = false)
-                    }
-                }
-            }
-        }
-    }
 
     fun getAllProduct(force: Boolean = false){
         if(!force && _getAllProduct.value.success != null && !_getAllProduct.value.isLoading && _getAllProduct.value.error == null ) return
@@ -402,6 +361,42 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
         }
     }
 
+
+    fun updateOrder(
+        orderId: String,isApproved: Boolean? = null,quantity: Int? = null,price: Float? = null
+    ) {
+//        if (_updateOrderState.value.success != null && !_updateOrderState.value.isLoading && _updateOrderState.value.error == null) return
+        _updateOrderState.value = _updateOrderState.value.toMutableMap().apply {
+            this[orderId] = UpdateOrderState(isLoading = true)  // set loading state for the specific order
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+//            _updateOrderState.value = UpdateOrderState(isLoading = true)
+            repository.updateOrder(orderId, isApproved, quantity, price).collect { order ->
+                val newState = when (order) {
+                    is ResultState.Loading -> {
+                        UpdateOrderState(isLoading = true)
+                    }
+
+                    is ResultState.Error -> {
+                        UpdateOrderState(error = order.exception.message)
+                    }
+
+                    is ResultState.Success -> {
+                        viewModelScope.launch {
+                            kotlinx.coroutines.delay(300)
+                            getAllOrders()  // refresh the order list after update
+                        }
+
+                        UpdateOrderState(success = order.data, isLoading = false)
+                    }
+                }
+                _updateOrderState.value = _updateOrderState.value.toMutableMap().apply {
+                    this[orderId] = newState  // update the specific order state
+                }
+            }
+        }
+    }
+
     fun isApprovedUser(userId: String, isApproved: Boolean){
 //        val currentState = _isApproved.value[userId]  // finding each user state approval
 //        if(currentState?.success != null) return    // don't process if already success state
@@ -475,6 +470,9 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     }
     fun clearGetOrderByIdState() {
         _getOrderByIdState.value = GetOrderByIdState()  // reset the state to initial
+    }
+    fun clearUpdateOrderSteate(){
+        _updateOrderState.value = emptyMap()  // reset the state to initial
     }
 
 

@@ -4,7 +4,7 @@ data class Order(
     val category: String,
     val date_of_order_creation: String,
     val id: Int,
-    val isApproved: Boolean,
+    var isApproved: Boolean,
     val message: String,
     val order_id: String,
     val price: Double,

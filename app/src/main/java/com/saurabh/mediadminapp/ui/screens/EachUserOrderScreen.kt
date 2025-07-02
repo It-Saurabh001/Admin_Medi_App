@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import android.R.attr.checked
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -104,6 +109,7 @@ fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: Nav
 
 @Composable
 fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewModel: MyViewModel) {
+
     Column(
         // it shows all products in list
         modifier = Modifier.fillMaxSize(),
@@ -123,10 +129,7 @@ fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewM
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items (orders){orderItem->
-                EachUserOrderCard(orderItem,  navController, onApprovalChange = {
-                    viewModel.updateOrder(orderItem.order_id, isApproved = it)
-
-                })
+                EachUserOrderCard(orderItem,  navController, viewModel)
             }
         }
 
@@ -135,7 +138,33 @@ fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewM
 
 
 @Composable
-fun EachUserOrderCard(order: Order, navController: NavController,onApprovalChange: (Boolean) -> Unit = {}) {
+fun EachUserOrderCard(
+    order: Order,
+    navController: NavController,
+    viewModel: MyViewModel
+) {
+
+    val updateUserState = viewModel.updateOrderState.collectAsState()
+    var isApproved = rememberSaveable { mutableStateOf(order.isApproved) }
+    val currentOrder = updateUserState.value[order.order_id]
+    var  pendingToggle by rememberSaveable(order.order_id) {
+        mutableStateOf(false)
+    }
+    LaunchedEffect(currentOrder?.success) {
+        if (currentOrder?.success != null && pendingToggle) {
+            isApproved.value = !isApproved.value
+            pendingToggle = false
+        }
+    }
+    LaunchedEffect(currentOrder?.error) {
+        if (currentOrder?.error != null && pendingToggle) {
+            isApproved.value = !isApproved.value
+            pendingToggle = false
+        }
+    }
+
+    val isLoading = currentOrder?.isLoading == true
+
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)
@@ -149,17 +178,24 @@ fun EachUserOrderCard(order: Order, navController: NavController,onApprovalChang
                 ),
                     modifier = Modifier.fillMaxWidth().padding(13.dp)
                 )
-                Box(modifier = Modifier.fillMaxWidth()){
+                Box(modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center){
                     Switch(             // switch is use as toggle button
-                        checked =order.isApproved ,
-                        onCheckedChange = {onApprovalChange},
+                        checked = isApproved.value ,
+                        onCheckedChange = {
+
+                            if (!isLoading){
+                                pendingToggle = true
+                                viewModel.updateOrder(order.order_id, isApproved=it)
+                            }
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Color(0xFFFFA500), // Orange
                             uncheckedThumbColor = Color.White,
                             uncheckedTrackColor = Color.LightGray
                         ),
-                        enabled = true
+                        enabled = !isLoading
                     )
                 }
 
