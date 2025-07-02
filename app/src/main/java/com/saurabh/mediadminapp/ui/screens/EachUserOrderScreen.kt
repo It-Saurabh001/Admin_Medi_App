@@ -1,6 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
 import android.R.attr.checked
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,8 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Recomposer
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,10 +39,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.Order
 import com.saurabh.mediadminapp.ui.screens.nav.SpecificOrderRoutes
+import com.saurabh.mediadminapp.utils.ScreensState.UpdateOrderState
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 
 @Composable
@@ -49,6 +54,8 @@ fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: Nav
         navController.popBackStack()
     }
     val response = viewModel.getUsersOrdersState.collectAsState()
+    val order = response.value.success?.order
+    val updateOrderState = viewModel.updateOrderState.collectAsState()
     LaunchedEffect(userId) {
         viewModel.getUsersOrders(userId)
     }
@@ -79,12 +86,13 @@ fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: Nav
                     }
                 }
                 response.value.success != null ->{
-                    val order = response.value.success?.order
+
                     if (order != null){
                         UserOrderListScreen(
                             order,
                             navController,
-                            viewModel
+                            updateOrderState,
+                            viewModel::updateOrder
                         )
                     }
                     else{
@@ -108,7 +116,7 @@ fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: Nav
 }
 
 @Composable
-fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewModel: MyViewModel) {
+fun UserOrderListScreen(orders: List<Order>, navController: NavController, updateOrderState: State<Map<String, UpdateOrderState>>,onApprovalToggle : (String, Boolean)-> Unit) {
 
     Column(
         // it shows all products in list
@@ -129,7 +137,7 @@ fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewM
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
         ) {
             items (orders){orderItem->
-                EachUserOrderCard(orderItem,  navController, viewModel)
+                EachUserOrderCard(orderItem,  navController, updateOrderState = updateOrderState,onApprovalToggle=onApprovalToggle,)
             }
         }
 
@@ -138,19 +146,26 @@ fun UserOrderListScreen(orders: List<Order>, navController: NavController, viewM
 
 
 @Composable
-fun EachUserOrderCard(order: Order,navController: NavController, viewModel: MyViewModel
+fun EachUserOrderCard(order: Order,navController: NavController,updateOrderState: State<Map<String, UpdateOrderState>>,onApprovalToggle : (String, Boolean)-> Unit
 ) {
-    val updateUserState = viewModel.updateOrderState.collectAsState()
+
     var isApproved by rememberSaveable (order.order_id){
-        mutableStateOf(order.isApproved == false) }
-    val currentOrder = updateUserState.value[order.order_id]
+        mutableStateOf(order.isApproved == true) }
+    val currentOrder = updateOrderState.value[order.order_id]
     var  pendingToggle by rememberSaveable(order.order_id) {
         mutableStateOf(false)
+    }
+    LaunchedEffect(order.isApproved) {
+        isApproved = order.isApproved == true
+        Log.d("TAG", "EachUserOrderCard: isapproved launcheffect ${order.isApproved}")
     }
     LaunchedEffect(currentOrder?.success) {
         if (currentOrder?.success != null && pendingToggle) {
             isApproved = !isApproved
             pendingToggle = false
+            Log.d("TAG", "EachUserOrderCard: current order state ${currentOrder.success.message} & ${currentOrder.success.status}")
+            Log.d("TAG", "EachUserOrderCard: launcheffect  $isApproved")
+
         }
     }
     LaunchedEffect(currentOrder?.error) {
@@ -165,7 +180,7 @@ fun EachUserOrderCard(order: Order,navController: NavController, viewModel: MyVi
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)
-        .clickable(onClick = {navController.navigate(SpecificOrderRoutes.invoke(order.order_id))}),
+        .clickable(onClick = { navController.navigate(SpecificOrderRoutes.invoke(order.order_id)) }),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)){
         Row (modifier = Modifier.fillMaxWidth()){
             Column (modifier = Modifier.fillMaxWidth(0.5f)){
@@ -173,7 +188,9 @@ fun EachUserOrderCard(order: Order,navController: NavController, viewModel: MyVi
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 ),
-                    modifier = Modifier.fillMaxWidth().padding(13.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(13.dp)
                 )
                 Box(modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center){
@@ -183,7 +200,8 @@ fun EachUserOrderCard(order: Order,navController: NavController, viewModel: MyVi
 
                             if (!isLoading){
                                 pendingToggle = true
-                                viewModel.updateOrder(order.order_id, isApproved=it)
+//                                viewModel.updateOrder(order.order_id, isApproved=it)
+                                onApprovalToggle(order.order_id, it)
                             }
                         },
                         colors = SwitchDefaults.colors(
@@ -203,14 +221,18 @@ fun EachUserOrderCard(order: Order,navController: NavController, viewModel: MyVi
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     ),
-                    modifier = Modifier.fillMaxWidth().padding(13.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(13.dp)
                 )
                 HorizontalScrollableText(
                     "Product Name: \n "+order.product_name, style = TextStyle(
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     ),
-                    modifier = Modifier.fillMaxWidth().padding(13.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(13.dp)
                 )
             }
         }

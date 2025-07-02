@@ -142,7 +142,7 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
         }
     }
 
-    suspend fun updateOrder(orderId: String, isApproved: Boolean? = null, quantity: Int?= null, price: Float?=null, total_amount: Float?=null, product_name: String?=null, message: String?=null): Flow<ResultState<UpdateOrderResponse>> = flow {
+    suspend fun updateOrder(orderId: String, isApproved: Int? = null, quantity: Int?= null, price: Float?=null, total_amount: Float?=null, product_name: String?=null, message: String?=null): Flow<ResultState<UpdateOrderResponse>> = flow {
         emit(ResultState.Loading)
         try {
             val response = apiServices.updateOrder(orderId, isApproved, quantity, price, total_amount, product_name, message)

@@ -365,13 +365,14 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     fun updateOrder(
         orderId: String,isApproved: Boolean? = null,quantity: Int? = null,price: Float? = null
     ) {
+        val isApprovedInt = isApproved?.let { if(it) 1 else 0 }  // convert Boolean to Int for API compatibility
 //        if (_updateOrderState.value.success != null && !_updateOrderState.value.isLoading && _updateOrderState.value.error == null) return
         _updateOrderState.value = _updateOrderState.value.toMutableMap().apply {
             this[orderId] = UpdateOrderState(isLoading = true)  // set loading state for the specific order
         }
         viewModelScope.launch(Dispatchers.IO) {
 //            _updateOrderState.value = UpdateOrderState(isLoading = true)
-            repository.updateOrder(orderId, isApproved, quantity, price).collect { order ->
+            repository.updateOrder(orderId, isApprovedInt, quantity, price).collect { order ->
                 val newState = when (order) {
                     is ResultState.Loading -> {
                         UpdateOrderState(isLoading = true)
@@ -383,6 +384,7 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
 
                     is ResultState.Success -> {
                         viewModelScope.launch {
+                            clearGetAllOrdersState()
                             kotlinx.coroutines.delay(300)
                             getAllOrders()  // refresh the order list after update
                         }
@@ -473,6 +475,10 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     }
     fun clearUpdateOrderSteate(){
         _updateOrderState.value = emptyMap()  // reset the state to initial
+    }
+
+    fun clearGetAllOrdersState(){
+        _getAllOrderState.value = GetAllOrdersState()  // reset the state to initial
     }
 
 

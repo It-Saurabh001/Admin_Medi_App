@@ -115,7 +115,7 @@ interface ApiServices {
     @PATCH("updateOrder")
     suspend fun updateOrder(
         @Field("Order_id") orderId: String,
-        @Field("isApproved") isApproved: Boolean? = null,
+        @Field("isApproved") isApproved: Int? = null,
         @Field("quantity") quantity: Int?= null,
         @Field("price") price: Float?=null,
         @Field("total_amount") total_amount: Float?=null,
