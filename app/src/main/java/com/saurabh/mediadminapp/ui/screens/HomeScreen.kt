@@ -47,7 +47,8 @@ import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
 import com.saurabh.mediadminapp.ui.screens.nav.UserSettingsRoutes
-import com.saurabh.mediadminapp.utils.IsApprovedUserState
+import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -61,13 +62,12 @@ fun HomeScreen(viewModel: MyViewModel,navController: NavController){
 
     }
     Scaffold (
-        modifier = Modifier.fillMaxSize(),
+//        modifier = Modifier.fillMaxSize(),
 
         ){innerpadding->
-
         when {
             state.value.isLoading ->{
-                    LoadingScreen(modifier = Modifier.padding(innerpadding))
+                    LoadingScreen(modifier = Modifier)
             }
             state.value.error != null->{
                 Log.d("TAG", "HomeScreen:  error :-> ${state.value.error}")
@@ -79,15 +79,47 @@ fun HomeScreen(viewModel: MyViewModel,navController: NavController){
                     users = state.value.success!!.users,
                     userApprovalState = isApproved,
                     onApprovalToggle = viewModel::isApprovedUser,
-                    modifier = Modifier.padding(innerpadding).background(Color(0xFFBF360C)),
+                    modifier = Modifier.background(Color(0xFFBF360C)),
                     navController= navController
-
-                )
-//
+                )//
             }
         }
     }
 }
+
+
+@Composable
+fun UserListScreen(
+    users: List<UserItem>,
+    userApprovalState: State<Map<String, IsApprovedUserState>>,
+    onApprovalToggle: (String, Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    navController: NavController
+) {
+    Column(
+        modifier = modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
+    ) {
+
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+//            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp)
+        ) {
+            items(users) { userItem ->
+                EachUserCard(
+                    userItem = userItem,
+                    userApprovalState = userApprovalState,
+                    onApprovalToggle = onApprovalToggle,
+                    navController = navController
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun EachUserCard(userItem: UserItem, userApprovalState : State<Map<String , IsApprovedUserState>>, onApprovalToggle: (String, Boolean) -> Unit,navController: NavController){
 
@@ -102,6 +134,7 @@ fun EachUserCard(userItem: UserItem, userApprovalState : State<Map<String , IsAp
         if (currentUserState?.success != null && pendingToggle) {
             isApproved = !isApproved
             pendingToggle = false
+
         }
     }
     // reset pending flag if we get an error
@@ -230,13 +263,13 @@ fun LoadingScreen(modifier: Modifier = Modifier){
         Log.d("TAG", "WaitingScreen: success")
 
         CircularProgressIndicator()
-
     }
+
 }
 
 @Composable
 fun ErrorScreen(errorMessage: String, modifier: Modifier = Modifier) {
-    Column(
+   Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -251,36 +284,5 @@ fun ErrorScreen(errorMessage: String, modifier: Modifier = Modifier) {
             text = errorMessage,
             modifier = Modifier.padding(16.dp)
         )
-    }
-}
-
-@Composable
-fun UserListScreen(
-    users: List<UserItem>,
-    userApprovalState: State<Map<String, IsApprovedUserState>>,
-    onApprovalToggle: (String, Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    navController: NavController
-) {
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            items(users) { userItem ->
-                EachUserCard(
-                    userItem = userItem,
-                    userApprovalState = userApprovalState,
-                    onApprovalToggle = onApprovalToggle,
-                    navController = navController
-                )
-            }
-        }
     }
 }

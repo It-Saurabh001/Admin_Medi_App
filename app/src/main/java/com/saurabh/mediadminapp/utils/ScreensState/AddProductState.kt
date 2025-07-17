@@ -1,4 +1,4 @@
-package com.saurabh.mediadminapp.utils
+package com.saurabh.mediadminapp.utils.ScreensState
 
 import com.saurabh.mediadminapp.network.response.GetAddProductResponse
 

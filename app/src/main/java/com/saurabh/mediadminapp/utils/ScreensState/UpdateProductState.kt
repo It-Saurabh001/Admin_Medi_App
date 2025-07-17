@@ -1,6 +1,5 @@
-package com.saurabh.mediadminapp.utils
+package com.saurabh.mediadminapp.utils.ScreensState
 
-import com.saurabh.mediadminapp.network.response.GetAllUserResponse
 import com.saurabh.mediadminapp.network.response.UpdateProductResponse
 
 data class UpdateProductState(

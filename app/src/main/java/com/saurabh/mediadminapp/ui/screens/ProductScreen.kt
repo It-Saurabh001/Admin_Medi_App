@@ -3,6 +3,7 @@ package com.saurabh.mediadminapp.ui.screens
 import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,8 +17,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,11 +43,10 @@ import com.saurabh.mediadminapp.ui.screens.nav.SpecificProductRoutes
 fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
     val productState = viewModel.getAllProduct.collectAsState()
     val currentState = navController.currentBackStackEntry
-     LaunchedEffect(currentState) {
-         val refresh = currentState?.savedStateHandle?.get<Boolean>("refresh_screen") ?: false
-
-         if (refresh) {
-            viewModel.getAllProduct()
+    LaunchedEffect(currentState) {
+        val refresh = currentState?.savedStateHandle?.get<Boolean>("refresh_screen") == true
+        if (refresh) {
+            viewModel.getAllProduct(force = true)
             currentState.savedStateHandle.remove<Boolean>("refresh_screen")
         }
     }
@@ -53,7 +55,7 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
     }
 
     Scaffold (
-       modifier = Modifier.fillMaxSize(),
+//       modifier = Modifier.fillMaxSize(),
         floatingActionButton = {
             FloatingActionButton(onClick = {navController.navigate(AddProductRoutes.route)}) {
                 Icon(Icons.Default.Add, contentDescription = "Add Product")
@@ -61,17 +63,40 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
         }
     ){ innerpadding->
 
+
         when{
             productState.value.isLoading->{
-                LoadingScreen(modifier = Modifier.padding(innerpadding))
+                Box(
+                    modifier = Modifier.padding(innerpadding)
+                        .fillMaxSize()
+
+                ) {
+                    LoadingScreen(modifier = Modifier)
+                }
             }
             productState.value.error !=null->{
-                Log.d("TAG", "ProductScreen: error :-> ${productState.value.error}")
-                ErrorScreen(errorMessage = productState.value.error.toString(), modifier = Modifier.padding(innerpadding))
+                Box(
+                    modifier = Modifier.padding(innerpadding)
+                        .fillMaxSize()
+
+                ) {
+                    Log.d("TAG", "ProductScreen: error :-> ${productState.value.error}")
+                    ErrorScreen(
+                        errorMessage = productState.value.error.toString(),
+                    )
+                }
             }
             productState.value.success != null->{
-                ProductListScreen(productState.value.success!!.products,navController, modifier = Modifier.padding(innerpadding))
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
 
+                ) {
+                    ProductListScreen(
+                        productState.value.success!!.products,
+                        navController,
+                    )
+                }
             }
         }
     }
@@ -79,9 +104,11 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
 
 @Composable
 fun ProductListScreen(products : List<ProductItem>,navController: NavController,modifier: Modifier = Modifier) {
-    Column(
+    Box(
+        // it shows all products in list
         modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.Top
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
@@ -98,44 +125,10 @@ fun ProductListScreen(products : List<ProductItem>,navController: NavController,
 
 }
 
-@Preview(showBackground = true)
-@Composable
-fun PreviewProductListScreen() {
-    val sampleProducts = listOf(
-        ProductItem(
-            Product_id = "P001",
-            category = "Electronics",
-            id = 101,
-            name = "Smartphone",
-            price = 49999.99,
-            stock = 25
-        ),
-        ProductItem(
-            Product_id = "P002",
-            category = "Books",
-            id = 102,
-            name = "Kotlin for Android Developers",
-            price = 799.0,
-            stock = 100
-        ),
-        ProductItem(
-            Product_id = "P003",
-            category = "Appliances",
-            id = 103,
-            name = "Air Conditioner",
-            price = 35999.0,
-            stock = 10
-        )
-    )
 
-    val navController = rememberNavController()
-
-    ProductListScreen(products = sampleProducts, navController = navController)
-}
 
 @Composable
 fun EachProductCard(productItem: ProductItem, navController: NavController) {
-
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)
@@ -149,8 +142,6 @@ fun EachProductCard(productItem: ProductItem, navController: NavController) {
                     ),
                     modifier = Modifier.fillMaxWidth().padding(13.dp)
                 )
-
-
             }
             Column(modifier = Modifier.fillMaxWidth()) {
                 HorizontalScrollableText(
@@ -164,48 +155,5 @@ fun EachProductCard(productItem: ProductItem, navController: NavController) {
         }
     }
 }
-
-//@Preview(showBackground = true)
-@Composable
-fun PreviewEachProductCard() {
-    val sampleProduct = ProductItem(
-        id = 1,
-        Product_id = "ID1234",
-        name = "Sample Item",
-        category = "Category A",
-        price = 199.99,
-        stock = 20
-    )
-    EachProductCard(productItem = sampleProduct, navController = rememberNavController())
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -1,7 +1,7 @@
 package com.saurabh.mediadminapp.network.response
 
-data class GetUsersOrdersResponse(
+data class GetUserSellHistoryResponse(
     val message: String,
-    val order: List<Order>,
+    val sell_history: List<SellHistoryXX>,
     val status: Int
 )

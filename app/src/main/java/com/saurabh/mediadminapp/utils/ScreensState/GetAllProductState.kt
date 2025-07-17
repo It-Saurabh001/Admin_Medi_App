@@ -1,7 +1,6 @@
-package com.saurabh.mediadminapp.utils
+package com.saurabh.mediadminapp.utils.ScreensState
 
 import com.saurabh.mediadminapp.network.response.GetAllProductResponse
-import com.saurabh.mediadminapp.network.response.GetAllUserResponse
 
 data class GetAllProductState (
     val isLoading: Boolean = false,

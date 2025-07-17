@@ -8,6 +8,7 @@ import com.saurabh.mediadminapp.network.response.GetAddProductResponse
 import com.saurabh.mediadminapp.network.response.GetAllOrdersResponse
 import com.saurabh.mediadminapp.network.response.GetAllProductResponse
 import com.saurabh.mediadminapp.network.response.GetAllUserResponse
+import com.saurabh.mediadminapp.network.response.GetOrderByIdResponse
 import com.saurabh.mediadminapp.network.response.GetProductSellHistory
 import com.saurabh.mediadminapp.network.response.GetSellHistoryResponse
 import com.saurabh.mediadminapp.network.response.GetSpecificProductResponse
@@ -105,10 +106,16 @@ interface ApiServices {
     ): Response<GetUsersOrdersResponse>
 
     @FormUrlEncoded
+    @POST("getOrderById")
+    suspend fun getOrderById(
+        @Field("Order_id") orderId: String
+    ): Response<GetOrderByIdResponse>
+
+    @FormUrlEncoded
     @PATCH("updateOrder")
     suspend fun updateOrder(
         @Field("Order_id") orderId: String,
-        @Field("isApproved") isApproved: Boolean? = null,
+        @Field("isApproved") isApproved: Int? = null,
         @Field("quantity") quantity: Int?= null,
         @Field("price") price: Float?=null,
         @Field("total_amount") total_amount: Float?=null,
