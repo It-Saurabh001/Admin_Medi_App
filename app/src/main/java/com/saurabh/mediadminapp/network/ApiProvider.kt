@@ -1,7 +1,8 @@
 package com.saurabh.mediadminapp.network
 
-import androidx.compose.material3.TimeInput
-import com.saurabh.mediadminapp.utils.BASE_URL
+import android.os.Build
+import com.saurabh.mediadminapp.utils.BASE_URL1
+import com.saurabh.mediadminapp.utils.BASE_URL4
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -12,31 +13,16 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
-
-object ApiProvider1 {
-
-    val logging = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
-    }
-
-    val client = OkHttpClient.Builder()
-        .addInterceptor(logging)
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .writeTimeout(30, TimeUnit.SECONDS)
-        .build()
-
-    fun providerApiServices() = Retrofit.Builder()
-        .baseUrl(BASE_URL)
-        .client(client)
-        .addConverterFactory(GsonConverterFactory.create())
-        .build()
-        .create(ApiServices::class.java)
-}
-
 @Module
 @InstallIn(SingletonComponent::class)
 object ApiProvider{
+    private val BASE_URL : String by lazy {
+        if(isEmulator()){
+            BASE_URL4
+        }else{
+            BASE_URL1
+        }
+    }
 
     @Provides
     @Singleton
@@ -64,7 +50,7 @@ object ApiProvider{
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL)
+            .baseUrl(BASE_URL1)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -74,6 +60,14 @@ object ApiProvider{
     @Singleton
     fun provideApiServices(retrofit: Retrofit) : ApiServices{
         return retrofit.create(ApiServices::class.java)
+    }
+    private fun isEmulator(): Boolean {
+        return (Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.lowercase().contains("vbox")
+                || Build.FINGERPRINT.lowercase().contains("test-keys")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86"))
     }
 
 }

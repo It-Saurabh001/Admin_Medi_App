@@ -3,6 +3,7 @@ package com.saurabh.mediadminapp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saurabh.mediadminapp.common.ResultState
+import com.saurabh.mediadminapp.network.response.GetSellHistoryResponse
 import com.saurabh.mediadminapp.repository.Repository
 import com.saurabh.mediadminapp.utils.ScreensState.AddProductState
 import com.saurabh.mediadminapp.utils.ScreensState.ApproveOrderState
@@ -12,10 +13,15 @@ import com.saurabh.mediadminapp.utils.ScreensState.DeleteUserState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllOrdersState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllProductState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllUserState
+import com.saurabh.mediadminapp.utils.ScreensState.GetDeleteSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.GetOrderByIdState
+import com.saurabh.mediadminapp.utils.ScreensState.GetProductSellHistoryState
+import com.saurabh.mediadminapp.utils.ScreensState.GetSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.GetSpecificProductState
+import com.saurabh.mediadminapp.utils.ScreensState.GetUserSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.GetUsersOrderState
 import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
+import com.saurabh.mediadminapp.utils.ScreensState.RecordSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateOrderState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateProductState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateUserState
@@ -72,10 +78,44 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     private var _approveState = MutableStateFlow(ApproveOrderState())
     val approveState = _approveState.asStateFlow()
 
+    private var _getSellHistory = MutableStateFlow(GetSellHistoryState())
+    val getSellHistory = _getSellHistory.asStateFlow()
 
+    private var _getRecordSellHistory = MutableStateFlow(RecordSellHistoryState())
+    val getRecordSellHistory = _getRecordSellHistory.asStateFlow()
+
+    private var _getProductSellHistory = MutableStateFlow(GetProductSellHistoryState())
+    val getProductSellHistory = _getProductSellHistory.asStateFlow()
+    private var _getUserSellHistory = MutableStateFlow(GetUserSellHistoryState())
+    val getUserSellHistory = _getUserSellHistory.asStateFlow()
+
+    private var _deleteSellHistory = MutableStateFlow(GetDeleteSellHistoryState())
+    val deleteSellHistory = _deleteSellHistory.asStateFlow()
 
     private var _getOrderByIdState = MutableStateFlow(GetOrderByIdState())
     val getOrderByIdState = _getOrderByIdState.asStateFlow()
+
+    fun getAllSellHistory() {
+        if (_getSellHistory.value.success != null && !_getSellHistory.value.isLoading && _getSellHistory.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _getSellHistory.value = GetSellHistoryState(isLoading = true)
+            repository.getAllSellHistory().collect { sellHistory ->
+                when (sellHistory) {
+                    is ResultState.Loading -> {
+                        _getSellHistory.value = GetSellHistoryState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _getSellHistory.value = GetSellHistoryState(error = sellHistory.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _getSellHistory.value = GetSellHistoryState(success = sellHistory.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
 
     fun deleteUser(userId: String){
         // prevent form duplicate operation
@@ -362,8 +402,7 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     }
 
 
-    fun updateOrder(
-        orderId: String,isApproved: Boolean? = null,quantity: Int? = null,price: Float? = null
+    fun updateOrder( orderId: String,isApproved: Boolean? = null,quantity: Int? = null,price: Float? = null
     ) {
         val isApprovedInt = isApproved?.let { if(it) 1 else 0 }  // convert Boolean to Int for API compatibility
 //        if (_updateOrderState.value.success != null && !_updateOrderState.value.isLoading && _updateOrderState.value.error == null) return

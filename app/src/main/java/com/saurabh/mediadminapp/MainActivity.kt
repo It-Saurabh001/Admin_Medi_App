@@ -12,7 +12,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen1
 import com.saurabh.mediadminapp.ui.screens.nav.NavApp
+import com.saurabh.mediadminapp.ui.screens.nav.OrdersScreen
 import com.saurabh.mediadminapp.ui.theme.MediAdminAppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -25,6 +27,9 @@ class MainActivity : ComponentActivity() {
             val viewModel : MyViewModel by viewModels()
             MediAdminAppTheme {
                 NavApp(viewModel)
+
+
+//                OrdersScreen(viewModel)
             }
         }
     }

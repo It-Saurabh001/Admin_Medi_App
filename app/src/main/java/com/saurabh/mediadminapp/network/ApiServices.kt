@@ -8,10 +8,13 @@ import com.saurabh.mediadminapp.network.response.GetAddProductResponse
 import com.saurabh.mediadminapp.network.response.GetAllOrdersResponse
 import com.saurabh.mediadminapp.network.response.GetAllProductResponse
 import com.saurabh.mediadminapp.network.response.GetAllUserResponse
+import com.saurabh.mediadminapp.network.response.GetDeleteSellHistoryResponse
 import com.saurabh.mediadminapp.network.response.GetOrderByIdResponse
-import com.saurabh.mediadminapp.network.response.GetProductSellHistory
+import com.saurabh.mediadminapp.network.response.GetProductSellHistoryResponse
+import com.saurabh.mediadminapp.network.response.GetRecordSellHistoryResoponse
 import com.saurabh.mediadminapp.network.response.GetSellHistoryResponse
 import com.saurabh.mediadminapp.network.response.GetSpecificProductResponse
+import com.saurabh.mediadminapp.network.response.GetUserSellHistoryResponse
 import com.saurabh.mediadminapp.network.response.GetUsersOrdersResponse
 import com.saurabh.mediadminapp.network.response.IsApproveUserResponse
 import com.saurabh.mediadminapp.network.response.UpdateOrderResponse
@@ -139,16 +142,33 @@ interface ApiServices {
 
 
 // sell history
+    @FormUrlEncoded
+    @POST("recordSell")
+    suspend fun recordSellHistory(
+        @Field("Order_id") orderId: String
+    ) : Response<GetRecordSellHistoryResoponse>
+
     @GET("getSellHistory")
     suspend fun getSellHistory() : Response<GetSellHistoryResponse>
-// user sell history in user section
+
+    @FormUrlEncoded
+    @POST("getusersellhistory")
+    suspend fun getusersellhistory(
+        @Field("user_id") userId: String
+    ) : Response<GetUserSellHistoryResponse>
 
     @FormUrlEncoded
     @POST("getproductsellhistory")
     suspend fun getProductSellHistory(
         @Field("Product_id") productId: String
+    ) : Response<GetProductSellHistoryResponse>
 
-    ) : Response<GetProductSellHistory>
+    @FormUrlEncoded
+    @POST("deleteSellHistory")
+    suspend fun deleteSellHistory(
+        @Field("Sell_id") sellId: String
+    ) : Response<GetDeleteSellHistoryResponse>
+
 
 
 

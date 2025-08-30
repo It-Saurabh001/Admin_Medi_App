@@ -1,6 +1,7 @@
 package com.saurabh.mediadminapp.network.response
 
 import com.google.gson.annotations.SerializedName
+import com.saurabh.mediadminapp.ui.screens.nav.User
 
 data class UserItem(
     val address: String,
@@ -30,3 +31,4 @@ data class UserItem(
             else -> false
         }
 }
+

@@ -52,6 +52,11 @@ import kotlinx.serialization.Serializable
         const val route = "ordersRoutes"
         operator fun invoke() = route
     }
+@Serializable
+    object  OrderDetailsScreen1{
+        const val route = " OrderDetailsScreen1"
+        operator fun invoke() = route
+    }
 
 
     @Serializable
