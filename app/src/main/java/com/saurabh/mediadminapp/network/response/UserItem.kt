@@ -1,16 +1,17 @@
 package com.saurabh.mediadminapp.network.response
 
 import com.google.gson.annotations.SerializedName
+import com.saurabh.mediadminapp.ui.screens.nav.User
 
 data class UserItem(
     val address: String,
     @SerializedName("block")
-    private val _block: Any? = null,
+     val _block: Any? = null,
     val date_of_account_creation: String,
     val email: String,
     val id: Int,
     @SerializedName("isApproved")
-    private val _isApproved: Any? = null,
+    val _isApproved: Any? = null,
     val name: String,
     val password: String,
     val phone_number: String,
@@ -30,3 +31,4 @@ data class UserItem(
             else -> false
         }
 }
+

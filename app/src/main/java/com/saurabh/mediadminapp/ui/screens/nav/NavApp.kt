@@ -39,6 +39,7 @@ import com.saurabh.mediadminapp.ui.screens.EachUserOrderScreen
 import com.saurabh.mediadminapp.ui.screens.HistoryScreen
 import com.saurabh.mediadminapp.ui.screens.HomeScreen
 import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen
+import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen1
 import com.saurabh.mediadminapp.ui.screens.ProductScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificOrderScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificProductScreen
@@ -108,7 +109,7 @@ fun NavApp(viewModel: MyViewModel) {
 
         NavHost(
             navController = navController,
-            startDestination = HomeRoutes.route,
+            startDestination =  HomeRoutes.route,
             modifier = Modifier.padding(innerpadding)
         ) {
             composable(HomeRoutes.route) {
@@ -185,8 +186,11 @@ fun NavApp(viewModel: MyViewModel) {
 
             }
             composable(HistoryRoutes.route) {
-                HistoryScreen()
+                HistoryScreen(viewModel,navController)
             }
+             composable(OrderDetailsScreen1.route) {
+                 OrderDetailsScreen1(viewModel,navController)
+                        }
 
         }
     }

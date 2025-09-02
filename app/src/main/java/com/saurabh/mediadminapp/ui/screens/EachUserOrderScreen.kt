@@ -29,6 +29,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,6 +45,8 @@ import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.Order
 import com.saurabh.mediadminapp.ui.screens.nav.SpecificOrderRoutes
+import com.saurabh.mediadminapp.utils.ScreensState.ApproveOrderState
+import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateOrderState
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 
@@ -56,6 +59,7 @@ fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: Nav
     val response = viewModel.getUsersOrdersState.collectAsState()
     val order = response.value.success?.order
     val updateOrderState = viewModel.updateOrderState.collectAsState()
+    val isApproveOrder = viewModel.isApproveOrdder.collectAsState()
     LaunchedEffect(userId) {
         viewModel.getUsersOrders(userId)
     }
@@ -89,10 +93,10 @@ fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: Nav
 
                     if (order != null){
                         UserOrderListScreen(
-                            order,
-                            navController,
-                            updateOrderState,
-                            viewModel::updateOrder
+                            orders=order,
+                            navController=navController,
+                            updateOrderState=isApproveOrder,
+                            onApprovalToggle = viewModel::isApproveOrder
                         )
                     }
                     else{
@@ -116,7 +120,7 @@ fun EachUserOrderScreen(userId: String,viewModel: MyViewModel,navController: Nav
 }
 
 @Composable
-fun UserOrderListScreen(orders: List<Order>, navController: NavController, updateOrderState: State<Map<String, UpdateOrderState>>,onApprovalToggle : (String, Boolean)-> Unit) {
+fun UserOrderListScreen(orders: List<Order>, navController: NavController, updateOrderState: State<Map<String, ApproveOrderState>>,onApprovalToggle : (String, Boolean)-> Unit) {
 
     Column(
         // it shows all products in list
@@ -146,19 +150,18 @@ fun UserOrderListScreen(orders: List<Order>, navController: NavController, updat
 
 
 @Composable
-fun EachUserOrderCard(order: Order,navController: NavController,updateOrderState: State<Map<String, UpdateOrderState>>,onApprovalToggle : (String, Boolean)-> Unit
+fun EachUserOrderCard(order: Order,navController: NavController,updateOrderState: State<Map<String, ApproveOrderState>>,onApprovalToggle : (String, Boolean)-> Unit
 ) {
 
-    var isApproved by rememberSaveable (order.order_id){
-        mutableStateOf(order.isApproved == true) }
+    var isApproved by remember (order.order_id){
+        mutableStateOf(order.isApproved) }
     val currentOrder = updateOrderState.value[order.order_id]
     var  pendingToggle by rememberSaveable(order.order_id) {
         mutableStateOf(false)
     }
-    LaunchedEffect(order.isApproved) {
-        isApproved = order.isApproved == true
-        Log.d("TAG", "EachUserOrderCard: isapproved launcheffect ${order.isApproved}")
-    }
+
+        Log.d("TAG", "EachUserOrderCard: isapproved  ${order.isApproved}")
+
     LaunchedEffect(currentOrder?.success) {
         if (currentOrder?.success != null && pendingToggle) {
             isApproved = !isApproved
@@ -170,7 +173,7 @@ fun EachUserOrderCard(order: Order,navController: NavController,updateOrderState
     }
     LaunchedEffect(currentOrder?.error) {
         if (currentOrder?.error != null && pendingToggle) {
-//            isApproved.value = !isApproved.value
+            isApproved = !isApproved
             pendingToggle = false
         }
     }
@@ -192,27 +195,37 @@ fun EachUserOrderCard(order: Order,navController: NavController,updateOrderState
                         .fillMaxWidth()
                         .padding(13.dp)
                 )
-                Box(modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center){
-                    Switch(             // switch is use as toggle button
-                        checked = isApproved ,
-                        onCheckedChange = {
-
-                            if (!isLoading){
-                                pendingToggle = true
-//                                viewModel.updateOrder(order.order_id, isApproved=it)
-                                onApprovalToggle(order.order_id, it)
-                            }
-                        },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFFFFA500), // Orange
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = Color.LightGray
-                        ),
-                        enabled = !isLoading
-                    )
-                }
+//                Box(modifier = Modifier.fillMaxWidth(),
+//                    contentAlignment = Alignment.Center) {
+//                    if (isLoading) {
+//                        CircularProgressIndicator(
+//                            modifier = Modifier.padding(8.dp),
+//                            strokeWidth = 2.dp
+//                        )
+//                    } else {
+//
+//
+//                    Switch(             // switch is use as toggle button
+//                        checked = isApproved,
+//                        onCheckedChange = {
+//
+//                            if (!isLoading) {
+//
+//                                pendingToggle = true
+////                                isApproved = it
+//                                onApprovalToggle(order.order_id, it)
+//                            }
+//                        },
+//                        colors = SwitchDefaults.colors(
+//                            checkedThumbColor = Color.White,
+//                            checkedTrackColor = Color(0xFFFFA500), // Orange
+//                            uncheckedThumbColor = Color.White,
+//                            uncheckedTrackColor = Color.LightGray
+//                        ),
+//                        enabled = !isLoading
+//                    )
+//                }
+//                }
 
             }
             Column(modifier = Modifier.fillMaxWidth()) {
