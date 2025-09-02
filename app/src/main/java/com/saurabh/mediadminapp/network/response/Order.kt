@@ -7,7 +7,7 @@ data class Order(
     val date_of_order_creation: String,
     val id: Int,
     @SerializedName("isApproved")
-    var _isApproved: Boolean,
+    var _isApproved: Any? = null,
     val message: String,
     val order_id: String,
     val price: Double,
@@ -24,5 +24,6 @@ data class Order(
             is Number -> (_isApproved as Number).toInt() == 1
             else -> false
         }
+
 
 }

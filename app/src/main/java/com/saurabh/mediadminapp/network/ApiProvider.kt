@@ -2,7 +2,9 @@ package com.saurabh.mediadminapp.network
 
 import android.os.Build
 import com.saurabh.mediadminapp.utils.BASE_URL1
+import com.saurabh.mediadminapp.utils.BASE_URL3
 import com.saurabh.mediadminapp.utils.BASE_URL4
+import com.saurabh.mediadminapp.utils.BASE_URL5
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -50,7 +52,7 @@ object ApiProvider{
     @Singleton
     fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
         return Retrofit.Builder()
-            .baseUrl(BASE_URL1)
+            .baseUrl(BASE_URL)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -69,5 +71,4 @@ object ApiProvider{
                 || Build.MODEL.contains("Emulator")
                 || Build.MODEL.contains("Android SDK built for x86"))
     }
-
 }

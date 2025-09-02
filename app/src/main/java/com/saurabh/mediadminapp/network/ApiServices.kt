@@ -109,7 +109,7 @@ interface ApiServices {
     ): Response<GetUsersOrdersResponse>
 
     @FormUrlEncoded
-    @POST("getOrderById")
+    @POST("orderById")
     suspend fun getOrderById(
         @Field("Order_id") orderId: String
     ): Response<GetOrderByIdResponse>

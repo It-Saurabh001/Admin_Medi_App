@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,6 +21,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -252,5 +254,95 @@ fun EachOrderCard(order: Order, navController: NavController) {
                 )
             }
         }
+    }
+}
+
+@Composable
+fun EachOrder(order : Order, navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    )  {
+        Text(
+            text = "Id: "+order.id,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "OrderId: "+order.order_id,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "UserId: "+order.user_id,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "ProductId: "+order.product_id,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Product: "+order.product_name,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Category: "+order.category,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Price: "+order.price,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Quantity: "+order.quantity,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Total Amount: "+order.total_amount,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "User Name: "+order.user_name,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Approval: "+order.isApproved,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Date: "+order.date_of_order_creation,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+        Text(
+            text = "Message: "+order.message,
+            style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
+            modifier = Modifier.fillMaxWidth()
+        )
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
     }
 }

@@ -177,7 +177,9 @@ fun UserListScreen(
     ) {
         item {
             Row(
-                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 StatsCard(
@@ -216,13 +218,17 @@ fun UserListScreen(
                 OutlinedTextField(
                     value = searchTerm,
                     onValueChange = { searchTerm = it },
-                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth(),
                     placeholder = { Text("Search users...") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "Search",
-                            modifier = Modifier.size(28.dp).padding(start = 3.dp),
+                            modifier = Modifier
+                                .size(28.dp)
+                                .padding(start = 3.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     },
@@ -273,10 +279,6 @@ fun UserListScreen(
             }
 
         } else {
-//            LazyColumn(
-//                modifier = Modifier.fillMaxWidth(),
-//                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 8.dp)
-//            ) {
                 items(filteredUsers) { userItem ->
                     EachUserCard1(
                         userItem = userItem,
@@ -285,7 +287,6 @@ fun UserListScreen(
                         navController = navController
                     )
                 }
-//            }
         }
     }
 }
@@ -299,9 +300,10 @@ fun EachUserCard1(
     navController: NavController
 ){
     val currentUserState = userApprovalState.value[userItem.user_id]
-    var isApproved by rememberSaveable(userItem.user_id) {
+    var isApproved by remember(userItem.user_id) {
         mutableStateOf(userItem.isApproved)
     } // track approval status
+    Log.d("TAG", "EachUserCard1: user ${userItem.isApproved}")
     var pendingToggle by rememberSaveable(userItem.user_id) {
         mutableStateOf(false)
     }
@@ -310,16 +312,16 @@ fun EachUserCard1(
         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
         label = "thumbScale"
     )
-
+    //API success -> pending flag reset
     LaunchedEffect(currentUserState?.success) {
         if (currentUserState?.success != null && pendingToggle) {
-            isApproved = !isApproved
+//            isApproved = !isApproved
             pendingToggle = false
 
 
         }
     }
-//     reset pending flag if we get an error
+//     API error -> pending flag reset
     LaunchedEffect(currentUserState?.error) {
         if (currentUserState?.error != null && pendingToggle) {
             pendingToggle = false
@@ -423,7 +425,9 @@ fun EachUserCard1(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Details", fontSize = 14.sp)
                 }
-                Box(modifier = Modifier.wrapContentSize().fillMaxWidth(0.5f),
+                Box(modifier = Modifier
+                    .wrapContentSize()
+                    .fillMaxWidth(0.5f),
                     contentAlignment = Alignment.Center
                 ){
                     if(isLoading){

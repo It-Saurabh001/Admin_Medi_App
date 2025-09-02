@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -35,13 +36,17 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,7 +62,9 @@ import androidx.navigation.compose.rememberNavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.Order
 import com.saurabh.mediadminapp.ui.screens.nav.EachUserOrderRoutes
+import com.saurabh.mediadminapp.ui.screens.nav.SpecificOrderRoutes
 import com.saurabh.mediadminapp.ui.screens.nav.StatsCard
+import com.saurabh.mediadminapp.utils.ScreensState.ApproveOrderState
 import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
 import java.text.NumberFormat
 import java.util.Locale
@@ -65,6 +72,7 @@ import java.util.Locale
 @Composable
 fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
     val response = viewModel.getAllOrderState.collectAsState()
+    val isApproveOrder = viewModel.isApproveOrdder.collectAsState()
 
     LaunchedEffect(key1 = Unit) {
         viewModel.getAllOrders()
@@ -73,9 +81,9 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
         response.value.success?.let {
             Log.d("TAG", "OrderDetailsScreen: ${it.message}")
             viewModel.clearGetAllProductState()
+            Log.d("TAG", "OrderDetailsScreen: ab recomposition ke baad successfull mai jana chiye")
         }
     }
-
     Scaffold (modifier = Modifier.background(Color(0xFFffffff))
     ){
         innerpadding ->
@@ -89,6 +97,8 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
 
                 ) {
                     LoadingScreen(modifier = Modifier)
+                    Log.d("TAG", "OrderDetailsScreen: ab recomposition ke baad loading mai aya")
+
                 }
             }
             response.value.error != null ->{
@@ -105,16 +115,24 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
                 }
             }
             response.value.success != null ->{
+
                 Box(
                     modifier = Modifier
-                        .fillMaxSize().background(Color(0xFFffffff)),
+                        .fillMaxSize()
+                        .background(Color(0xFFffffff)),
 
                 ) {
+                    Log.d("TAG", "OrderDetailsScreen: ${response.value.success!!.orders}")
+                    Log.d("TAG", "OrderDetailsScreen: ab recomposition ke baad successfull mai aya")
+
 
                     OrdersListScreen(
                         response.value.success!!.orders,
                         navController,
                         modifier = Modifier,
+                        isApproveOrder = isApproveOrder,
+                        onApprovalToggle = viewModel::isApproveOrder,
+                        viewModel = viewModel
                     )
                 }
             }
@@ -126,9 +144,17 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController){
 }
 
 @Composable
-fun OrdersListScreen(orders: List<Order>, navController: NavController,modifier: Modifier) {
+fun OrdersListScreen(
+    orders: List<Order>,
+    navController: NavController,
+    modifier: Modifier,
+    isApproveOrder: State<Map<String, ApproveOrderState>>,
+    onApprovalToggle: (String, Boolean) -> Unit,
+    viewModel: MyViewModel
+) {
     var searchTerm by remember { mutableStateOf("") }
     var filterStatus by remember { mutableStateOf("all") }
+    val isApproveOrder = viewModel.isApproveOrdder.collectAsState()
 
     val filteredOrders = remember(orders, searchTerm, filterStatus) {
         orders.filter { order ->
@@ -271,9 +297,10 @@ fun OrdersListScreen(orders: List<Order>, navController: NavController,modifier:
                 }
             }
         }else{
-            itemsIndexed (orders){index,orderItem->
+            itemsIndexed (filteredOrders){index,orderItem->
                 val bgColor = cardColors[index%cardColors.size]
-                EachOrderCard(orderItem,navController,bgColor, modifier = Modifier)
+                EachOrderCard(orderItem,navController,bgColor, modifier = Modifier,isApproveOrder = isApproveOrder,
+                    onApprovalToggle = viewModel::isApproveOrder)
             }
         }
     }
@@ -282,7 +309,7 @@ fun OrdersListScreen(orders: List<Order>, navController: NavController,modifier:
 
 
 
-@Preview(showSystemUi = true)
+//@Preview(showSystemUi = true)
 @Composable
 fun previw(modifier: Modifier = Modifier) {
     val orders = Order(
@@ -301,14 +328,106 @@ fun previw(modifier: Modifier = Modifier) {
         message = "Urgent requirement for hospital ward"
 
     )
+
+    // 🔹 Dummy approval state banate hain
+    val fakeApprovalState = remember {
+        mutableStateOf(
+            mapOf(
+                orders.order_id to ApproveOrderState(
+                    success= null,
+                    isLoading = false,
+                    error = null
+                )
+            )
+        )
+    }
     val navController = rememberNavController()
-    EachOrderCard(orders,navController, Color(0xFFF59EBB), modifier = Modifier)
+    EachOrderCard(
+        orders, navController, Color(0xFFF59EBB), modifier = Modifier,
+        isApproveOrder =fakeApprovalState ,
+        onApprovalToggle = {} as (String, Boolean) -> Unit,
+    )
+}
+@Preview(showBackground = true)
+@Composable
+fun PreviewEachOrderCard() {
+    val sampleOrder = Order(
+        id = 1,
+        order_id = "ORD001",
+        user_id = "USR001",
+        product_id = "PRD001",
+        product_name = "Paracetamol 500mg",
+        user_name = "Dr. Rajesh Kumar",
+        quantity = 100,
+        price = 25.50,
+        total_amount = 2550.00,
+        category = "Tablet",
+        date_of_order_creation = "2024-01-28",
+        _isApproved = false,
+        message = "Urgent requirement for hospital ward"
+
+    )
+
+    val dummyApprovalState = remember {
+        mutableStateOf(
+            mapOf(sampleOrder.order_id to ApproveOrderState(  success= null,
+                isLoading = false,
+                error = null))
+        )
+    }
+
+    EachOrderCard(
+        order = sampleOrder,
+        navController = rememberNavController(),
+        bgColor = Color(0xFFE0F7FA),
+        modifier = Modifier.padding(16.dp),
+        isApproveOrder = dummyApprovalState,
+        onApprovalToggle = { orderId, newState ->
+            Log.d("Preview", "Approval toggled for $orderId: $newState")
+        }
+    )
 }
 
 
 @Composable
-fun EachOrderCard(order: Order,navController: NavController, bgColor: Color,modifier: Modifier) {
+fun EachOrderCard(
+    order: Order,
+    navController: NavController,
+    bgColor: Color,
+    modifier: Modifier,
+    isApproveOrder: State<Map<String, ApproveOrderState>>,
+    onApprovalToggle: (String, Boolean) -> Unit
+) {
     val scrollState = rememberScrollState()
+    var isApproved by remember (order.order_id){
+        mutableStateOf(order.isApproved)
+    }
+    Log.d("TAG", "EachOrderCard: ${order.isApproved}")
+    val currentOrder = isApproveOrder.value[order.order_id]
+    var  pendingToggle by rememberSaveable(order.order_id) {
+        mutableStateOf(false)
+    }
+    Log.d("TAG", "EachUserOrderCard: isapproved  ${order.isApproved}")
+
+    LaunchedEffect(currentOrder?.success) {
+        if (currentOrder?.success != null && pendingToggle) {
+            pendingToggle = false
+            Log.d("TAG", "EachUserOrderCard: current order state ${currentOrder.success.message} & ${currentOrder.success.status}")
+            Log.d("TAG", "EachUserOrderCard: launcheffect  $isApproved")
+        }
+    }
+    LaunchedEffect(currentOrder?.error) {
+        if (currentOrder?.error != null && pendingToggle) {
+            pendingToggle = false
+        }
+    }
+    // Keep local state in sync with order data when it changes from parent
+    LaunchedEffect(order.isApproved) {
+        if (!pendingToggle) {
+            isApproved = order.isApproved
+        }
+    }
+    val isLoading = currentOrder?.isLoading == true
     ElevatedCard(
         modifier = Modifier
             .fillMaxWidth()
@@ -330,25 +449,56 @@ fun EachOrderCard(order: Order,navController: NavController, bgColor: Color,modi
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
-
                 // Status Badge
-                Surface(
-                    color = if (order._isApproved) Color(0xFF10B981) else Color(0xFFF59E0B),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = if (order._isApproved) "Approved" else "Pending",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                Row (modifier = Modifier,
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center){
+                    Surface(
+                        color = if (order.isApproved) Color(0xFF10B981) else Color(0xFFF59E0B),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (order.isApproved) "Approved" else "Pending",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(5.dp))
+                    Box(modifier = Modifier,
+                        contentAlignment = Alignment.Center) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.padding(8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Switch(             // switch is use as toggle button
+                                checked = isApproved,
+                                onCheckedChange = {isCkecked->
+                                    if (!isLoading && isCkecked != isApproved) {
+                                        pendingToggle = true
+                                        isApproved = isCkecked
+                                        onApprovalToggle(order.order_id, isCkecked)
+                                        Log.d("TAG", "EachOrderCard: ${isCkecked}")
+                                    }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = Color(0xFF10B981), // Orange
+                                    uncheckedThumbColor = Color.White,
+                                    uncheckedTrackColor = Color.LightGray
+                                ),
+                                enabled = !isLoading
+                            )
+                        }
+                    }
                 }
             }
             Row(modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically) {
                 Column (modifier = Modifier
-
                     .horizontalScroll(scrollState),
                     ){
                     // Product Info
@@ -357,7 +507,6 @@ fun EachOrderCard(order: Order,navController: NavController, bgColor: Color,modi
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
-
                     Text(
                         text = "By: ${order.user_name.capitalizeEachWord()}",
                         fontSize = 12.sp,
@@ -368,10 +517,9 @@ fun EachOrderCard(order: Order,navController: NavController, bgColor: Color,modi
                 Box(modifier = Modifier.wrapContentSize(),
                     contentAlignment = Alignment.CenterStart){
                     OutlinedButton(
-                        onClick = { navController.navigate(EachUserOrderRoutes.invoke(order.user_id))  },
+                        onClick = { navController.navigate(SpecificOrderRoutes.invoke(order.order_id))  },
                         modifier = Modifier,
                         colors = ButtonDefaults.buttonColors(Color(0xFF7089F0))
-
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,  //Visibility
@@ -382,9 +530,7 @@ fun EachOrderCard(order: Order,navController: NavController, bgColor: Color,modi
                         Text("Details")
                     }
                 }
-
             }
-
             // Message (if exists)
             if (order.message.isNotEmpty()) {
                 Text(
@@ -396,19 +542,10 @@ fun EachOrderCard(order: Order,navController: NavController, bgColor: Color,modi
                             MaterialTheme.colorScheme.surfaceVariant,
                             RoundedCornerShape(4.dp)
                         )
-                        .padding(8.dp)
+                        .padding(8.dp),
+                    maxLines = 2
                 )
             }
-
         }
-
     }
-
-
-
-
-
-
-
-    
 }

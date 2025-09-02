@@ -1,9 +1,11 @@
 package com.saurabh.mediadminapp
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saurabh.mediadminapp.common.ResultState
 import com.saurabh.mediadminapp.network.response.GetSellHistoryResponse
+import com.saurabh.mediadminapp.network.response.UserItem
 import com.saurabh.mediadminapp.repository.Repository
 import com.saurabh.mediadminapp.utils.ScreensState.AddProductState
 import com.saurabh.mediadminapp.utils.ScreensState.ApproveOrderState
@@ -28,9 +30,12 @@ import com.saurabh.mediadminapp.utils.ScreensState.UpdateUserState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.builtins.MapSerializer
+import kotlin.apply
 
 @HiltViewModel
 class MyViewModel @Inject constructor(private val repository: Repository) : ViewModel (){
@@ -75,8 +80,8 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
     private var _deleteOrderState = MutableStateFlow(DeleteOrderState())
     val deleteOrderState = _deleteOrderState.asStateFlow()
 
-    private var _approveState = MutableStateFlow(ApproveOrderState())
-    val approveState = _approveState.asStateFlow()
+    private var _isApproveState = MutableStateFlow<Map<String, ApproveOrderState>>(emptyMap())
+    val isApproveOrdder = _isApproveState.asStateFlow()
 
     private var _getSellHistory = MutableStateFlow(GetSellHistoryState())
     val getSellHistory = _getSellHistory.asStateFlow()
@@ -416,18 +421,17 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
                     is ResultState.Loading -> {
                         UpdateOrderState(isLoading = true)
                     }
-
                     is ResultState.Error -> {
                         UpdateOrderState(error = order.exception.message)
                     }
-
                     is ResultState.Success -> {
                         viewModelScope.launch {
                             clearGetAllOrdersState()
                             kotlinx.coroutines.delay(300)
+                            _updateOrderState.value = emptyMap()
+                            _getAllOrderState.value = GetAllOrdersState(isLoading = false, success = null, error = null)
                             getAllOrders()  // refresh the order list after update
                         }
-
                         UpdateOrderState(success = order.data, isLoading = false)
                     }
                 }
@@ -438,16 +442,12 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
         }
     }
 
-    fun isApprovedUser(userId: String, isApproved: Boolean){
-//        val currentState = _isApproved.value[userId]  // finding each user state approval
-//        if(currentState?.success != null) return    // don't process if already success state
-
+    fun isApprovedUser(userId: String, isApproveds: Boolean){
         _isApproved.value = _isApproved.value.toMutableMap().apply {
             this[userId] = IsApprovedUserState(isLoading = true)
         }
-
         viewModelScope.launch (Dispatchers.IO){
-            repository.isApprovedUser(userId,isApproved).collect {
+            repository.isApprovedUser(userId,isApproveds).collect {
                 val newState = when(it){
                     is ResultState.Loading->{
                         IsApprovedUserState(isLoading = true)
@@ -458,8 +458,10 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
                     is ResultState.Success -> {
                         // force to clear the user list state to ensure the fresh list
 //                        _getAllUserState.value = GetAllUserState(isLoading = true)
-                        viewModelScope.launch {
+                        viewModelScope.launch(Dispatchers.Main) {
                             kotlinx.coroutines.delay(300)
+                            _isApproved.value = emptyMap()
+                            _getAllUserState.value = GetAllUserState(isLoading = false, success = null, error = null)
                             getAllUsers()
                         }
                         IsApprovedUserState(success = it.data, isLoading = false)
@@ -468,11 +470,50 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
                 _isApproved.value = _isApproved.value.toMutableMap().apply {
                     this[userId] = newState
                 }
-
             }
         }
-
     }
+    fun isApproveOrder(orderId: String, isApproved: Boolean) {
+        val isApprovedInt = if (isApproved) 1 else 0  // convert Boolean to Int for API compatibility
+        Log.d("ViewModel", "API Call: Order $orderId, Setting approved to: $isApproved")
+        _isApproveState.value = _isApproveState.value.toMutableMap().apply {
+            this[orderId] = ApproveOrderState(isLoading = true)
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.approveOrder(orderId, isApproved).collect {
+                val newState = when (it) {
+                    is ResultState.Loading -> {
+                        ApproveOrderState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        ApproveOrderState(error = it.exception.message, isLoading = false)
+                    }
+
+                    is ResultState.Success -> {
+                        // force to clear the user list state to ensure the fresh list
+                        viewModelScope.launch ( Dispatchers.Main ){
+                            delay(100)
+
+                            _isApproveState.value = emptyMap()
+                            _getAllOrderState.value = GetAllOrdersState(isLoading = false, success = null, error = null)
+                            getAllOrders()
+                            Log.d("OrderDebug", "Orders = ${_getAllOrderState.value.success}")
+                            Log.d("ViewModel", "API Success: Order $orderId updated successfully")
+                        }
+                        ApproveOrderState(success = it.data, isLoading = false)
+
+                    }
+                }
+                _isApproveState.value = _isApproveState.value.toMutableMap().apply {
+                    this[orderId] = newState
+                }
+            }
+        }
+    }
+
+
+
+
     // Clear approval state for testing/refreshing
     fun clearApprovalState(userId: String? = null) {
         _isApproved.value = if (userId != null) {
