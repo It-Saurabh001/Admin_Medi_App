@@ -25,10 +25,21 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.ProductItem
-import com.saurabh.mediadminapp.ui.screens.nav.UpdateProductRoutes
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
 
 @Composable
 fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navController: NavController) {
@@ -108,15 +119,29 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
 }
 
 @Composable
-fun EachProduct(productItem: ProductItem, navController: NavController,onDeleteClick: () -> Unit = {}) {
+fun EachProduct(productItem: ProductItem, navController: NavController, onDeleteClick: () -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-
+        val imageUrl = productItem.image_url
+        if (!imageUrl.isNullOrEmpty()) {
+            Image(
+                painter = rememberAsyncImagePainter(imageUrl),
+                contentDescription = "Product Image",
+                modifier = Modifier
+                    .size(200.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, Color.Gray.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .background(Color.White),
+                contentScale = ContentScale.Crop
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         Text(
             text = "Id: ${productItem.Product_id}",
@@ -148,13 +173,10 @@ fun EachProduct(productItem: ProductItem, navController: NavController,onDeleteC
             modifier = Modifier.fillMaxWidth()
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-        // add space using Spacer of 13.dp
         Spacer(modifier = Modifier.height(15.dp))
-        //add button to update product details
         Button(
-            onClick = {navController.navigate(UpdateProductRoutes.invoke(productItem.Product_id))
+            onClick = {navController.navigate(Routes.UpdateProductRoutes.invoke(productItem.Product_id))
             },
-
             modifier = Modifier.fillMaxWidth(0.7f).padding(16.dp)
         ) {
             Text(text = "Update ProductDetails")
@@ -162,7 +184,6 @@ fun EachProduct(productItem: ProductItem, navController: NavController,onDeleteC
         Spacer(modifier = Modifier.height(15.dp))
         Button(
             onClick = {onDeleteClick()},
-
             modifier = Modifier.fillMaxWidth(0.7f).padding(16.dp)
         ) {
             Text(text = "Delete Product")

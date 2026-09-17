@@ -5,12 +5,36 @@ import com.saurabh.mediadminapp.MyViewModel
 import kotlinx.serialization.Serializable
 
 //@Serializable
-//sealed class Routes{
+sealed class Routes{
+    @Serializable
+    object SignUpRoutes
+
+    @Serializable
+    object SignInRoutes
+
+    @Serializable
+    object ProfileRoutes {
+        const val route = "ProfileRoutes"
+        operator fun invoke() = route
+    }
     @Serializable
     object HomeRoutes{
         const val route = "HomeRoutes"
         operator fun invoke() = route
     }
+
+    @Serializable
+    object SettingsRoutes {
+        const val route = "SettingsRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object AboutRoutes {
+        const val route = "AboutRoutes"
+        operator fun invoke() = route
+    }
+
 
 
     @Serializable
@@ -104,7 +128,10 @@ class SpecificOrderRoutes(val orderId: String){
         operator fun invoke(orderId: String) = "specificOrderRoutes/$orderId"
     }
 }
+    @Serializable
+    data class VerifyOtpRoutes(val userId: String?)
 
 
 
-//}
+
+}

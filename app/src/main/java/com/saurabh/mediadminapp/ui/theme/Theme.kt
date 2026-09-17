@@ -2,6 +2,7 @@ package com.saurabh.mediadminapp.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -21,25 +22,16 @@ private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
 )
 
 @Composable
 fun MediAdminAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    // Dynamic color disabled by default to avoid main-thread wallpaper IPC delay on Android 12+
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    Log.d("PERF_TRACE", "MediAdminAppTheme composition START [Thread: ${Thread.currentThread().name}]")
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -55,4 +47,5 @@ fun MediAdminAppTheme(
         typography = Typography,
         content = content
     )
+    Log.d("PERF_TRACE", "MediAdminAppTheme composition END [Thread: ${Thread.currentThread().name}]")
 }

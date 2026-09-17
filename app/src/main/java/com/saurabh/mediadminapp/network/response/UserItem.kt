@@ -1,7 +1,6 @@
 package com.saurabh.mediadminapp.network.response
 
 import com.google.gson.annotations.SerializedName
-import com.saurabh.mediadminapp.ui.screens.nav.User
 
 data class UserItem(
     val address: String,
@@ -16,6 +15,7 @@ data class UserItem(
     val password: String,
     val phone_number: String,
     val pin_code: String,
+    val role: String,
     val user_id: String
 ){
     val isApproved: Boolean         // This is a custom getter to handle both Boolean and Number types of approval

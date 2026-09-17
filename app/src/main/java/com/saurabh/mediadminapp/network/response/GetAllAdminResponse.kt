@@ -1,7 +1,7 @@
 package com.saurabh.mediadminapp.network.response
 
-data class fake(
+data class GetAllAdminResponse(
+    val admins: List<Admin>,
     val message: String,
-    val sell_history: List<SellHistoryX>,
     val status: Int
 )

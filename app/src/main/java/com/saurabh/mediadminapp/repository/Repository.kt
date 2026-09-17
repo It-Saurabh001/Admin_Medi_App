@@ -4,13 +4,17 @@ import android.util.Log
 import androidx.compose.material3.ExposedDropdownMenuBox
 import com.saurabh.mediadminapp.network.response.GetAllUserResponse
 import com.saurabh.mediadminapp.common.ResultState
-import com.saurabh.mediadminapp.network.ApiProvider
 import com.saurabh.mediadminapp.network.ApiServices
+import com.saurabh.mediadminapp.network.MainApiService
+import com.saurabh.mediadminapp.network.response.AdminLoginResponse
 import com.saurabh.mediadminapp.network.response.ApproveOrderResponse
+import com.saurabh.mediadminapp.network.response.CreateAdminResponse
+import com.saurabh.mediadminapp.network.response.DeleteAdminResponse
 import com.saurabh.mediadminapp.network.response.DeleteOrderResponse
 import com.saurabh.mediadminapp.network.response.DeleteProductResponse
 import com.saurabh.mediadminapp.network.response.DeleteUserResponse
 import com.saurabh.mediadminapp.network.response.GetAddProductResponse
+import com.saurabh.mediadminapp.network.response.GetAllAdminResponse
 import com.saurabh.mediadminapp.network.response.GetAllOrdersResponse
 import com.saurabh.mediadminapp.network.response.GetAllProductResponse
 import com.saurabh.mediadminapp.network.response.GetDeleteSellHistoryResponse
@@ -19,23 +23,215 @@ import com.saurabh.mediadminapp.network.response.GetProductSellHistoryResponse
 import com.saurabh.mediadminapp.network.response.GetRecordSellHistoryResoponse
 import com.saurabh.mediadminapp.network.response.GetSellHistoryResponse
 import com.saurabh.mediadminapp.network.response.GetSpecificProductResponse
+import com.saurabh.mediadminapp.network.response.GetSpecificUserResponse
 import com.saurabh.mediadminapp.network.response.GetUserSellHistoryResponse
 import com.saurabh.mediadminapp.network.response.GetUsersOrdersResponse
 import com.saurabh.mediadminapp.network.response.IsApproveUserResponse
+import com.saurabh.mediadminapp.network.response.PasswordResetOtpResponse
+import com.saurabh.mediadminapp.network.response.PasswordResetResponse
+import com.saurabh.mediadminapp.network.response.RefreshTokenResponse
+import com.saurabh.mediadminapp.network.response.UpdateAdminResponse
 import com.saurabh.mediadminapp.network.response.UpdateOrderResponse
 import com.saurabh.mediadminapp.network.response.UpdateProductResponse
 import com.saurabh.mediadminapp.network.response.UpdateUserResponse
+import com.saurabh.mediadminapp.network.response.VerifyOtpResponse
+import com.saurabh.mediadminapp.utils.utilityFunctions.toTextRequestBody
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.Response
 import javax.inject.Inject
 
-class Repository @Inject constructor(private val apiServices: ApiServices) {
+class Repository @Inject constructor(@param:MainApiService private val apiServices: ApiServices) {
+
+    init {
+        Log.d("PERF_TRACE", "Repository instantiated (First Repository access) [Thread: ${Thread.currentThread().name}]")
+    }
+
+    // ----------------------------
+    // REFRESH TOKEN
+    // ----------------------------
+    suspend fun refreshToken(refreshToken: String): Flow<ResultState<RefreshTokenResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.refreshToken(refreshToken)
+            handleResponse("refreshToken", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "refreshToken exception: ${e.message}")
+        }
+    }
+
+    // ----------------------------
+    // CREATE ADMIN
+    // ----------------------------
+    suspend fun createAdmin(
+        name: String,
+        password: String,
+        email: String,
+        phoneNumber: String
+    ): Flow<ResultState<CreateAdminResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.createAdmin(name, password, email, phoneNumber)
+            handleResponse("createAdmin", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "createAdmin exception: ${e.message}")
+        }
+    }
+
+    // ----------------------------
+    // ADMIN LOGIN
+    // ----------------------------
+    suspend fun loginAdmin(
+        email: String,
+        password: String
+    ): Flow<ResultState<AdminLoginResponse>> = flow {
+        Log.d("PERF_TRACE", "Repository loginAdmin START [Thread: ${Thread.currentThread().name}]")
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.loginAdmin(email, password)
+            handleResponse("loginAdmin", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "loginAdmin exception: ${e.message}")
+        }
+        Log.d("PERF_TRACE", "Repository loginAdmin END [Thread: ${Thread.currentThread().name}]")
+    }
+
+    // ----------------------------
+    // VERIFY ADMIN OTP
+    // ----------------------------
+    suspend fun verifyAdminOtp(
+        adminId: String,
+        otp: String
+    ): Flow<ResultState<VerifyOtpResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.verifyAdminOtp(adminId, otp)
+            handleResponse("verifyAdminOtp", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "verifyAdminOtp exception: ${e.message}")
+        }
+    }
+
+    // ----------------------------
+    // PASSWORD RESET
+    // ----------------------------
+    suspend fun requestAdminPasswordReset(email: String): Flow<ResultState<PasswordResetResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.requestAdminPasswordReset(email)
+            handleResponse("requestAdminPasswordReset", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "requestAdminPasswordReset exception: ${e.message}")
+        }
+    }
+
+    suspend fun resetAdminPasswordWithOtp(
+        adminId: String,
+        otp: String,
+        newPassword: String
+    ): Flow<ResultState<PasswordResetOtpResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.resetAdminPasswordWithOtp(adminId, otp, newPassword)
+            handleResponse("resetAdminPasswordWithOtp", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "resetAdminPasswordWithOtp exception: ${e.message}")
+        }
+    }
+
+    // ----------------------------
+    // ADMIN MANAGEMENT
+    // ----------------------------
+    suspend fun getAllAdmins(): Flow<ResultState<GetAllAdminResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.getAllAdmins()
+            handleResponse("getAllAdmins", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "getAllAdmins exception: ${e.message}")
+        }
+    }
+
+    suspend fun updateAdmin(
+        adminId: String,
+        name: String? = null,
+        password: String? = null,
+        email: String? = null,
+        phoneNumber: String? = null,
+        role: String? = "admin"
+    ): Flow<ResultState<UpdateAdminResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.updateAdmin(adminId, name, password, email, phoneNumber, role)
+            handleResponse("updateAdmin", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "updateAdmin exception: ${e.message}")
+        }
+    }
+
+    suspend fun deleteAdmin(adminId: String): Flow<ResultState<DeleteAdminResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.deleteAdmin(adminId)
+            handleResponse("deleteAdmin", response, this)
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("AdminRepository", "deleteAdmin exception: ${e.message}")
+        }
+    }
+
+    // ----------------------------
+    // Helper Function
+    // ----------------------------
+    private suspend fun <T> handleResponse(
+        tag: String,
+        response: Response<T>,
+        emitter: kotlinx.coroutines.flow.FlowCollector<ResultState<T>>
+    ) {
+        if (response.isSuccessful && response.body() != null) {
+            emitter.emit(ResultState.Success(response.body()!!))
+            Log.d("AdminRepository", "$tag success: ${response.body()}")
+        } else {
+            val error = response.errorBody()?.string() ?: "Unknown error"
+            emitter.emit(ResultState.Error(Exception(error)))
+            Log.e("AdminRepository", "$tag error: $error")
+        }
+    }
+
+    suspend fun getSpecificUser(
+        userId: String
+    ): Flow<ResultState<GetSpecificUserResponse>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiServices.getSpecificUser(userId)
+            if (response.isSuccessful && response.body() != null) {
+                emit(ResultState.Success(response.body()!!))
+                Log.d("UserRepository", "getSpecificUser success: ${response.body()}")
+            } else {
+                val error = response.errorBody()?.string() ?: "Unknown error"
+                emit(ResultState.Error(Exception(error)))
+                Log.e("UserRepository", "getSpecificUser error: $error")
+            }
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
+            Log.e("UserRepository", "getSpecificUser exception: ${e.message}")
+        }
+    }
 
     suspend fun getAllUsers(): Flow<ResultState<GetAllUserResponse>> = flow {
         emit(ResultState.Loading)
         try {
-//            val response = ApiProvider.providerApiServices().getAllUser()
-            val response = apiServices.getAllUser()
+            val response = apiServices.getAllUsers()
             if (response.isSuccessful  && response.body() != null){
                 emit(ResultState.Success(response.body()!!))
                 Log.d("TAG", "getSpecificUser repository: ${ResultState.Success(response.body()!!)}")
@@ -50,11 +246,11 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
         }
     }
 
-    suspend fun updateUser(userId: String, name: String? = null, password : String?=null, isApproved: Boolean? = null, block : Boolean?=null, address : String?=null, email: String? = null, phonenumber: String? = null, pincode: String? = null): Flow<ResultState<UpdateUserResponse>> = flow {
+    suspend fun updateUser(userId: String, name: String? = null, password : String?=null, isApproved: Boolean? = null, block : Boolean?=null, address : String?=null, email: String? = null, phonenumber: String? = null, pincode: String? = null, role: String? = "user"): Flow<ResultState<UpdateUserResponse>> = flow {
         emit(ResultState.Loading)
         try {
             // get response from api
-            val response = apiServices.updateUser(userId, name, password, isApproved, block, address, email, phonenumber, pincode)
+            val response = apiServices.updateUser(userId, name, password, isApproved, block, address, email, phonenumber, pincode, role = role)
             if(response.isSuccessful && response.body() != null){
                 emit(ResultState.Success(response.body()!!))
                 Log.d("TAG", "updateUser: repository : ${ResultState.Success(response.body())}")
@@ -119,32 +315,41 @@ class Repository @Inject constructor(private val apiServices: ApiServices) {
         }
     }
 
-    suspend fun getAddProduct(name: String, price: Double, category: String, stock: Int):Flow<ResultState<GetAddProductResponse>> = flow{
+    suspend fun getAddProduct(name: String, price: Double, category: String, stock: Int, image: MultipartBody.Part? = null): Flow<ResultState<GetAddProductResponse>> = flow {
         emit(ResultState.Loading)
         try {
-            val response = apiServices.addProduct(name, price, category, stock)
+            val nameBody = name.toTextRequestBody()
+            val priceBody = price.toString().toTextRequestBody()
+            val categoryBody = category.toTextRequestBody()
+            val stockBody = stock.toString().toTextRequestBody()
+            val response = apiServices.addProduct(nameBody, priceBody, categoryBody, stockBody, image)
             if(response.isSuccessful && response.body() != null){
                 emit(ResultState.Success(response.body()!!))
                 Log.d("TAG", "getAddProduct: repository : ${ResultState.Success(response.body())}")
             }else{
                 emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getAddProduct: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+                Log.d("TAG", "getAddProduct: repository error : ${response.errorBody()?.string()}")
             }
         }
         catch (e: Exception){
             emit(ResultState.Error(e))
         }
     }
-    suspend fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null): Flow<ResultState<UpdateProductResponse>> = flow {
+    suspend fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null, image: MultipartBody.Part? = null): Flow<ResultState<UpdateProductResponse>> = flow {
         emit(ResultState.Loading)
         try {
-            val response = apiServices.updateProduct(productId, name, price, category, stock)
+            val productIdBody = productId.toTextRequestBody()
+            val nameBody = name?.toTextRequestBody()
+            val priceBody = price?.toString()?.toTextRequestBody()
+            val categoryBody = category?.toTextRequestBody()
+            val stockBody = stock?.toString()?.toTextRequestBody()
+            val response = apiServices.updateProduct(productIdBody, nameBody, priceBody, categoryBody, stockBody, image)
             if(response.isSuccessful && response.body() != null){
                 emit(ResultState.Success(response.body()!!))
                 Log.d("TAG", "updateProduct: repository : ${ResultState.Success(response.body())}")
             }else{
                 emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "updateProduct: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
+                Log.d("TAG", "updateProduct: repository error : ${response.errorBody()?.string()}")
             }
         }catch (e: Exception){
             emit(ResultState.Error(e))
