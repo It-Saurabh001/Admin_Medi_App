@@ -14,6 +14,8 @@ data class Order(
     val product_id: String,
     val product_name: String,
     val quantity: Int,
+    @SerializedName("sold")
+    val _sold: Any? = null,
     val total_amount: Double,
     val user_id: String,
     val user_name: String
@@ -22,6 +24,12 @@ data class Order(
         get() = when(_isApproved){
             is Boolean -> _isApproved as Boolean
             is Number -> (_isApproved as Number).toInt() == 1
+            else -> false
+        }
+        val sold: Boolean         // This is a custom getter to handle both Boolean and Number types of approval
+        get() = when(_sold){
+            is Boolean -> _sold as Boolean
+            is Number -> (_sold as Number).toInt() == 1
             else -> false
         }
 

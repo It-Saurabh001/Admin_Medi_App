@@ -32,12 +32,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
-import com.saurabh.mediadminapp.ui.screens.nav.HomeRoutes
-import com.saurabh.mediadminapp.ui.screens.nav.UpdateUserDetailsRoutes
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserSettingScreen(user_id : String, viewModel: MyViewModel,navController: NavController) {
+fun UserDetailsScreen(user_id : String, viewModel: MyViewModel,navController: NavController) {
     val usersState = viewModel.getAllUserState.collectAsState()
     val deleteState = viewModel.deleteUserState.collectAsState().value
     val context = LocalContext.current
@@ -54,8 +53,8 @@ fun UserSettingScreen(user_id : String, viewModel: MyViewModel,navController: Na
             viewModel.resetDeleteUserState()
 
             // Navigate first, then fetch updated data on the home screen
-            navController.navigate(HomeRoutes()) {
-                popUpTo(HomeRoutes()) { inclusive = true }
+            navController.navigate(Routes.HomeRoutes()) {
+                popUpTo(Routes.HomeRoutes()) { inclusive = true }
             }
         }
     }
@@ -218,7 +217,7 @@ fun SpecificUser(
                     }
                     Spacer(modifier = Modifier.height(25.dp))
                     Button(
-                        onClick = {navController.navigate(UpdateUserDetailsRoutes.invoke(user.user_id))},
+                        onClick = {navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.user_id))},
                         enabled = !isDeleting
                     ) {
                         Text(text = "Update Details")

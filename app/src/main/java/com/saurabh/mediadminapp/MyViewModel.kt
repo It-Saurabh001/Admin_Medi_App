@@ -4,14 +4,16 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saurabh.mediadminapp.common.ResultState
-import com.saurabh.mediadminapp.network.response.GetSellHistoryResponse
-import com.saurabh.mediadminapp.network.response.UserItem
+import com.saurabh.mediadminapp.network.TokenManager
 import com.saurabh.mediadminapp.repository.Repository
 import com.saurabh.mediadminapp.utils.ScreensState.AddProductState
+import com.saurabh.mediadminapp.utils.ScreensState.AdminState
 import com.saurabh.mediadminapp.utils.ScreensState.ApproveOrderState
+import com.saurabh.mediadminapp.utils.ScreensState.CreateAdminState
 import com.saurabh.mediadminapp.utils.ScreensState.DeleteOrderState
 import com.saurabh.mediadminapp.utils.ScreensState.DeleteProductState
 import com.saurabh.mediadminapp.utils.ScreensState.DeleteUserState
+import com.saurabh.mediadminapp.utils.ScreensState.GetAllAdminState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllOrdersState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllProductState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllUserState
@@ -23,23 +25,56 @@ import com.saurabh.mediadminapp.utils.ScreensState.GetSpecificProductState
 import com.saurabh.mediadminapp.utils.ScreensState.GetUserSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.GetUsersOrderState
 import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
+import com.saurabh.mediadminapp.utils.ScreensState.LoginAdminState
+import com.saurabh.mediadminapp.utils.ScreensState.PasswordResetOtpState
+import com.saurabh.mediadminapp.utils.ScreensState.PasswordResetState
 import com.saurabh.mediadminapp.utils.ScreensState.RecordSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateOrderState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateProductState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateUserState
+import com.saurabh.mediadminapp.utils.ScreensState.VerifyOtpState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.serialization.builtins.MapSerializer
-import kotlin.apply
+import okhttp3.MultipartBody
+import javax.inject.Inject
 
 @HiltViewModel
-class MyViewModel @Inject constructor(private val repository: Repository) : ViewModel (){
+class MyViewModel @Inject constructor(
+    private val repository: Repository,
+    private val tokenManager: TokenManager) : ViewModel (){
 //    private val repository = Repository()
+    private val _isAdminLoggedIn = MutableStateFlow(false)
+    val isAdminLoggedIn = _isAdminLoggedIn.asStateFlow()
+
+    private val _loggedInAdminId = MutableStateFlow<String?>(null)
+    val loggedInAdminId = _loggedInAdminId.asStateFlow()
+    // ===========================
+    // 1. AUTHENTICATION STATES
+    // ===========================
+    private val _createAdminState = MutableStateFlow(CreateAdminState())
+    val createAdminState = _createAdminState.asStateFlow()
+
+    private val _loginAdminState = MutableStateFlow(LoginAdminState())
+    val loginAdminState = _loginAdminState.asStateFlow()
+    private val _getAllAdminState = MutableStateFlow(GetAllAdminState())
+    val getAllAdminState = _getAllAdminState.asStateFlow()
+
+    private val _specificAdminState = MutableStateFlow(AdminState())
+    val specificAdminState = _specificAdminState.asStateFlow()
+
+    private val _verifyOtpState = MutableStateFlow(VerifyOtpState())
+    val verifyOtpState = _verifyOtpState.asStateFlow()
+
+    private val _passwordResetOtpState = MutableStateFlow(PasswordResetOtpState())
+    val passwordResetOtpState = _passwordResetOtpState.asStateFlow()
+
+    private val _passwordResetState = MutableStateFlow(PasswordResetState())
+    val passwordResetState = _passwordResetState.asStateFlow()
+
 
     private var _getAllUserState = MutableStateFlow(GetAllUserState())
     val getAllUserState = _getAllUserState.asStateFlow()
@@ -99,6 +134,169 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
 
     private var _getOrderByIdState = MutableStateFlow(GetOrderByIdState())
     val getOrderByIdState = _getOrderByIdState.asStateFlow()
+
+
+    init {
+        Log.d("PERF_TRACE", "MyViewModel init START [Thread: ${Thread.currentThread().name}]")
+        checkLoginStatus()
+        Log.d("PERF_TRACE", "MyViewModel init END [Thread: ${Thread.currentThread().name}]")
+    }
+    fun checkLoginStatus(){
+        Log.d("PERF_TRACE", "checkLoginStatus START [Thread: ${Thread.currentThread().name}]")
+        viewModelScope.launch (Dispatchers.IO){
+            _isAdminLoggedIn.value = tokenManager.isLoggedIn()
+            _loggedInAdminId.value = tokenManager.getAdminId()
+            Log.d("TAG", "checkLoginStatus: admin logged in status: ${_isAdminLoggedIn.value}")
+            Log.d("PERF_TRACE", "checkLoginStatus END [Thread: ${Thread.currentThread().name}]")
+        }
+    }
+    fun setAdminLoggedIn() {
+        _isAdminLoggedIn.value = true
+        _loggedInAdminId.value = tokenManager.getAdminId()
+        Log.d("TAG", "setAdminLoggedIn: Admin logged in, tokens saved")
+    }
+
+    fun setAdminLoggedOut() {
+        tokenManager.clearTokens()
+        _isAdminLoggedIn.value = false
+        _loggedInAdminId.value = null
+        Log.d("TAG", "setAdminLoggedIn: Admin logged out, tokens cleared")
+    }
+
+    fun createAdmin(name: String, email: String, password: String, phoneNumber: String) {
+        if (_createAdminState.value.success != null && !_createAdminState.value.isLoading && _createAdminState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _createAdminState.value = CreateAdminState(isLoading = true)
+            repository.createAdmin(name, password, email,phoneNumber).collect { result ->
+                when (result) {
+                    is ResultState.Loading -> {
+                        _createAdminState.value = CreateAdminState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _createAdminState.value = CreateAdminState(error = result.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _createAdminState.value = CreateAdminState(success = result.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun loginAdmin(email: String, password: String) {
+        Log.d("PERF_TRACE", "MyViewModel loginAdmin START [Thread: ${Thread.currentThread().name}]")
+        if (_loginAdminState.value.success != null && !_loginAdminState.value.isLoading && _loginAdminState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _loginAdminState.value = LoginAdminState(isLoading = true)
+            repository.loginAdmin(email, password).collect { result ->
+                when (result) {
+                    is ResultState.Loading -> {
+                        _loginAdminState.value = LoginAdminState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _loginAdminState.value = LoginAdminState(error = result.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _loginAdminState.value = LoginAdminState(success = result.data, isLoading = false)
+                    }
+                }
+            }
+            Log.d("PERF_TRACE", "MyViewModel loginAdmin END [Thread: ${Thread.currentThread().name}]")
+        }
+    }
+    fun verifyAdminOtp(adminId: String, otp: String) {
+        if (_verifyOtpState.value.success != null && !_verifyOtpState.value.isLoading && _verifyOtpState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.verifyAdminOtp(adminId, otp).collect { result ->
+                when (result) {
+                    is ResultState.Loading -> {
+                        _verifyOtpState.value = VerifyOtpState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        Log.e("TAG", "verifyAdminOtp: Network/parse error: ${result.exception.message}")
+                        _verifyOtpState.value = VerifyOtpState(error = result.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        val data = result.data
+                        Log.d("TAG", "verifyAdminOtp: HTTP 200 received. Business status=${data.status}, message=${data.message}")
+
+                        if (data.status == 200 && data.access_token != null) {
+                            // Genuine OTP success — save tokens and mark logged in
+                            tokenManager.saveTokens(
+                                accessToken = data.access_token,
+                                refreshToken = data.refresh_token ?: "",
+                                role = data.role ?: "",
+                                adminId = adminId
+                            )
+                            setAdminLoggedIn()
+                            Log.d("TAG", "verifyAdminOtp: OTP verified. Tokens saved. Admin logged in.")
+                            _verifyOtpState.value = VerifyOtpState(success = data, isLoading = false)
+                        } else {
+                            // Business-level failure (e.g. 400 No OTP request found)
+                            val errMsg = data.message ?: "OTP verification failed"
+                            Log.e("TAG", "verifyAdminOtp: Business error: $errMsg (status=${data.status})")
+                            _verifyOtpState.value = VerifyOtpState(error = errMsg, isLoading = false)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // New: Request Password Reset
+    fun requestPasswordReset(email: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.requestAdminPasswordReset(email).collect { result ->
+                when (result) {
+                    is ResultState.Loading -> _passwordResetState.value = PasswordResetState(isLoading = true)
+                    is ResultState.Error -> _passwordResetState.value = PasswordResetState(error = result.exception.message)
+                    is ResultState.Success -> _passwordResetState.value = PasswordResetState(success = result.data)
+                }
+            }
+        }
+    }
+
+    fun resetPasswordOtp(userId: String, otp: String,newPassword: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.resetAdminPasswordWithOtp(userId,otp,newPassword).collect { result ->
+                when (result) {
+                    is ResultState.Loading -> _passwordResetOtpState.value = PasswordResetOtpState(isLoading = true)
+                    is ResultState.Error -> _passwordResetOtpState.value = PasswordResetOtpState(error = result.exception.message)
+                    is ResultState.Success -> _passwordResetOtpState.value = PasswordResetOtpState(success = result.data)
+                }
+            }
+        }
+    }
+
+    fun getAllAdmin(){
+        if (_getAllAdminState.value.success != null && !_getAllAdminState.value.isLoading && _getAllAdminState.value.error == null) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            _getAllAdminState.value = GetAllAdminState(isLoading = true)
+            repository.getAllAdmins().collect { result ->
+                when (result) {
+                    is ResultState.Loading -> {
+                        _getAllAdminState.value = GetAllAdminState(isLoading = true)
+                    }
+                    is ResultState.Error -> {
+                        _getAllAdminState.value = GetAllAdminState(error = result.exception.message)
+                    }
+                    is ResultState.Success -> {
+                        _getAllAdminState.value = GetAllAdminState(success = result.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    // ===========================
+    // History FUNCTIONS
+    // ===========================
+
+
 
     fun getAllSellHistory() {
         if (_getSellHistory.value.success != null && !_getSellHistory.value.isLoading && _getSellHistory.value.error == null) return
@@ -287,12 +485,12 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
         }
     }
 
-    fun addProduct(name: String, price: Double, category: String, stock: Int){
+    fun addProduct(name: String, price: Double, category: String, stock: Int, image: MultipartBody.Part? = null){
         if(_addProductState.value.success != null && !_addProductState.value.isLoading && _addProductState.value.error == null ) return
 
         viewModelScope.launch(Dispatchers.IO) {
             _addProductState.value = AddProductState(isLoading = true)
-            repository.getAddProduct(name, price, category, stock).collect {
+            repository.getAddProduct(name, price, category, stock, image).collect {
                 when(it){
                     is ResultState.Loading ->{
                         _addProductState.value = AddProductState(isLoading = true)
@@ -308,12 +506,12 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
             }
         }
     }
-    fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null){
+    fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null, image: MultipartBody.Part? = null){
         if(_updateProductState.value.success != null && !_updateProductState.value.isLoading && _updateProductState.value.error == null ) return
 
         viewModelScope.launch(Dispatchers.IO) {
             _updateProductState.value = UpdateProductState(isLoading = true)
-            repository.updateProduct(productId,name, price, category, stock).collect {
+            repository.updateProduct(productId, name, price, category, stock, image).collect {
                 when(it){
                     is ResultState.Loading ->{
                         _updateProductState.value = UpdateProductState(isLoading = true)
@@ -559,6 +757,14 @@ class MyViewModel @Inject constructor(private val repository: Repository) : View
 
     fun clearGetAllOrdersState(){
         _getAllOrderState.value = GetAllOrdersState()  // reset the state to initial
+    }
+
+    fun clearLoginState(){
+        _loginAdminState.value = LoginAdminState()
+    }
+
+    fun clearVerifyOtpState(){
+        _verifyOtpState.value = VerifyOtpState()
     }
 
 

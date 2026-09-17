@@ -58,13 +58,6 @@ import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
 import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
 import java.time.LocalDate
 
-@Preview(showBackground = true)
-@Composable
-fun test(modifier: Modifier = Modifier) {
-    var users by remember { mutableStateOf(mockUsers) }
-
-    
-}
 
 
 @Composable
@@ -172,9 +165,9 @@ fun EachUserCard(userItem: UserItem, userApprovalState : State<Map<String , IsAp
                 .padding(top = 5.dp, end = 5.dp),
                 horizontalAlignment = AbsoluteAlignment.Right,
                 verticalArrangement = Arrangement.Top) {
-                IconButton(onClick = {navController.navigate(UserSettingsRoutes.invoke(userItem.user_id))}   // navigation just call the class defined in the routes
+                IconButton(onClick = {navController.navigate(Routes.UserDetailsRoutes.invoke(userItem.user_id))}   // navigation just call the class defined in the routes
                 ) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "User Setting")
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "User Details")
                 }
             }
         }
@@ -188,7 +181,7 @@ fun EachProductCard(productItem: ProductItem, navController: NavController) {
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp) // clickable mera view se replace ho jayega
-        .clickable(onClick = { navController.navigate(SpecificProductRoutes.invoke(productItem.Product_id)) }),
+        .clickable(onClick = { navController.navigate(Routes.SpecificProductRoutes.invoke(productItem.Product_id)) }),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)){
         Row (modifier = Modifier.fillMaxWidth()){
             Column (modifier = Modifier.fillMaxWidth(0.5f)){
@@ -220,7 +213,7 @@ fun EachOrderCard(order: Order, navController: NavController) {
     ElevatedCard (modifier = Modifier
         .fillMaxWidth()
         .padding(vertical = 4.dp)
-        .clickable(onClick = { navController.navigate(EachUserOrderRoutes.invoke(order.user_id)) }),
+        .clickable(onClick = { navController.navigate(Routes.EachUserOrderRoutes.invoke(order.user_id)) }),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)){
         Row (modifier = Modifier.fillMaxWidth()){
             Column (modifier = Modifier.fillMaxWidth(0.5f)){

@@ -19,11 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.ui.screens.nav.ProductRoutes
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun getTopBarForRoute(route: String?, navController: NavController, viewModel: MyViewModel) : @Composable () -> Unit {
+fun getTopBarForRoute(route: String?, navController: NavController, viewModel: MyViewModel, onMenuClick: () -> Unit) : @Composable () -> Unit {
 
     return when{
         route?.contains("HomeRoutes") == true ->{
@@ -36,8 +36,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         modifier = Modifier.padding(vertical = 9.dp)
                     )},
                         actions = {
-                            IconButton(onClick = {}) {
-                                Icon(imageVector = Icons.Default.Menu, contentDescription = "Admin Setting")
+                            IconButton(onClick = onMenuClick) {
+                                Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
                             }
                         }
                     )
@@ -65,10 +65,10 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         )
                     },
                     actions = {
-                        IconButton(onClick = {}) {
+                        IconButton(onClick = onMenuClick) {
                             Icon(
                                 imageVector = Icons.Default.Menu,
-                                contentDescription = "Product Setting"
+                                contentDescription = "Open Drawer"
                             )
                         }
                     })
@@ -91,8 +91,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         modifier = Modifier.padding(vertical = 16.dp)
                     )},
                         actions = {
-                            IconButton(onClick = {}) {
-                                Icon(imageVector = Icons.Default.Menu, contentDescription = "History Setting")
+                            IconButton(onClick = onMenuClick) {
+                                Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
                             }
                         })
                     HorizontalDivider(
@@ -115,8 +115,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         modifier = Modifier.padding(vertical = 16.dp)
                     )},
                         actions = {
-                            IconButton(onClick = {}) {
-                                Icon(imageVector = Icons.Default.Menu, contentDescription = "Order Setting")
+                            IconButton(onClick = onMenuClick) {
+                                Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
                             }
                         })
                     HorizontalDivider(
@@ -207,8 +207,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                             )
                         },
                         navigationIcon = {
-                            IconButton(onClick = { navController.navigate(ProductRoutes()){
-                                popUpTo(ProductRoutes()){inclusive = true}    // on click back button navigate to product screen and cleat back stack entry
+                            IconButton(onClick = { navController.navigate(Routes.ProductRoutes()){
+                                popUpTo(Routes.ProductRoutes()){inclusive = true}    // on click back button navigate to product screen and cleat back stack entry
                             } }) {
                                 Icon(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -322,6 +322,10 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
             }
         }
 
+
+        route?.contains("ProfileRoutes") == true -> {
+            {}
+        }
 
         else -> {{
             TopAppBar(

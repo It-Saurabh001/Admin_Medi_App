@@ -29,21 +29,14 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -61,10 +54,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -72,53 +63,43 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
-import com.saurabh.mediadminapp.ui.screens.nav.EachUserOrderRoutes
-import com.saurabh.mediadminapp.ui.screens.nav.FilterButton
-import com.saurabh.mediadminapp.ui.screens.nav.FilterOption1
-import com.saurabh.mediadminapp.ui.screens.nav.FilterStatus
-import com.saurabh.mediadminapp.ui.screens.nav.StatsCard
-import com.saurabh.mediadminapp.ui.screens.nav.UserSettingsRoutes
-import com.saurabh.mediadminapp.ui.screens.nav.mockUsers
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
-import java.text.NumberFormat
 import java.time.LocalDate
-import java.util.Locale
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun HomeScreen(viewModel: MyViewModel,navController: NavController){
-    val state = viewModel.getAllUserState.collectAsState()
+fun HomeScreen(viewModel: MyViewModel, navController: NavController) {
+    val state by viewModel.getAllUserState.collectAsState()
     val isApproved = viewModel.isApprovedUser.collectAsState()
 
     LaunchedEffect(key1 = Unit) {
         viewModel.getAllUsers()
     }
-    Scaffold{innerpadding->
+    Scaffold { innerpadding ->
         when {
-            state.value.isLoading ->{
-                    LoadingScreen(modifier = Modifier)
+            state.isLoading -> {
+                LoadingScreen(modifier = Modifier)
             }
-            state.value.error != null->{
-                Log.d("TAG", "HomeScreen:  error :-> ${state.value.error}")
-                ErrorScreen(errorMessage = state.value.error.toString(),modifier = Modifier.padding(innerpadding))
+            state.error != null -> {
+                Log.d("TAG", "HomeScreen:  error :-> ${state.error}")
+                ErrorScreen(errorMessage = state.error.toString(), modifier = Modifier.padding(innerpadding))
             }
-            state.value.success != null ->{
-
+            state.success != null -> {
                 UserListScreen(
-                    users = state.value.success!!.users,
+                    users = state.success!!.users,
                     userApprovalState = isApproved,
                     onApprovalToggle = viewModel::isApprovedUser,
                     modifier = Modifier.background(Color(0xFFffffff)),
-                    navController= navController
-                )//
+                    navController = navController
+                )
             }
         }
     }
@@ -137,38 +118,43 @@ fun UserListScreen(
     var searchTerm by remember { mutableStateOf("") }
     var filterStatus by remember { mutableStateOf(FilterStatus.ALL) }
 
-    // Filter users based on search term and filter status
-    val filteredUsers = users.filter { user ->
-        val matchesSearch = user.name.lowercase().contains(searchTerm.lowercase()) ||
-                user.email.lowercase().contains(searchTerm.lowercase()) ||
-                user.user_id.lowercase().contains(searchTerm.lowercase())
+    // Filter users — wrapped in remember() so it only recomputes when inputs change,
+    // not on every recomposition (e.g. drawer open/close, pager scroll).
+    val filteredUsers = remember(users, searchTerm, filterStatus) {
+        users.filter { user ->
+            val matchesSearch = user.name.lowercase().contains(searchTerm.lowercase()) ||
+                    user.email.lowercase().contains(searchTerm.lowercase()) ||
+                    user.user_id.lowercase().contains(searchTerm.lowercase())
 
-        val matchesFilter = when (filterStatus) {
-            FilterStatus.ALL -> true
-            FilterStatus.APPROVED -> user.isApproved && !user.block
-            FilterStatus.PENDING -> !user.isApproved
-            FilterStatus.BLOCKED -> user.block
+            val matchesFilter = when (filterStatus) {
+                FilterStatus.ALL -> true
+                FilterStatus.APPROVED -> user.isApproved && !user.block
+                FilterStatus.PENDING -> !user.isApproved
+                FilterStatus.BLOCKED -> user.block
+            }
+
+            matchesSearch && matchesFilter
         }
-
-        matchesSearch && matchesFilter
     }
-    // Calculate stats
-    val stats = mapOf(
-                "total" to users.size,
-                "approved" to users.count { it.isApproved && !it.block },
-                "pending" to users.count { !it.isApproved },
-                "blocked" to users.count { it.block }
-            )
-
-
-
-    // Medical gradient colors
-    val medicalGradient = Brush.horizontalGradient(
-        colors = listOf(
-            Color(0xFF4F46E5), // Indigo
-            Color(0xFF06B6D4)  // Cyan
+    // Calculate stats — only recompute when user list changes
+    val stats = remember(users) {
+        mapOf(
+            "total" to users.size,
+            "approved" to users.count { it.isApproved && !it.block },
+            "pending" to users.count { !it.isApproved },
+            "blocked" to users.count { it.block }
         )
-    )
+    }
+
+    // Medical gradient — wrapped in remember{} so no new Brush object on every recomposition
+    val medicalGradient = remember {
+        Brush.horizontalGradient(
+            colors = listOf(
+                Color(0xFF4F46E5), // Indigo
+                Color(0xFF06B6D4)  // Cyan
+            )
+        )
+    }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(5.dp),
@@ -240,10 +226,10 @@ fun UserListScreen(
 
                 // Filter Buttons
                 val filterOptions = listOf(
-                    FilterOption1(FilterStatus.ALL, "All Users", Icons.AutoMirrored.Filled.List),
-                    FilterOption1(FilterStatus.APPROVED, "Approved", Icons.Default.CheckCircle),
-                    FilterOption1(FilterStatus.PENDING, "Pending", Icons.AutoMirrored.Filled.List),
-                    FilterOption1(FilterStatus.BLOCKED, "Blocked", Icons.Default.Add)
+                    FilterOption(FilterStatus.ALL, "All Users", Icons.AutoMirrored.Filled.List),
+                    FilterOption(FilterStatus.APPROVED, "Approved", Icons.Default.CheckCircle),
+                    FilterOption(FilterStatus.PENDING, "Pending", Icons.AutoMirrored.Filled.List),
+                    FilterOption(FilterStatus.BLOCKED, "Blocked", Icons.Default.Add)
                 )
 
                 LazyRow(
@@ -252,7 +238,7 @@ fun UserListScreen(
                 ) {
                     items(filterOptions) { filter ->
                         FilterButton(
-                            filterOption = filter,
+                            option = filter,
                             isSelected = filterStatus == filter.key,
                             onClick = { filterStatus = filter.key },
                             medicalGradient = medicalGradient
@@ -385,22 +371,40 @@ fun EachUserCard1(
 
             // User details
             Text(
-                text = userItem.email,
+                text = userItem.email ?: "No Email",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
-                text = userItem.phone_number,
+                text = userItem.phone_number ?: "No Phone",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            val addressText = remember(userItem.address, userItem.pin_code) {
+                val addr = userItem.address ?: ""
+                val pin = userItem.pin_code ?: ""
+                if (addr.isNotEmpty() && pin.isNotEmpty()) "$addr, $pin"
+                else addr.ifEmpty { pin }.ifEmpty { "No Address" }
+            }
             Text(
-                text = "${userItem.address}, ${userItem.pin_code}",
+                text = addressText,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            val createdDate = remember(userItem.date_of_account_creation) {
+                try {
+                    val date = userItem.date_of_account_creation
+                    if (!date.isNullOrEmpty()) {
+                        LocalDate.parse(date.take(10)).toString()
+                    } else {
+                        "N/A"
+                    }
+                } catch (e: Exception) {
+                    userItem.date_of_account_creation ?: "N/A"
+                }
+            }
             Text(
-                text = "Created: "+LocalDate.parse(userItem.date_of_account_creation).toString(),
+                text = "Created: $createdDate",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -411,7 +415,7 @@ fun EachUserCard1(
             ){
 
                 OutlinedButton(
-                    onClick = { navController.navigate(UserSettingsRoutes.invoke(userItem.user_id))},
+                    onClick = { navController.navigate(Routes.UserDetailsRoutes.invoke(userItem.user_id))},
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFF4F46E5)

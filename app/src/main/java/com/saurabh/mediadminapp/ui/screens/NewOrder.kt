@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Done
@@ -49,16 +50,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.ui.screens.nav.EachUserOrderRoutes
-import com.saurabh.mediadminapp.ui.screens.nav.mockOrders
+import com.saurabh.mediadminapp.network.response.Order
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import java.text.NumberFormat
 import java.util.Locale
+import kotlin.collections.filter
 
 @Composable
 fun OrderDetailsScreen1(viewModel: MyViewModel, navController: NavController){
@@ -108,44 +108,44 @@ fun OrderDetailsScreen1(viewModel: MyViewModel, navController: NavController){
 
                 ) {
 
-                    EnhancedOrdersListScreen(
-                        mockOrders,
-                        navController,
-                    )
+//                    EnhancedOrdersListScreen(
+//                        viewModel.getAllOrderState.collectAsState().value.success!!.orders,
+//                        navController,
+//                    )
                 }
             }
         }
     }
 }
+//
+//@Preview
+//@Composable
+//private fun previews() {
+//    val navController = rememberNavController()
+//    EnhancedOrdersListScreen(
+//        orders = mockOrders,
+//        navController = navController // Replace with actual NavController in real use
+//    )
+//
+//}
+////
 
-@Preview
 @Composable
-private fun previews() {
-    val navController = rememberNavController()
-    EnhancedOrdersListScreen(
-        orders = mockOrders,
-        navController = navController // Replace with actual NavController in real use
-    )
-
-}
-
-
-@Composable
-fun EnhancedOrdersListScreen(orders: List<com.saurabh.mediadminapp.ui.screens.nav.Order>, navController: NavController) {
+fun EnhancedOrdersListScreen(orders: List<Order>, navController: NavController) {
     var searchTerm by remember { mutableStateOf("") }
-    var filterStatus by remember { mutableStateOf("all") }
+    var filterStatus: FilterStatus by remember { mutableStateOf(FilterStatus.ALL) }
 
     // Filter orders based on search and status
     val filteredOrders = remember(orders, searchTerm, filterStatus) {
         orders.filter { order ->
-            val matchesSearch = order.productName.contains(searchTerm, ignoreCase = true) ||
-                    order.userName.contains(searchTerm, ignoreCase = true) ||
-                    order.orderId.contains(searchTerm, ignoreCase = true)
+            val matchesSearch = order.product_name.contains(searchTerm, ignoreCase = true) ||
+                    order.user_id.contains(searchTerm, ignoreCase = true) ||
+                    order.order_id.contains(searchTerm, ignoreCase = true)
 
             val matchesFilter = when (filterStatus) {
-                "all" -> true
-                "pending" -> !order.isApproved
-                "approved" -> order.isApproved
+                FilterStatus.ALL -> true
+                FilterStatus.PENDING-> !order.isApproved
+                FilterStatus.APPROVED -> order.isApproved
                 else -> true
             }
 
@@ -159,7 +159,7 @@ fun EnhancedOrdersListScreen(orders: List<com.saurabh.mediadminapp.ui.screens.na
             "total" to orders.size,
             "pending" to orders.count { !it.isApproved },
             "approved" to orders.count { it.isApproved },
-            "totalValue" to orders.sumOf { it.totalAmount }
+            "totalValue" to orders.sumOf { it.total_amount }
         )
     }
 
@@ -239,9 +239,9 @@ fun EnhancedOrdersListScreen(orders: List<com.saurabh.mediadminapp.ui.screens.na
         // Status Filter
         item {
             val filterOptions = listOf(
-                FilterOption("all", "All Orders", Icons.Default.List),
-                FilterOption("pending", "Pending", Icons.Default.CheckCircle),
-                FilterOption("approved", "Approved", Icons.Default.CheckCircle)
+                FilterOption(FilterStatus.ALL, "All Users", Icons.AutoMirrored.Filled.List),
+                FilterOption(FilterStatus.APPROVED, "Approved", Icons.Default.CheckCircle),
+                FilterOption(FilterStatus.PENDING, "Pending", Icons.AutoMirrored.Filled.List)
             )
 
             LazyRow(
@@ -286,7 +286,7 @@ fun EnhancedOrdersListScreen(orders: List<com.saurabh.mediadminapp.ui.screens.na
 }
 
 @Composable
-private fun StatsCard(
+fun StatsCard(
     modifier: Modifier = Modifier,
     value: String,
     label: String,
@@ -324,7 +324,7 @@ private fun StatsCard(
 
 // Filter data class
 data class FilterOption(
-    val key: String,
+    val key: FilterStatus,
     val label: String,
     val icon: ImageVector
 )
@@ -391,7 +391,7 @@ fun FilterButton(
 
 @Composable
 fun EnhancedOrderCard(
-    order: com.saurabh.mediadminapp.ui.screens.nav.Order,
+    order: Order,
     navController: NavController
 ) {
     Card(
@@ -413,7 +413,7 @@ fun EnhancedOrderCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = order.orderId,
+                    text = order.order_id,
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp
                 )
@@ -434,13 +434,13 @@ fun EnhancedOrderCard(
 
             // Product Info
             Text(
-                text = order.productName,
+                text = order.product_name,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
 
             Text(
-                text = "By: ${order.userName}",
+                text = "By: ${order.user_name}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -451,12 +451,12 @@ fun EnhancedOrderCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "User ID: ${order.userId}",
+                    text = "User ID: ${order.user_id}",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Product ID: ${order.productId}",
+                    text = "Product ID: ${order.product_id}",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -473,7 +473,7 @@ fun EnhancedOrderCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "₹${NumberFormat.getInstance(Locale("en", "IN")).format(order.totalAmount)}",
+                    text = "₹${NumberFormat.getInstance(Locale("en", "IN")).format(order.total_amount)}",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -482,7 +482,7 @@ fun EnhancedOrderCard(
 
             // Date
             Text(
-                text = "Ordered: ${order.dateOfOrderCreation}",
+                text = "Ordered: ${order.date_of_order_creation}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -508,7 +508,7 @@ fun EnhancedOrderCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { navController.navigate(EachUserOrderRoutes.invoke(order.userId)) },
+                    onClick = { navController.navigate(Routes.EachUserOrderRoutes.invoke(order.user_id)) },
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
