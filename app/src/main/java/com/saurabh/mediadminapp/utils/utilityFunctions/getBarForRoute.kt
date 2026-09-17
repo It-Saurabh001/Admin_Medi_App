@@ -23,7 +23,7 @@ import com.saurabh.mediadminapp.ui.screens.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun getTopBarForRoute(route: String?, navController: NavController, viewModel: MyViewModel, onMenuClick: () -> Unit) : @Composable () -> Unit {
+fun getTopBarForRoute(route: String?, navController: NavController, viewModel: MyViewModel, onMenuClick: () -> Unit) : (@Composable () -> Unit)? {
 
     return when{
         route?.contains("HomeRoutes") == true ->{
@@ -323,21 +323,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
 
 
-        route?.contains("ProfileRoutes") == true -> {
-            {}
-        }
-
-        else -> {{
-            TopAppBar(
-                title = {
-                    Text(
-                        text = "App",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 16.dp)
-                    )
-                }
-            )
-        }}
+        // Profile, Settings, About, and unknown routes → no top bar (null)
+        else -> null
     }
 }

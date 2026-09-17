@@ -95,7 +95,7 @@ sealed class Routes{
 class SpecificProductRoutes(val productId: String){
     companion object {
         const val route = "specificProductRoutes/{productId}"
-        operator fun invoke(productId: String) = "SpecificProductRoutes/$productId"
+        operator fun invoke(productId: String) = "specificProductRoutes/$productId"
     }
 }
 @Serializable

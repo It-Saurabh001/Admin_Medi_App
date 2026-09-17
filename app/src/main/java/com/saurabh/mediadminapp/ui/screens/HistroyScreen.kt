@@ -48,6 +48,7 @@ import com.saurabh.mediadminapp.ui.screens.components.SalesCard
 import com.saurabh.mediadminapp.ui.screens.components.SalesFilter
 import com.saurabh.mediadminapp.utils.cardColors
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -99,7 +100,7 @@ fun aggregateSalesPerDay(data: List<SellHistory>, filter: SalesFilter): List<Pai
                 .map { (month, sales) ->
                     month.format(monthFormatter) to sales.sumOf { it.total_amount }
                 }
-                .sortedBy { LocalDate.parse("${it.first}",monthFormatter) } // ascending order of month
+                .sortedBy { YearMonth.parse(it.first, monthFormatter) } // ascending order of month
         }
         SalesFilter.Year -> {
             data.groupBy {
