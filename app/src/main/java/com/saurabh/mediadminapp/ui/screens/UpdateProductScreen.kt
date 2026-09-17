@@ -7,13 +7,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,9 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -40,28 +38,31 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.ui.screens.components.ClayOutlinedButton
+import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
+import com.saurabh.mediadminapp.ui.screens.components.ClayTextField
+import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
-import kotlinx.coroutines.flow.collectLatest
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun UpdateProductScreen(productId : String, viewModel: MyViewModel, navController: NavController,modifier: Modifier = Modifier) {
+fun UpdateProductScreen(productId: String, viewModel: MyViewModel, navController: NavController, modifier: Modifier = Modifier) {
     val response = viewModel.updateProductState.collectAsState()
     val productState by viewModel.getSpecificProductState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // Fetch product details on first composition
     LaunchedEffect(productId) {
         viewModel.getSpecificProduct(productId)
     }
 
-    // Local state for form fields, prefilled from productState
     var name by remember { mutableStateOf("") }
     var price by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("") }
@@ -75,7 +76,6 @@ fun UpdateProductScreen(productId : String, viewModel: MyViewModel, navControlle
         newImageUri = uri
     }
 
-    // Prefill fields when product is loaded
     LaunchedEffect(productState.success) {
         productState.success?.product?.let { product ->
             if (!isInitialized) {
@@ -93,9 +93,8 @@ fun UpdateProductScreen(productId : String, viewModel: MyViewModel, navControlle
             Toast.makeText(context, it.message, Toast.LENGTH_LONG).show()
             viewModel.clearUpdateProductState()
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_screen", true)
-            navController.popBackStack() // Go back after update
+            navController.popBackStack()
             snackbarHostState.showSnackbar("Product updated successfully!")
-
         }
     }
     LaunchedEffect(response.value.error) {
@@ -109,13 +108,21 @@ fun UpdateProductScreen(productId : String, viewModel: MyViewModel, navControlle
             Column(
                 modifier = modifier
                     .padding(innerPadding)
-                    .padding(16.dp)
+                    .padding(horizontal = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.Top
             ) {
-                Text(text = "Update Product", modifier = Modifier.padding(bottom = 16.dp))
-                HorizontalDivider(modifier = Modifier.padding(bottom = 16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Update Product",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ClayTextPrimary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                HorizontalDivider(modifier = Modifier.padding(bottom = 24.dp))
+                
                 if (productState.isLoading) {
                     Text("Loading product details...")
                 } else if (productState.error != null) {
@@ -134,53 +141,51 @@ fun UpdateProductScreen(productId : String, viewModel: MyViewModel, navControlle
                                 contentDescription = "Product Image",
                                 modifier = Modifier
                                     .size(150.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .border(2.dp, Color(0xFFD0C8FF), RoundedCornerShape(16.dp)),
                                 contentScale = ContentScale.Crop
                             )
                         }
                     }
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Button(onClick = {
+                    ClayOutlinedButton(
+                        text = if (newImageUri == null && currentImageUrl.isNullOrEmpty()) "Select Product Image" else "Change Image",
+                        onClick = {
                             launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }) {
-                            Text(if (newImageUri == null && currentImageUrl.isNullOrEmpty()) "Select Product Image" else "Change Image")
-                        }
-                    }
+                        },
+                        leadingIcon = Icons.Default.AddCircle,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                    // Editable fields using TextField
-                    OutlinedTextField(
+                    Spacer(modifier = Modifier.height(24.dp))
+                    ClayTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Name") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    )
-                    OutlinedTextField(
-                        value = price,
-                        onValueChange = { price = it },
-                        label = { Text("Price") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    )
-                    OutlinedTextField(
-                        value = category,
-                        onValueChange = { category = it },
-                        label = { Text("Category") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    )
-                    OutlinedTextField(
-                        value = stock,
-                        onValueChange = { stock = it },
-                        label = { Text("Stock") },
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                        label = "Name"
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Button(
+                    ClayTextField(
+                        value = price,
+                        onValueChange = { price = it },
+                        label = "Price"
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ClayTextField(
+                        value = category,
+                        onValueChange = { category = it },
+                        label = "Category"
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ClayTextField(
+                        value = stock,
+                        onValueChange = { stock = it },
+                        label = "Stock"
+                    )
+                    Spacer(modifier = Modifier.height(32.dp))
+                    
+                    ClayPrimaryButton(
+                        text = if (response.value.isLoading) "Updating..." else "Update Product",
                         onClick = {
                             val priceDouble = price.toDoubleOrNull()
                             val stockInt = stock.toIntOrNull()
@@ -196,17 +201,16 @@ fun UpdateProductScreen(productId : String, viewModel: MyViewModel, navControlle
                                 )
                             }
                         },
+                        isLoading = response.value.isLoading,
                         enabled = !response.value.isLoading,
                         modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (response.value.isLoading) "Updating..." else "Update Product")
-                    }
+                    )
                     if (response.value.error != null) {
-                        Text(text = response.value.error ?: "", modifier = Modifier.padding(top = 8.dp))
+                        Text(text = response.value.error ?: "", modifier = Modifier.padding(top = 8.dp), color = Color.Red)
                     }
+                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
     }
-
 }

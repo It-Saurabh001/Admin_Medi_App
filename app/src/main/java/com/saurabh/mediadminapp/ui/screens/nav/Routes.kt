@@ -7,6 +7,12 @@ import kotlinx.serialization.Serializable
 //@Serializable
 sealed class Routes{
     @Serializable
+    object SplashRoutes {
+        const val route = "SplashRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
     object SignUpRoutes
 
     @Serializable

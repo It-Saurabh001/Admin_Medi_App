@@ -10,18 +10,45 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = ClayPrimaryLight,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF252139),
+    onPrimaryContainer = Color(0xFFE2E8F0),
+    secondary = ClaySecondary,
+    onSecondary = Color.Black,
+    secondaryContainer = Color(0xFF1E293B),
+    tertiary = ClayAccent,
+    background = Color(0xFF13101C),
+    onBackground = Color(0xFFF8FAFC),
+    surface = Color(0xFF1E1B2E),
+    onSurface = Color(0xFFF8FAFC),
+    surfaceVariant = Color(0xFF27233B),
+    onSurfaceVariant = Color(0xFFCBD5E1),
+    outline = Color(0xFF4A4468),
+    error = ClayError
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = ClayPrimary,
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFF0EEFF),
+    onPrimaryContainer = Color(0xFF1E293B),
+    secondary = ClaySecondary,
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFFE0F7FA),
+    tertiary = ClayAccent,
+    background = ClayScreenBg,
+    onBackground = ClayTextPrimary,
+    surface = ClayCardBg,
+    onSurface = ClayTextPrimary,
+    surfaceVariant = ClayFieldBg,
+    onSurfaceVariant = ClayTextSecondary,
+    outline = ClayBorder,
+    error = ClayError
 )
 
 @Composable
@@ -31,9 +58,8 @@ fun MediAdminAppTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    Log.d("PERF_TRACE", "MediAdminAppTheme composition START [Thread: ${Thread.currentThread().name}]")
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicColor -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
@@ -47,5 +73,4 @@ fun MediAdminAppTheme(
         typography = Typography,
         content = content
     )
-    Log.d("PERF_TRACE", "MediAdminAppTheme composition END [Thread: ${Thread.currentThread().name}]")
 }

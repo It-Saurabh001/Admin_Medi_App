@@ -1,10 +1,8 @@
 package com.saurabh.mediadminapp.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,6 +21,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.ui.screens.components.ClayCard
+import com.saurabh.mediadminapp.ui.theme.ClayPrimary
+import com.saurabh.mediadminapp.ui.theme.ClayScreenBg
+import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
+import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,23 +41,25 @@ fun SettingsScreen(viewModel: MyViewModel, navController: NavController) {
                     Text(
                         text = "Settings",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 20.sp,
+                        color = ClayTextPrimary
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            tint = ClayTextPrimary
                         )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White
+                    containerColor = ClayScreenBg
                 )
             )
         },
-        containerColor = Color(0xFFF9FAFB)
+        containerColor = ClayScreenBg
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -75,7 +80,7 @@ fun SettingsScreen(viewModel: MyViewModel, navController: NavController) {
                     checked = isDarkTheme,
                     onCheckedChange = { isDarkTheme = it }
                 )
-                HorizontalDivider(color = Color(0xFFF3F4F6))
+                HorizontalDivider(color = Color(0xFFD0C8FF))
                 SettingRowWithSwitch(
                     icon = Icons.Default.Notifications,
                     title = "Push Notifications",
@@ -95,7 +100,7 @@ fun SettingsScreen(viewModel: MyViewModel, navController: NavController) {
                         // Mock functionality or redirect to forgot password
                     }
                 )
-                HorizontalDivider(color = Color(0xFFF3F4F6))
+                HorizontalDivider(color = Color(0xFFD0C8FF))
                 SettingRowItem(
                     icon = Icons.Default.Info,
                     title = "Active Sessions",
@@ -114,22 +119,16 @@ fun SettingsGroup(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
             text = title,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF4F46E5), // Indigoaccent
+            color = ClayPrimary,
             modifier = Modifier.padding(start = 4.dp)
         )
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.elevatedCardElevation(2.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
-        ) {
+        ClayCard(modifier = Modifier.fillMaxWidth()) {
             Column(
-                modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 content()
@@ -158,7 +157,7 @@ fun SettingRowWithSwitch(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Color(0xFF6B7280),
+                tint = ClayTextSecondary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -167,12 +166,12 @@ fun SettingRowWithSwitch(
                     text = title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1F2937)
+                    color = ClayTextPrimary
                 )
                 Text(
                     text = subtitle,
                     fontSize = 12.sp,
-                    color = Color(0xFF6B7280)
+                    color = ClayTextSecondary
                 )
             }
         }
@@ -181,7 +180,7 @@ fun SettingRowWithSwitch(
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
-                checkedTrackColor = Color(0xFF4F46E5),
+                checkedTrackColor = ClayPrimary,
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = Color(0xFFD1D5DB)
             )
@@ -210,7 +209,7 @@ fun SettingRowItem(
             Icon(
                 imageVector = icon,
                 contentDescription = title,
-                tint = Color(0xFF6B7280),
+                tint = ClayTextSecondary,
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -219,12 +218,12 @@ fun SettingRowItem(
                     text = title,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1F2937)
+                    color = ClayTextPrimary
                 )
                 Text(
                     text = subtitle,
                     fontSize = 12.sp,
-                    color = Color(0xFF6B7280)
+                    color = ClayTextSecondary
                 )
             }
         }

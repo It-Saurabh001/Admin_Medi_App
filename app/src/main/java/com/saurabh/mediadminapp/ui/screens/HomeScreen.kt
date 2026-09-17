@@ -24,24 +24,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -56,48 +46,73 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
+import com.saurabh.mediadminapp.ui.screens.components.ClayCard
+import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
+import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
+import com.saurabh.mediadminapp.ui.screens.components.ClayFilterChip
+import com.saurabh.mediadminapp.ui.screens.components.FilterOption
+import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
+import com.saurabh.mediadminapp.ui.screens.components.ClayOutlinedButton
+import com.saurabh.mediadminapp.ui.screens.components.ClaySearchField
+import com.saurabh.mediadminapp.ui.screens.components.ClayStatCard
+import com.saurabh.mediadminapp.ui.screens.components.ClayStatusBadge
+import com.saurabh.mediadminapp.ui.screens.components.DonutChart
+import com.saurabh.mediadminapp.ui.screens.components.buildUserStatsSegments
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.theme.ClayBadgeApproved
+import com.saurabh.mediadminapp.ui.theme.ClayBadgePending
+import com.saurabh.mediadminapp.ui.theme.ClayError
+import com.saurabh.mediadminapp.ui.theme.ClayHomeGradient
+import com.saurabh.mediadminapp.ui.theme.ClayPrimary
+import com.saurabh.mediadminapp.ui.theme.ClayScreenBg
+import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
+import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 import com.saurabh.mediadminapp.utils.ScreensState.IsApprovedUserState
 import java.time.LocalDate
 
 
-@OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(viewModel: MyViewModel, navController: NavController) {
     val state by viewModel.getAllUserState.collectAsState()
     val isApproved = viewModel.isApprovedUser.collectAsState()
 
+    Log.d("HomeScreen", "HomeScreen composed — state: ${state.isLoading}")
+
     LaunchedEffect(key1 = Unit) {
+        Log.d("HomeScreen", "LaunchedEffect triggered to fetch all users")
         viewModel.getAllUsers()
     }
-    Scaffold { innerpadding ->
+    
+    Scaffold(modifier = Modifier.background(ClayScreenBg)) { innerpadding ->
         when {
             state.isLoading -> {
-                LoadingScreen(modifier = Modifier)
+                ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
             }
             state.error != null -> {
                 Log.d("TAG", "HomeScreen:  error :-> ${state.error}")
-                ErrorScreen(errorMessage = state.error.toString(), modifier = Modifier.padding(innerpadding))
+                ClayErrorScreen(
+                    errorMessage = state.error.toString(), 
+                    modifier = Modifier.padding(innerpadding)
+                )
             }
             state.success != null -> {
                 UserListScreen(
                     users = state.success!!.users,
                     userApprovalState = isApproved,
                     onApprovalToggle = viewModel::isApprovedUser,
-                    modifier = Modifier.background(Color(0xFFffffff)),
+                    modifier = Modifier
+                        .padding(innerpadding)
+                        .background(ClayScreenBg),
                     navController = navController
                 )
             }
@@ -106,6 +121,7 @@ fun HomeScreen(viewModel: MyViewModel, navController: NavController) {
 }
 
 enum class FilterStatus { ALL, APPROVED, PENDING, BLOCKED }
+
 @Composable
 fun UserListScreen(
     users: List<UserItem>,
@@ -114,12 +130,9 @@ fun UserListScreen(
     modifier: Modifier = Modifier,
     navController: NavController
 ) {
-    var userList by remember { mutableStateOf(users) }
     var searchTerm by remember { mutableStateOf("") }
     var filterStatus by remember { mutableStateOf(FilterStatus.ALL) }
 
-    // Filter users — wrapped in remember() so it only recomputes when inputs change,
-    // not on every recomposition (e.g. drawer open/close, pager scroll).
     val filteredUsers = remember(users, searchTerm, filterStatus) {
         users.filter { user ->
             val matchesSearch = user.name.lowercase().contains(searchTerm.lowercase()) ||
@@ -136,7 +149,7 @@ fun UserListScreen(
             matchesSearch && matchesFilter
         }
     }
-    // Calculate stats — only recompute when user list changes
+
     val stats = remember(users) {
         mapOf(
             "total" to users.size,
@@ -146,240 +159,189 @@ fun UserListScreen(
         )
     }
 
-    // Medical gradient — wrapped in remember{} so no new Brush object on every recomposition
-    val medicalGradient = remember {
-        Brush.horizontalGradient(
-            colors = listOf(
-                Color(0xFF4F46E5), // Indigo
-                Color(0xFF06B6D4)  // Cyan
-            )
-        )
-    }
     LazyColumn(
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(5.dp),
+        contentPadding = PaddingValues(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            Row(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                StatsCard(
-                    modifier = Modifier.weight(1f),
-                    value = stats["total"].toString(),
-                    label = "Total Users",
-                    valueColor = MaterialTheme.colorScheme.onSurface
+            ClayCard(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "User Overview",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ClayTextPrimary,
+                    modifier = Modifier.padding(bottom = 16.dp)
                 )
-                StatsCard(
-                    modifier = Modifier.weight(1f),
-                    value = stats["approved"].toString(),
-                    label = "Approved",
-                    valueColor = Color(0xFF4F46E5)
-                )
-                StatsCard(
-                    modifier = Modifier.weight(1f),
-                    value = stats["pending"].toString(),
-                    label = "Pending",
-                    valueColor = Color(0xFFD97706)
-                )
-                StatsCard(
-                    modifier = Modifier.weight(1f),
-                    value = stats["blocked"].toString(),
-                    label = "Blocked",
-                    valueColor = MaterialTheme.colorScheme.error
+                DonutChart(
+                    segments = buildUserStatsSegments(stats),
+                    centerLabel = stats["total"].toString(),
+                    centerSubLabel = "Total Users",
+                    chartSize = 160.dp
                 )
             }
         }
-        // summary of stats
-
 
         item {
-            // Search and Filter
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Search Input
-                OutlinedTextField(
-                    value = searchTerm,
-                    onValueChange = { searchTerm = it },
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .fillMaxWidth(),
-                    placeholder = { Text("Search users...") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            modifier = Modifier
-                                .size(28.dp)
-                                .padding(start = 3.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    },
-
-                    maxLines = 2,
-                    shape = RoundedCornerShape(8.dp),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ClayStatCard(
+                    modifier = Modifier.weight(1f),
+                    value = stats["approved"].toString(),
+                    label = "Approved",
+                    accentColor = ClayBadgeApproved
                 )
-
-                // Filter Buttons
-                val filterOptions = listOf(
-                    FilterOption(FilterStatus.ALL, "All Users", Icons.AutoMirrored.Filled.List),
-                    FilterOption(FilterStatus.APPROVED, "Approved", Icons.Default.CheckCircle),
-                    FilterOption(FilterStatus.PENDING, "Pending", Icons.AutoMirrored.Filled.List),
-                    FilterOption(FilterStatus.BLOCKED, "Blocked", Icons.Default.Add)
+                ClayStatCard(
+                    modifier = Modifier.weight(1f),
+                    value = stats["pending"].toString(),
+                    label = "Pending",
+                    accentColor = ClayBadgePending
                 )
+                ClayStatCard(
+                    modifier = Modifier.weight(1f),
+                    value = stats["blocked"].toString(),
+                    label = "Blocked",
+                    accentColor = ClayError
+                )
+            }
+        }
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    contentPadding = PaddingValues(bottom = 8.dp)
-                ) {
-                    items(filterOptions) { filter ->
-                        FilterButton(
-                            option = filter,
-                            isSelected = filterStatus == filter.key,
-                            onClick = { filterStatus = filter.key },
-                            medicalGradient = medicalGradient
-                        )
-                    }
+        item {
+            ClaySearchField(
+                value = searchTerm,
+                onValueChange = { searchTerm = it },
+                placeholder = "Search users...",
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") }
+            )
+        }
+
+        item {
+            val filterOptions = listOf(
+                FilterOption(FilterStatus.ALL, "All Users", Icons.AutoMirrored.Filled.List),
+                FilterOption(FilterStatus.APPROVED, "Approved", Icons.Default.CheckCircle),
+                FilterOption(FilterStatus.PENDING, "Pending", Icons.AutoMirrored.Filled.List),
+                FilterOption(FilterStatus.BLOCKED, "Blocked", Icons.Default.Add)
+            )
+
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(bottom = 8.dp)
+            ) {
+                items(filterOptions) { filter ->
+                    ClayFilterChip(
+                        label = filter.label,
+                        icon = filter.icon,
+                        selected = filterStatus == filter.key,
+                        onClick = { filterStatus = filter.key },
+                        gradient = ClayHomeGradient
+                    )
                 }
             }
         }
 
         if (filteredUsers.isEmpty()) {
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No users found",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-                }
+                ClayEmptyState(
+                    message = "No users found",
+                    emoji = "👥"
+                )
             }
-
         } else {
-                items(filteredUsers) { userItem ->
-                    EachUserCard1(
-                        userItem = userItem,
-                        userApprovalState = userApprovalState,
-                        onApprovalToggle =onApprovalToggle,
-                        navController = navController
-                    )
-                }
+            items(filteredUsers) { userItem ->
+                EachUserCard1(
+                    userItem = userItem,
+                    userApprovalState = userApprovalState,
+                    onApprovalToggle = onApprovalToggle,
+                    navController = navController
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
         }
     }
 }
 
-
 @Composable
 fun EachUserCard1(
     userItem: UserItem,
-    userApprovalState : State<Map<String , IsApprovedUserState>>,
+    userApprovalState: State<Map<String, IsApprovedUserState>>,
     onApprovalToggle: (String, Boolean) -> Unit,
     navController: NavController
-){
+) {
     val currentUserState = userApprovalState.value[userItem.user_id]
     var isApproved by remember(userItem.user_id) {
         mutableStateOf(userItem.isApproved)
-    } // track approval status
-    Log.d("TAG", "EachUserCard1: user ${userItem.isApproved}")
+    }
     var pendingToggle by rememberSaveable(userItem.user_id) {
         mutableStateOf(false)
     }
+    
     val scale by animateFloatAsState(
-        targetValue = if (isApproved) 1.2f else 1f,
+        targetValue = if (isApproved) 1.1f else 1f,
         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
         label = "thumbScale"
     )
-    //API success -> pending flag reset
+
     LaunchedEffect(currentUserState?.success) {
         if (currentUserState?.success != null && pendingToggle) {
-//            isApproved = !isApproved
             pendingToggle = false
-
-
         }
     }
-//     API error -> pending flag reset
     LaunchedEffect(currentUserState?.error) {
         if (currentUserState?.error != null && pendingToggle) {
             pendingToggle = false
         }
     }
-//
+
     val isLoading = currentUserState?.isLoading == true
 
-    ElevatedCard(modifier = Modifier
-        .fillMaxWidth()
-        .padding(4.dp),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
-    ) {
-
-        Column (
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+    ClayCard(modifier = Modifier.fillMaxWidth()) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Row (modifier = Modifier.fillMaxWidth()
-            ) {
+            Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    // userId and Name
                     HorizontalScrollableText(
-                        userItem.name, style = TextStyle(
+                        text = userItem.name,
+                        style = TextStyle(
                             fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
+                            fontSize = 16.sp,
+                            color = ClayTextPrimary
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth(0.5f)
-
+                        modifier = Modifier.fillMaxWidth(0.9f)
                     )
                     HorizontalScrollableText(
-                        userItem.user_id, modifier = Modifier, style = TextStyle(
-                            color = Color.Gray,
+                        text = userItem.user_id,
+                        style = TextStyle(
+                            color = ClayTextSecondary,
                             fontSize = 12.sp
                         )
                     )
-
                 }
+                
                 val (statusText, statusColor) = when {
-                    !isApproved -> "Pending" to MaterialTheme.colorScheme.error
-                    isApproved -> "Approved" to Color(0xFF10B981)
-                    else -> "Blocked" to Color(0xFFD97706)
+                    !isApproved -> "Pending" to ClayBadgePending
+                    isApproved -> "Approved" to ClayBadgeApproved
+                    else -> "Blocked" to ClayError
                 }
-
-                Surface(
-                    color = statusColor.copy(alpha = 0.1f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = statusText,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        fontSize = 12.sp,
-                        color = statusColor,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+                
+                ClayStatusBadge(text = statusText, color = statusColor)
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // User details
             Text(
                 text = userItem.email ?: "No Email",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = ClayTextSecondary
             )
             Text(
                 text = userItem.phone_number ?: "No Phone",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = ClayTextSecondary
             )
+            
             val addressText = remember(userItem.address, userItem.pin_code) {
                 val addr = userItem.address ?: ""
                 val pin = userItem.pin_code ?: ""
@@ -389,12 +351,13 @@ fun EachUserCard1(
             Text(
                 text = addressText,
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = ClayTextSecondary
             )
+            
             val createdDate = remember(userItem.date_of_account_creation) {
                 try {
                     val date = userItem.date_of_account_creation
-                    if (!date.isNullOrEmpty()) {
+                    if (date.isNotEmpty()) {
                         LocalDate.parse(date.take(10)).toString()
                     } else {
                         "N/A"
@@ -406,55 +369,45 @@ fun EachUserCard1(
             Text(
                 text = "Created: $createdDate",
                 fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = ClayTextSecondary
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            Row (modifier = Modifier.fillMaxWidth(),
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
-            ){
-
-                OutlinedButton(
-                    onClick = { navController.navigate(Routes.UserDetailsRoutes.invoke(userItem.user_id))},
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF4F46E5)
-                    )
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "View",
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Details", fontSize = 14.sp)
-                }
-                Box(modifier = Modifier
-                    .wrapContentSize()
-                    .fillMaxWidth(0.5f),
+            ) {
+                ClayOutlinedButton(
+                    text = "Details",
+                    onClick = { navController.navigate(Routes.UserDetailsRoutes.invoke(userItem.user_id)) },
+                    leadingIcon = Icons.Default.Add,
+                    modifier = Modifier.weight(1f)
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .fillMaxWidth(0.5f),
                     contentAlignment = Alignment.Center
-                ){
-                    if(isLoading){
+                ) {
+                    if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.padding(8.dp),
                             strokeWidth = 2.dp,
-                            color = Color(0xFFFFA500)
+                            color = ClayPrimary
                         )
-                    }
-                    else {
+                    } else {
                         Switch(
                             checked = isApproved,
                             onCheckedChange = {
-                                if (!isLoading) {
-                                    pendingToggle = true
-                                    onApprovalToggle(userItem.user_id, it)
-
-
-                                }
+                                pendingToggle = true
+                                onApprovalToggle(userItem.user_id, it)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = Color.White,
-                                checkedTrackColor = Color(0xFFFFA500),
+                                checkedTrackColor = ClayBadgeApproved,
                                 uncheckedThumbColor = Color.White,
                                 uncheckedTrackColor = Color.LightGray
                             ),
@@ -466,71 +419,22 @@ fun EachUserCard1(
                         )
                     }
                 }
-
-
             }
         }
     }
 }
 
-
 @Composable
 fun HorizontalScrollableText(
     text: String,
     style: TextStyle = TextStyle.Default,
-    modifier: Modifier = Modifier) {
+    modifier: Modifier = Modifier
+) {
     val scrollState = rememberScrollState()
-
     Text(
         text = text,
         modifier = modifier.horizontalScroll(scrollState),
-        style=style,
-
-
-
+        style = style,
+        maxLines = 1
     )
-}
-@Composable
-fun HorizontalScrollable1(content: @Composable () -> Unit) {
-    val scrollState = rememberScrollState()
-    Box(modifier = Modifier.horizontalScroll(scrollState)) {
-        content()
-    }
-}
-
-@Composable
-fun LoadingScreen(modifier: Modifier = Modifier){
-    Column(
-        modifier = modifier
-            .fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(text = "This is loading screen")
-
-        Log.d("TAG", "WaitingScreen: success")
-
-        CircularProgressIndicator()
-    }
-
-}
-
-@Composable
-fun ErrorScreen(errorMessage: String, modifier: Modifier = Modifier) {
-   Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Error",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.Red
-        )
-        Text(
-            text = errorMessage,
-            modifier = Modifier.padding(16.dp)
-        )
-    }
 }

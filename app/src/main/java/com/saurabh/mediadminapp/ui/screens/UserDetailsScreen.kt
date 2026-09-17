@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -32,11 +31,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.UserItem
+import com.saurabh.mediadminapp.ui.screens.components.ClayCard
+import com.saurabh.mediadminapp.ui.screens.components.ClayDangerButton
+import com.saurabh.mediadminapp.ui.screens.components.ClayInfoRow
+import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserDetailsScreen(user_id : String, viewModel: MyViewModel,navController: NavController) {
+fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: NavController) {
     val usersState = viewModel.getAllUserState.collectAsState()
     val deleteState = viewModel.deleteUserState.collectAsState().value
     val context = LocalContext.current
@@ -68,26 +71,12 @@ fun UserDetailsScreen(user_id : String, viewModel: MyViewModel,navController: Na
         }
     }
 
-
-    Scaffold(){ innerpadding ->
-        HorizontalDivider(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 1.dp),
-            thickness = 1.dp
-        )
+    Scaffold() { innerpadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerpadding)
         ) {
-            HorizontalDivider(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 1.dp),
-                thickness = 1.dp
-            )
-
             when {
                 usersState.value.isLoading -> {
                     Box(
@@ -124,7 +113,7 @@ fun UserDetailsScreen(user_id : String, viewModel: MyViewModel,navController: Na
                             isDeleting = deleteState.isLoading,
                             onDeleteClick = { viewModel.deleteUser(user.user_id) },
                             navController = navController,
-                            viewModel,
+                            viewModel = viewModel,
                             modifier = Modifier.padding(innerpadding)
                         )
                     } else {
@@ -140,11 +129,8 @@ fun UserDetailsScreen(user_id : String, viewModel: MyViewModel,navController: Na
                     }
                 }
             }
-
         }
-
     }
-
 }
 
 @Composable
@@ -156,74 +142,61 @@ fun SpecificUser(
     viewModel: MyViewModel,
     modifier: Modifier
 ) {
-    val userDetails = listOf(
-        "ID" to user.id.toString(),
-        "User ID" to user.user_id.toString(),
-        "Date of Account Creation" to user.date_of_account_creation.toString(),
-        "isApproved" to user.isApproved.toString(),
-        "Block" to user.block.toString(),
-        "Name" to user.name.toString(),
-        "Phone Number" to user.phone_number.toString(),
-        "Email" to user.email.toString(),
-        "Pin Code" to user.pin_code.toString(),
-        "Address" to user.address.toString()
-        )
-
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        LazyColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .weight(1f)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "User Details",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 16.dp)
+        )
+        
+        ClayCard(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            items(userDetails) { (label, value) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(
-                            text = "$label:",
-                            modifier = Modifier.align(Alignment.Start),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                        Text(
-                            text = value.toString(),
-                            modifier = Modifier.align(Alignment.End),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                    }
-                }
-                HorizontalDivider()
-            }
-            item {
-                Spacer(modifier = Modifier.height(30.dp))
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Button(
-                        onClick = onDeleteClick,
-                        enabled = !isDeleting
-                    ) {
-                        Text(text = if (isDeleting) "Deleting..." else "Delete Button")
-                    }
-                    Spacer(modifier = Modifier.height(25.dp))
-                    Button(
-                        onClick = {navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.user_id))},
-                        enabled = !isDeleting
-                    ) {
-                        Text(text = "Update Details")
-                    }
-                }
-            }
+            ClayInfoRow("Name", user.name)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("ID", user.id.toString())
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("User ID", user.user_id)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("Account Created", user.date_of_account_creation)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("Approved Status", user.isApproved.toString())
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("Block Status", user.block.toString())
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("Phone Number", user.phone_number)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("Email", user.email)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("Pin Code", user.pin_code)
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFD0C8FF))
+            ClayInfoRow("Address", user.address)
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            ClayPrimaryButton(
+                text = "Update Details",
+                onClick = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.user_id)) },
+                enabled = !isDeleting
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            ClayDangerButton(
+                text = if (isDeleting) "Deleting..." else "Delete User",
+                onClick = onDeleteClick,
+                isLoading = isDeleting,
+                enabled = !isDeleting
+            )
         }
     }
 }

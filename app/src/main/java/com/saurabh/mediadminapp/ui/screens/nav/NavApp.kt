@@ -9,6 +9,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -73,10 +75,11 @@ import com.saurabh.mediadminapp.ui.screens.HomeScreen
 import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.OtpScreen
 import com.saurabh.mediadminapp.ui.screens.ProductScreen
-import com.saurabh.mediadminapp.ui.screens.nav.ProfileScreen
+import com.saurabh.mediadminapp.ui.screens.ProfileScreen
 import com.saurabh.mediadminapp.ui.screens.SettingsScreen
 import com.saurabh.mediadminapp.ui.screens.SignIn
 import com.saurabh.mediadminapp.ui.screens.SignUp
+import com.saurabh.mediadminapp.ui.screens.SplashScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificOrderScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificProductScreen
 import com.saurabh.mediadminapp.ui.screens.UpdateProductScreen
@@ -85,74 +88,56 @@ import com.saurabh.mediadminapp.ui.screens.UserDetailsScreen
 import com.saurabh.mediadminapp.utils.utilityFunctions.getTopBarForRoute
 import kotlinx.coroutines.launch
 
-// =============================================================================
-// NavApp — Production-grade single-NavHost navigation shell
-//
-// TOUCH/GESTURE FIXES APPLIED:
-// ─────────────────────────────────────────────────────────────────────────────
-// FIX 1 — PHANTOM PagerState REMOVED
-//   rememberPagerState() existed without any HorizontalPager consuming it.
-//   This created orphaned coroutine scroll machinery and caused unnecessary
-//   recompositions of the entire NavApp subtree on every tab click.
-//
-// FIX 2 — ModalNavigationDrawer CONDITIONALLY RENDERED
-//   The core touch-blocking root cause: ModalNavigationDrawer's internal
-//   AnchoredDraggableState installs a FULL-SCREEN pointer-input handler on
-//   Frame 0. Dynamic gesturesEnabled toggling (true→false) does NOT fully
-//   remove this handler in Material3. The fix: auth routes bypass the
-//   ModalNavigationDrawer entirely — they render inside a clean Box.
-//   The drawer is ONLY composed for main/app routes where it belongs.
-//
-// FIX 3 — LaunchedEffect RACE CONDITION FIXED
-//   Changed key from (isLoggedIn) to (isLoggedIn, currentRoute).
-//   The effect now re-evaluates AFTER the backstack settles and currentRoute
-//   becomes non-null. Added explicit currentRoute != null guard.
-//
-// FIX 4 — Bottom-nav SINGLE-TOP + STATE SAVE/RESTORE
-//   Added launchSingleTop=true, saveState=true, restoreState=true to bottom
-//   nav navigation calls. Prevents duplicate route stacking.
-//
-// FIX 5 — Bottom-nav SELECTION SYNCED TO ACTUAL ROUTE
-//   Added LaunchedEffect(currentRoute) to sync `selected` index with the
-//   real active route. Fixes desynced highlight after back-navigation.
-// =============================================================================
-
 @Composable
 fun NavApp(viewModel: MyViewModel) {
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
 
+    val drawerState = DrawerState(initialValue = DrawerValue.Closed)
     // Observe backstack changes — drives isAuthRoute, topBar, bottomBar
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val isHomeScreen = currentRoute?.contains("HomeRoutes", ignoreCase = true) == true
+    Log.d("TAG", "Current drawerValue: ${drawerState.currentValue}, isAnimationRunning: ${drawerState.isAnimationRunning}, currentRoute: $currentRoute")
 
     // ─────────────────────────────────────────────────────────────────────────
     // isAuthRoute: true when on auth screens OR backstack not yet settled (null)
     // ?: true fallback is INTENTIONAL — keeps the drawer gesture detector from
     // initializing on Frame 0 before the first backstack entry is delivered.
     // ─────────────────────────────────────────────────────────────────────────
-    val isAuthRoute: Boolean = currentRoute?.let { route ->
-        route.contains("SignInRoutes") ||
-                route.contains("SignUpRoutes") ||
-                route.contains("VerifyOtpRoutes")
-    } ?: true
+    val isAuthRoute = when {
+        currentRoute == null -> true
+        currentRoute.contains("SplashRoutes") -> true
+        currentRoute.contains("SignInRoutes") -> true
+        currentRoute.contains("SignUpRoutes") -> true
+        currentRoute.contains("VerifyOtpRoutes") -> true
+        else -> false
+    }
 
     // Bottom-nav tab index — no PagerState, plain saveable int
     var selected by rememberSaveable { mutableIntStateOf(0) }
 
+    val isBottomBarVisible = currentRoute?.let { route ->
+        route.contains("HomeRoutes", ignoreCase = true) ||
+                route.contains("productRoutes", ignoreCase = true) ||
+                route.contains("OrdersRoutes", ignoreCase = true) ||
+                route.contains("HistoryRoutes", ignoreCase = true)
+    } ?: false
+
     // Sync bottom-nav highlight with actual current route (handles back-nav desync)
     LaunchedEffect(currentRoute) {
         selected = when {
-            currentRoute?.contains("HomeRoutes") == true -> 0
-            currentRoute?.contains("productroutes") == true ||
-                    currentRoute?.contains("specificProductRoutes") == true ||
-                    currentRoute?.contains("AddProductRoutes") == true ||
-                    currentRoute?.contains("updateProductRoutes") == true -> 1
-            currentRoute?.contains("ordersRoutes") == true ||
-                    currentRoute?.contains("specificOrderRoutes") == true -> 2
-            currentRoute?.contains("HistoryRoutes") == true -> 3
-            else -> selected
+            currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
+            currentRoute?.contains("productRoutes", ignoreCase = true) == true -> 1
+            currentRoute?.contains("OrdersRoutes", ignoreCase = true) == true -> 2
+            currentRoute?.contains("HistoryRoutes", ignoreCase = true) == true -> 3
+            else -> -1 // Profile, Settings, About, Details आदि पर कोई टैब सेलेक्ट नहीं रहेगा
         }
+        if (!isHomeScreen && drawerState.isOpen) {
+            Log.d("TAG", " DRAWER_DEBUGRoute changed to: $currentRoute | drawer isOpen: ${drawerState.isOpen}")
+            drawerState.close()
+        }
+
     }
 
     val bottomNavItems = remember {
@@ -170,26 +155,35 @@ fun NavApp(viewModel: MyViewModel) {
     val loggedInAdminId by viewModel.loggedInAdminId.collectAsState()
     val admin: Admin? = adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
 
+
+    LaunchedEffect(isLoggedIn) {
+        if (isLoggedIn) {
+            viewModel.getAllAdmin()
+            if (drawerState.isOpen) {
+                drawerState.close()
+            }
+        }
+    }
     // ─────────────────────────────────────────────────────────────────────────
     // Auth Redirect — keyed on BOTH isLoggedIn AND currentRoute.
     // This re-fires once the backstack settles (null → real route string).
     // currentRoute != null guard prevents acting on Frame-0 null state.
     // ─────────────────────────────────────────────────────────────────────────
-    LaunchedEffect(isLoggedIn, currentRoute) {
-        if (isLoggedIn) {
-            viewModel.getAllAdmin()
-            if (currentRoute != null && isAuthRoute) {
-                Log.d("NAV", "Logged in on auth screen ($currentRoute) → navigating to Home")
-                navController.navigate(Routes.HomeRoutes()) {
-                    popUpTo(0) { inclusive = true }
-                }
+    LaunchedEffect(isLoggedIn, isAuthRoute) {
+        if (!isLoggedIn && !isAuthRoute) {
+            Log.d("NAV", "User logged out -> navigating to SignIn")
+            navController.navigate(Routes.SignInRoutes) {
+                popUpTo(Routes.HomeRoutes.route) { inclusive = true }
+                launchSingleTop = true
             }
-        } else {
-            if (currentRoute != null && !isAuthRoute) {
-                Log.d("NAV", "Not logged in on main screen ($currentRoute) → navigating to SignIn")
-                navController.navigate(Routes.SignInRoutes) {
-                    popUpTo(0) { inclusive = true }
-                }
+        }
+    }
+    LaunchedEffect(isLoggedIn, isAuthRoute) {
+        if (isLoggedIn && isAuthRoute) {
+            Log.d("NAV", "Admin session active on auth screen -> forcing navigation to Home")
+            navController.navigate(Routes.HomeRoutes()) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
             }
         }
     }
@@ -205,83 +199,13 @@ fun NavApp(viewModel: MyViewModel) {
     // while keeping a single NavController instance.
     // =========================================================================
 
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
-    // Close drawer when navigating to auth routes
-    LaunchedEffect(isAuthRoute) {
-        if (isAuthRoute && drawerState.isOpen) {
-            drawerState.close()
-        }
-    }
 
-    if (isAuthRoute) {
-        // ── AUTH SHELL ────────────────────────────────────────────────────────
-        // Pure Box: zero gesture detectors, zero Scaffold overhead.
-        // The NavHost below includes ALL routes so the NavController graph is
-        // complete and can handle redirects from auth → main without exceptions.
-        Box(modifier = Modifier.fillMaxSize()) {
-            NavHost(
-                navController = navController,
-                startDestination = Routes.SignInRoutes
-            ) {
-                composable<Routes.SignInRoutes> {
-                    SignIn(viewModel, navController)
-                }
-                composable<Routes.SignUpRoutes> {
-                    SignUp(viewModel, navController)
-                }
-                composable<Routes.VerifyOtpRoutes> { backStackEntry ->
-                    val verifyOtpRoutes: Routes.VerifyOtpRoutes = backStackEntry.toRoute()
-                    OtpScreen(verifyOtpRoutes.userId ?: "", viewModel, navController)
-                }
-                // Stub destinations so NavController can navigate to them
-                // when auth→home redirect fires before the main shell renders
-                composable(Routes.HomeRoutes.route) {
-                    HomeScreen(viewModel, navController)
-                }
-                navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
-                    composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController) }
-                    composable(
-                        Routes.SpecificProductRoutes.route,
-                        arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                    ) { b -> SpecificProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
-                    composable(Routes.AddProductRoutes.route) { AddProductScreen(viewModel, navController) }
-                    composable(
-                        Routes.UpdateProductRoutes.route,
-                        arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                    ) { b -> UpdateProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
-                }
-                navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
-                    composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController) }
-                    composable(
-                        Routes.SpecificOrderRoutes.route,
-                        arguments = listOf(navArgument("orderId") { type = NavType.StringType })
-                    ) { b -> SpecificOrderScreen(b.arguments?.getString("orderId")!!, viewModel, navController) }
-                }
-                composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController) }
-                composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
-                composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
-                composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
-                navigation(startDestination = Routes.UserDetailsRoutes.route, route = "user_details") {
-                    composable(
-                        Routes.UserDetailsRoutes.route,
-                        arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                    ) { b -> UserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
-                    composable(
-                        Routes.UpdateUserDetailsRoutes.route,
-                        arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                    ) { b -> UpdateUserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
-                }
-            }
-        }
-    } else {
-        // ── MAIN APP SHELL ────────────────────────────────────────────────────
-        // ModalNavigationDrawer is ONLY rendered here. The gesture detector is
-        // never installed on auth screens. gesturesEnabled is always true here.
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            gesturesEnabled = true,
-            drawerContent = {
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = isHomeScreen,
+        drawerContent = {
+            if (isHomeScreen) {
                 AppDrawerContent(
                     admin = admin,
                     currentRoute = currentRoute,
@@ -298,98 +222,113 @@ fun NavApp(viewModel: MyViewModel) {
                         navController.navigate(Routes.AboutRoutes.route) { launchSingleTop = true }
                     },
                     onLogoutClick = {
-                        coroutineScope.launch { drawerState.close() }
-                        viewModel.setAdminLoggedOut()
+                        coroutineScope.launch {
+                            drawerState.close()
+                            viewModel.setAdminLoggedOut()
+                        }
                     }
                 )
             }
-        ) {
-            Scaffold(
-                topBar = {
+        }
+    ) {
+        Scaffold(
+            topBar = {
+                if (!isAuthRoute) {
                     getTopBarForRoute(currentRoute, navController, viewModel) {
-                        coroutineScope.launch { drawerState.open() }
+                        Log.i("TAG", " DRAWER_DEBUG TopBar hamburger/menu icon CLICKED on route: $currentRoute")
+                        if (isHomeScreen) {
+                            coroutineScope.launch { drawerState.open() }
+                        }
                     }?.invoke()
-                },
-                bottomBar = {
-                    AnimatedVisibility(
-                        visible = true,
-                        enter = slideInVertically { it } + fadeIn(),
-                        exit = slideOutVertically { it } + fadeOut()
-                    ) {
-                        AppBottomBar(
-                            items = bottomNavItems,
-                            selected = selected,
-                            onItemSelected = { index ->
-                                selected = index
-                                val route = when (index) {
-                                    0 -> Routes.HomeRoutes()
-                                    1 -> Routes.ProductRoutes()
-                                    2 -> Routes.OrdersRoutes()
-                                    3 -> Routes.HistoryRoutes()
-                                    else -> Routes.HomeRoutes()
-                                }
-                                navController.navigate(route) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                    popUpTo(Routes.HomeRoutes()) { saveState = true }
-                                }
-                            }
-                        )
-                    }
                 }
-            ) { innerPadding ->
-                NavHost(
-                    navController = navController,
-                    startDestination = Routes.SignInRoutes,
-                    modifier = Modifier.padding(innerPadding)
+            },
+            bottomBar = {
+                AnimatedVisibility(
+                    visible = isBottomBarVisible,
+                    enter = slideInVertically { it } + fadeIn(),
+                    exit = slideOutVertically { it } + fadeOut()
                 ) {
-                    composable<Routes.SignInRoutes> { SignIn(viewModel, navController) }
-                    composable<Routes.SignUpRoutes> { SignUp(viewModel, navController) }
-                    composable<Routes.VerifyOtpRoutes> { backStackEntry ->
-                        val r: Routes.VerifyOtpRoutes = backStackEntry.toRoute()
-                        OtpScreen(r.userId ?: "", viewModel, navController)
-                    }
+                    AppBottomBar(
+                        items = bottomNavItems,
+                        selected = selected,
+                        onItemSelected = { index ->
+                            selected = index
+                            val route = when (index) {
+                                0 -> Routes.HomeRoutes()
+                                1 -> Routes.ProductRoutes()
+                                2 -> Routes.OrdersRoutes()
+                                3 -> Routes.HistoryRoutes()
+                                else -> Routes.HomeRoutes()
+                            }
+                            navController.navigate(route) {
+                                launchSingleTop = true
+                                restoreState = true
+                                popUpTo(Routes.HomeRoutes.route) { saveState = true }
+                            }
+                        }
+                    )
+                }
+            }
+        ) { innerPadding ->
+            // SINGLE NAVHOST FOR ENTIRE APP
+            NavHost(
+                navController = navController,
+                startDestination = Routes.SplashRoutes.route,
+                modifier = Modifier.padding(if (isAuthRoute) PaddingValues(0.dp) else innerPadding)
+            ) {
+                composable(Routes.SplashRoutes.route) {
+                    SplashScreen(navController, viewModel)
+                }
+                composable<Routes.SignInRoutes> {
+                    SignIn(viewModel, navController)
+                }
+                composable<Routes.SignUpRoutes> {
+                    SignUp(viewModel, navController)
+                }
+                composable<Routes.VerifyOtpRoutes> { backStackEntry ->
+                    val verifyOtpRoutes: Routes.VerifyOtpRoutes = backStackEntry.toRoute()
+                    OtpScreen(verifyOtpRoutes.userId ?: "", viewModel, navController)
+                }
 
-                    composable(Routes.HomeRoutes.route) {
-                        HomeScreen(viewModel, navController)
-                    }
+                composable(Routes.HomeRoutes.route) {
+                    HomeScreen(viewModel, navController)
+                }
 
-                    navigation(startDestination = Routes.UserDetailsRoutes.route, route = "user_details") {
-                        composable(
-                            Routes.UserDetailsRoutes.route,
-                            arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                        ) { b -> UserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
-                        composable(
-                            Routes.UpdateUserDetailsRoutes.route,
-                            arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                        ) { b -> UpdateUserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
-                    }
+                navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
+                    composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController) }
+                    composable(
+                        Routes.SpecificProductRoutes.route,
+                        arguments = listOf(navArgument("productId") { type = NavType.StringType })
+                    ) { b -> SpecificProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
+                    composable(Routes.AddProductRoutes.route) { AddProductScreen(viewModel, navController) }
+                    composable(
+                        Routes.UpdateProductRoutes.route,
+                        arguments = listOf(navArgument("productId") { type = NavType.StringType })
+                    ) { b -> UpdateProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
+                }
 
-                    navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
-                        composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController) }
-                        composable(
-                            Routes.SpecificProductRoutes.route,
-                            arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                        ) { b -> SpecificProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
-                        composable(Routes.AddProductRoutes.route) { AddProductScreen(viewModel, navController) }
-                        composable(
-                            Routes.UpdateProductRoutes.route,
-                            arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                        ) { b -> UpdateProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
-                    }
+                navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
+                    composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController) }
+                    composable(
+                        Routes.SpecificOrderRoutes.route,
+                        arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+                    ) { b -> SpecificOrderScreen(b.arguments?.getString("orderId")!!, viewModel, navController) }
+                }
 
-                    navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
-                        composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController) }
-                        composable(
-                            Routes.SpecificOrderRoutes.route,
-                            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
-                        ) { b -> SpecificOrderScreen(b.arguments?.getString("orderId")!!, viewModel, navController) }
-                    }
+                composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController) }
+                composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
+                composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
+                composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
 
-                    composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController) }
-                    composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
-                    composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
-                    composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
+                navigation(startDestination = Routes.UserDetailsRoutes.route, route = "user_details") {
+                    composable(
+                        Routes.UserDetailsRoutes.route,
+                        arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                    ) { b -> UserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
+                    composable(
+                        Routes.UpdateUserDetailsRoutes.route,
+                        arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                    ) { b -> UpdateUserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
                 }
             }
         }

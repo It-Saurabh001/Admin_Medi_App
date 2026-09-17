@@ -4,37 +4,21 @@ import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,109 +26,90 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.Order
-import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
+import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
+import com.saurabh.mediadminapp.ui.screens.components.ClayFilterChip
+import com.saurabh.mediadminapp.ui.screens.components.FilterOption
+import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
+import com.saurabh.mediadminapp.ui.screens.components.ClaySearchField
+import com.saurabh.mediadminapp.ui.screens.components.ClayStatCard
+import com.saurabh.mediadminapp.ui.screens.components.EachOrderCard
+import com.saurabh.mediadminapp.ui.theme.ClayOrderGradient
+import com.saurabh.mediadminapp.ui.theme.ClayPrimary
+import com.saurabh.mediadminapp.ui.theme.ClayScreenBg
+import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
+import com.saurabh.mediadminapp.utils.cardColors
 import java.text.NumberFormat
 import java.util.Locale
-import kotlin.collections.filter
 
 @Composable
-fun OrderDetailsScreen1(viewModel: MyViewModel, navController: NavController){
+fun OrderDetailsScreen1(viewModel: MyViewModel, navController: NavController) {
     val response = viewModel.getAllOrderState.collectAsState()
+    val isApproveOrder = viewModel.isApproveOrdder.collectAsState()
 
     LaunchedEffect(key1 = Unit) {
         viewModel.getAllOrders()
     }
+    
     LaunchedEffect(response.value.success) {
         response.value.success?.let {
-            Log.d("TAG", "OrderDetailsScreen: ${it.message}")
             viewModel.clearGetAllProductState()
         }
     }
-
-    Scaffold {
-            innerpadding ->
-
-        when{
-            response.value.isLoading ->{
-                Box(
-                    modifier = Modifier
-                        .padding(innerpadding)
-                        .fillMaxSize()
-
-                ) {
-                    LoadingScreen(modifier = Modifier)
-                }
+    
+    Scaffold(modifier = Modifier.background(ClayScreenBg)) { innerpadding ->
+        when {
+            response.value.isLoading -> {
+                ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
             }
-            response.value.error != null ->{
+            response.value.error != null -> {
+                ClayErrorScreen(
+                    errorMessage = response.value.error.toString(),
+                    modifier = Modifier.padding(innerpadding)
+                )
+            }
+            response.value.success != null -> {
                 Box(
                     modifier = Modifier
-                        .padding(innerpadding)
                         .fillMaxSize()
-
+                        .background(ClayScreenBg)
                 ) {
-                    Log.d("TAG", "ProductScreen: error :-> ${response.value.error}")
-                    ErrorScreen(
-                        errorMessage = response.value.error.toString(),
+                    EnhancedOrdersListScreen(
+                        orders = response.value.success!!.orders,
+                        navController = navController,
+                        viewModel = viewModel
                     )
-                }
-            }
-            response.value.success != null ->{
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-
-                ) {
-
-//                    EnhancedOrdersListScreen(
-//                        viewModel.getAllOrderState.collectAsState().value.success!!.orders,
-//                        navController,
-//                    )
                 }
             }
         }
     }
 }
-//
-//@Preview
-//@Composable
-//private fun previews() {
-//    val navController = rememberNavController()
-//    EnhancedOrdersListScreen(
-//        orders = mockOrders,
-//        navController = navController // Replace with actual NavController in real use
-//    )
-//
-//}
-////
 
 @Composable
-fun EnhancedOrdersListScreen(orders: List<Order>, navController: NavController) {
+fun EnhancedOrdersListScreen(
+    orders: List<Order>,
+    navController: NavController,
+    viewModel: MyViewModel
+) {
     var searchTerm by remember { mutableStateOf("") }
-    var filterStatus: FilterStatus by remember { mutableStateOf(FilterStatus.ALL) }
+    var filterStatus by remember { mutableStateOf(FilterStatus.ALL) }
+    val isApproveOrder = viewModel.isApproveOrdder.collectAsState()
 
-    // Filter orders based on search and status
     val filteredOrders = remember(orders, searchTerm, filterStatus) {
         orders.filter { order ->
             val matchesSearch = order.product_name.contains(searchTerm, ignoreCase = true) ||
-                    order.user_id.contains(searchTerm, ignoreCase = true) ||
+                    order.user_name.contains(searchTerm, ignoreCase = true) ||
                     order.order_id.contains(searchTerm, ignoreCase = true)
 
             val matchesFilter = when (filterStatus) {
                 FilterStatus.ALL -> true
-                FilterStatus.PENDING-> !order.isApproved
+                FilterStatus.PENDING -> !order.isApproved
                 FilterStatus.APPROVED -> order.isApproved
                 else -> true
             }
@@ -153,7 +118,6 @@ fun EnhancedOrdersListScreen(orders: List<Order>, navController: NavController) 
         }
     }
 
-    // Calculate stats
     val stats = remember(orders) {
         mapOf(
             "total" to orders.size,
@@ -163,85 +127,58 @@ fun EnhancedOrdersListScreen(orders: List<Order>, navController: NavController) 
         )
     }
 
-    // Medical gradient colors
-    val medicalGradient = Brush.horizontalGradient(
-        colors = listOf(
-            Color(0xFF0EA5E9), // sky-500
-            Color(0xFF3B82F6)  // blue-500
-        )
-    )
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-        // Header with Stats
+        item {
+            ClaySearchField(
+                value = searchTerm,
+                onValueChange = { searchTerm = it },
+                placeholder = "Search orders...",
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") }
+            )
+        }
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Total Orders
-                StatsCard(
+                ClayStatCard(
                     modifier = Modifier.weight(1f),
                     value = stats["total"].toString(),
-                    label = "Total Orders",
-                    valueColor = MaterialTheme.colorScheme.onSurface
+                    label = "Total",
+                    accentColor = ClayTextPrimary
                 )
-
-                // Pending
-                StatsCard(
+                ClayStatCard(
                     modifier = Modifier.weight(1f),
                     value = stats["pending"].toString(),
                     label = "Pending",
-                    valueColor = Color(0xFFD97706) // yellow-600
+                    accentColor = Color(0xFFD97706)
                 )
-
-                // Approved
-                StatsCard(
+                ClayStatCard(
                     modifier = Modifier.weight(1f),
                     value = stats["approved"].toString(),
                     label = "Approved",
-                    valueColor = MaterialTheme.colorScheme.primary
+                    accentColor = ClayPrimary
                 )
-
-                // Total Value
-                StatsCard(
+                ClayStatCard(
                     modifier = Modifier.weight(1f),
-                    value = "₹${NumberFormat.getInstance(Locale("en", "IN")).format(stats["totalValue"])}",
-                    label = "Total Value",
-                    valueColor = MaterialTheme.colorScheme.secondary,
-                    valueSize = 16.sp
+                    value = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(stats["totalValue"])}",
+                    label = "Total ₹",
+                    accentColor = Color(0xFF10B981)
                 )
             }
         }
 
-        // Search
-        item {
-            OutlinedTextField(
-                value = searchTerm,
-                onValueChange = { searchTerm = it },
-                placeholder = { Text("Search orders...") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-        }
-
-        // Status Filter
         item {
             val filterOptions = listOf(
-                FilterOption(FilterStatus.ALL, "All Users", Icons.AutoMirrored.Filled.List),
+                FilterOption(FilterStatus.ALL, "All", Icons.Default.List),
                 FilterOption(FilterStatus.APPROVED, "Approved", Icons.Default.CheckCircle),
-                FilterOption(FilterStatus.PENDING, "Pending", Icons.AutoMirrored.Filled.List)
+                FilterOption(FilterStatus.PENDING, "Pending", Icons.Default.List)
             )
 
             LazyRow(
@@ -249,310 +186,34 @@ fun EnhancedOrdersListScreen(orders: List<Order>, navController: NavController) 
                 contentPadding = PaddingValues(bottom = 8.dp)
             ) {
                 items(filterOptions) { filter ->
-                    FilterButton(
-                        option = filter,
-                        isSelected = filterStatus == filter.key,
+                    ClayFilterChip(
+                        label = filter.label,
+                        icon = filter.icon,
+                        selected = filterStatus == filter.key,
                         onClick = { filterStatus = filter.key },
-                        medicalGradient = medicalGradient
+                        gradient = ClayOrderGradient
                     )
                 }
             }
         }
-
-        // Orders List
+        
         if (filteredOrders.isEmpty()) {
             item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No orders found",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                ClayEmptyState(
+                    message = "No orders found",
+                    emoji = "📦"
+                )
             }
         } else {
-            items(filteredOrders) { order ->
-                EnhancedOrderCard(
-                    order = order,
-                    navController = navController
+            itemsIndexed(filteredOrders) { index, orderItem ->
+                val bgColor = cardColors[index % cardColors.size]
+                EachOrderCard(
+                    order = orderItem,
+                    navController = navController,
+                    bgColor = bgColor,
+                    isApproveOrder = isApproveOrder,
+                    onApprovalToggle = viewModel::isApproveOrder
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun StatsCard(
-    modifier: Modifier = Modifier,
-    value: String,
-    label: String,
-    valueColor: Color,
-    valueSize: androidx.compose.ui.unit.TextUnit = 24.sp
-) {
-    Card(
-        modifier = modifier
-            .shadow(2.dp, RoundedCornerShape(8.dp)),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                fontSize = valueSize,
-                fontWeight = FontWeight.Bold,
-                color = valueColor,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-// Filter data class
-data class FilterOption(
-    val key: FilterStatus,
-    val label: String,
-    val icon: ImageVector
-)
-
-@Composable
-fun FilterButton(
-    option: FilterOption,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-    medicalGradient: Brush
-) {
-    val buttonColors = if (isSelected) {
-        ButtonDefaults.buttonColors(containerColor = Color.Transparent)
-    } else {
-        ButtonDefaults.outlinedButtonColors()
-    }
-
-    val modifier = if (isSelected) {
-        Modifier.background(medicalGradient, RoundedCornerShape(20.dp))
-    } else {
-        Modifier
-    }
-
-    if (isSelected) {
-        Button(
-            onClick = onClick,
-            modifier = modifier,
-            colors = buttonColors,
-            shape = RoundedCornerShape(20.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Icon(
-                imageVector = option.icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = Color.White
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = option.label,
-                color = Color.White,
-                fontSize = 14.sp
-            )
-        }
-    } else {
-        OutlinedButton(
-            onClick = onClick,
-            shape = RoundedCornerShape(20.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Icon(
-                imageVector = option.icon,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = option.label,
-                fontSize = 14.sp
-            )
-        }
-    }
-}
-
-@Composable
-fun EnhancedOrderCard(
-    order: Order,
-    navController: NavController
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(2.dp, RoundedCornerShape(8.dp))
-        ,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = order.order_id,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
-                )
-
-                // Status Badge
-                Surface(
-                    color = if (order.isApproved) Color(0xFF10B981) else Color(0xFFF59E0B),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = if (order.isApproved) "Approved" else "Pending",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            // Product Info
-            Text(
-                text = order.product_name,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-
-            Text(
-                text = "By: ${order.user_name}",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // User ID and Product ID Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "User ID: ${order.user_id}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "Product ID: ${order.product_id}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            // Quantity and Price Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Qty: ${order.quantity} ${order.category}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "₹${NumberFormat.getInstance(Locale("en", "IN")).format(order.total_amount)}",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            // Date
-            Text(
-                text = "Ordered: ${order.date_of_order_creation}",
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            // Message (if exists)
-            if (order.message.isNotEmpty()) {
-                Text(
-                    text = order.message,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .background(
-                            MaterialTheme.colorScheme.surfaceVariant,
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(8.dp)
-                )
-            }
-
-            // Action Buttons Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { navController.navigate(Routes.EachUserOrderRoutes.invoke(order.user_id)) },
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "View",
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("View Details")
-                }
-
-                if (!order.isApproved) {
-                    Button(
-                        onClick = { /* Handle approve action */ },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF10B981)
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Approve",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Approve")
-                    }
-                } else {
-                    Button(
-                        onClick = { /* Handle view approved order */ },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Done,
-                            contentDescription = "Approved",
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Approved")
-                    }
-                }
             }
         }
     }

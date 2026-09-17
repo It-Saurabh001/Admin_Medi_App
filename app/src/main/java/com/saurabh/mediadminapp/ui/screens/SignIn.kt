@@ -92,6 +92,7 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
     val context = LocalContext.current
 
     Log.d("NAV", "SignIn composed — state: ${state.value}")
+    Log.d("NAV", "SignIn Screen")
 
     // Error handling
     LaunchedEffect(state.value.error) {
@@ -280,7 +281,10 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
                         )
                     } else {
                         Button(
-                            onClick = { viewModel.loginAdmin(email, password) },
+                            onClick = { 
+                                Log.d("SignIn", "Sign In button clicked for email: $email")
+                                viewModel.loginAdmin(email, password) 
+                            },
                             modifier = Modifier.fillMaxSize(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = Color.Transparent

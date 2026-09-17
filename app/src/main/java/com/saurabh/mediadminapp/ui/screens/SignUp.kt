@@ -102,6 +102,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
         else -> SignUpScreen.FORM
     }
 
+    Log.d("SignUp", "Current screen state: $screenState")
     // Error Toast
     LaunchedEffect(state.error) {
         if (state.error != null) {
@@ -380,6 +381,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                                 text = "Create Account →",
                                 isLoading = false,
                                 onClick = {
+                                    Log.d("SignUp", "Sign Up button clicked for email: $email")
                                     var valid = true
                                     if (name.isBlank()) {
                                         nameError = "Name is required"

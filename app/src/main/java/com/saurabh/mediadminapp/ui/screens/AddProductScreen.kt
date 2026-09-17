@@ -19,10 +19,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,24 +38,29 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
+import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
+import com.saurabh.mediadminapp.ui.screens.components.ClayOutlinedButton
+import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
+import com.saurabh.mediadminapp.ui.screens.components.ClayTextField
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddProductScreen(viewModel: MyViewModel,navController: NavController,modifier: Modifier = Modifier) {
+fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modifier: Modifier = Modifier) {
     val response = viewModel.addProductState.collectAsState()
     val context = LocalContext.current
     val name = remember { mutableStateOf("") }
     val price = remember { mutableStateOf("") }
     val category = remember { mutableStateOf("") }
     val stock = remember { mutableStateOf("") }
-
-
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     val launcher = rememberLauncherForActivityResult(
@@ -70,7 +75,7 @@ fun AddProductScreen(viewModel: MyViewModel,navController: NavController,modifie
             Log.d("TAG", "AddProductScreen: ${it.message}")
             viewModel.clearAddProductState()
 
-            navController.previousBackStackEntry?.savedStateHandle?.set("refresh_screen",true)
+            navController.previousBackStackEntry?.savedStateHandle?.set("refresh_screen", true)
             navController.popBackStack()
         }
     }
@@ -78,76 +83,99 @@ fun AddProductScreen(viewModel: MyViewModel,navController: NavController,modifie
     LaunchedEffect(response.value.error) {
         response.value.error?.let {
             Toast.makeText(context, it, Toast.LENGTH_LONG).show()
-            Log.d("TAG", "AddProductScreen: ${it}")
+            Log.d("TAG", "AddProductScreen: $it")
         }
     }
 
     DismissKeyboardOnTapScreen {
-        Scaffold { innerpadding->
-            when{
-                response.value.isLoading ->{
-                    LoadingScreen()
+        Scaffold { innerpadding ->
+            when {
+                response.value.isLoading -> {
+                    ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
                 }
-                response.value.error != null ->{
-                    ErrorScreen(errorMessage = response.value.error.toString(),modifier = Modifier.padding(innerpadding))
+                response.value.error != null -> {
+                    ClayErrorScreen(
+                        errorMessage = response.value.error.toString(),
+                        modifier = Modifier.padding(innerpadding),
+                        onRetry = { viewModel.clearAddProductState() }
+                    )
                 }
                 else -> {
                     Column(
                         modifier = Modifier
                             .padding(innerpadding)
                             .fillMaxSize()
+                            .padding(horizontal = 24.dp)
                             .verticalScroll(rememberScrollState()),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            text = "Add New Product",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+
                         if (imageUri != null) {
                             Image(
                                 painter = rememberAsyncImagePainter(imageUri),
                                 contentDescription = "Product Image Preview",
                                 modifier = Modifier
                                     .size(150.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .border(1.dp, Color.Gray, RoundedCornerShape(8.dp)),
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .border(2.dp, Color(0xFFD0C8FF), RoundedCornerShape(16.dp)),
                                 contentScale = ContentScale.Crop
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                         }
 
-                        Button(onClick = {
-                            launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        }) {
-                            Text(if (imageUri == null) "Select Product Image" else "Change Image")
-                        }
+                        ClayOutlinedButton(
+                            text = if (imageUri == null) "Select Product Image" else "Change Image",
+                            onClick = {
+                                launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                            },
+                            leadingIcon = Icons.Default.AddCircle,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
+                        Spacer(modifier = Modifier.height(24.dp))
+                        ClayTextField(
                             value = name.value,
                             onValueChange = { name.value = it },
-                            label = { Text(text = "Name") })
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
+                            label = "Name"
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ClayTextField(
                             value = price.value,
                             onValueChange = { price.value = it },
-                            label = { Text(text = "Price") })
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
+                            label = "Price"
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ClayTextField(
                             value = category.value,
                             onValueChange = { category.value = it },
-                            label = { Text(text = "Category") })
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
+                            label = "Category"
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ClayTextField(
                             value = stock.value,
                             onValueChange = { stock.value = it },
-                            label = { Text(text = "Stock") })
+                            label = "Stock"
+                        )
 
-                        HorizontalDivider(modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp))
+                        HorizontalDivider(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp)
+                        )
 
-                        Button(
+                        ClayPrimaryButton(
+                            text = "Add Product",
                             onClick = {
-                                if (validateInput(name.value, price.value, category.value, stock.value)){
+                                if (validateInput(name.value, price.value, category.value, stock.value)) {
                                     val imagePart = imageUri?.toMultipartBodyPart(context, "image")
                                     viewModel.addProduct(
                                         name.value,
@@ -156,22 +184,19 @@ fun AddProductScreen(viewModel: MyViewModel,navController: NavController,modifie
                                         stock.value.toInt(),
                                         imagePart
                                     )
-                                }else{
+                                } else {
                                     Toast.makeText(context, "Please fill all the fields correctly", Toast.LENGTH_LONG).show()
                                 }
                             },
                             enabled = !response.value.isLoading,
-                            modifier = Modifier.fillMaxWidth(0.5f).padding(16.dp)
-                        ) {
-                            Text(text = "Add Product")
-                        }
-
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
                     }
                 }
             }
         }
     }
-
 }
 
 private fun validateInput(name: String, price: String, category: String, stock: String): Boolean {
