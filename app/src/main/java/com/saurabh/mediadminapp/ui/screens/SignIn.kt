@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.theme.*
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Claymorphism Design System — MediAdmin
@@ -72,16 +73,7 @@ import com.saurabh.mediadminapp.ui.screens.nav.Routes
 //           BG Top    #6C63FF → #48CAE4 gradient
 // ─────────────────────────────────────────────────────────────────────────────
 
-private val ClayPrimary = Color(0xFF6C63FF)
-private val ClaySecondary = Color(0xFF48CAE4)
-private val ClayAccent = Color(0xFFFF6584)
-private val ClayCardBg = Color(0xFFFAF9FF)
-private val ClayFieldBg = Color(0xFFF0EEFF)
-private val ClayBorder = Color(0xFFD0C8FF)
-private val ClayGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF6C63FF), Color(0xFF48CAE4))
-)
-private val ClayCardShadow = Color(0xFF6C63FF).copy(alpha = 0.18f)
+
 
 @Composable
 fun SignIn(viewModel: MyViewModel, navController: NavHostController) {

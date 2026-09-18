@@ -7,15 +7,20 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,7 +44,6 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -52,6 +56,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -79,14 +84,17 @@ import com.saurabh.mediadminapp.ui.screens.ProfileScreen
 import com.saurabh.mediadminapp.ui.screens.SettingsScreen
 import com.saurabh.mediadminapp.ui.screens.SignIn
 import com.saurabh.mediadminapp.ui.screens.SignUp
-import com.saurabh.mediadminapp.ui.screens.SplashScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificOrderScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificProductScreen
+import com.saurabh.mediadminapp.ui.screens.SplashScreen
 import com.saurabh.mediadminapp.ui.screens.UpdateProductScreen
 import com.saurabh.mediadminapp.ui.screens.UpdateUserDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.UserDetailsScreen
+import com.saurabh.mediadminapp.ui.theme.ClayPrimary
+import com.saurabh.mediadminapp.ui.theme.ClaySecondary
 import com.saurabh.mediadminapp.utils.utilityFunctions.getTopBarForRoute
 import kotlinx.coroutines.launch
+
 
 @Composable
 fun NavApp(viewModel: MyViewModel) {
@@ -232,7 +240,10 @@ fun NavApp(viewModel: MyViewModel) {
         }
     ) {
         Scaffold(
+            containerColor = Color.Transparent,
+            modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClaySecondary))),
             topBar = {
+
                 if (!isAuthRoute) {
                     getTopBarForRoute(currentRoute, navController, viewModel) {
                         Log.i("TAG", " DRAWER_DEBUG TopBar hamburger/menu icon CLICKED on route: $currentRoute")
@@ -246,7 +257,8 @@ fun NavApp(viewModel: MyViewModel) {
                 AnimatedVisibility(
                     visible = isBottomBarVisible,
                     enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut()
+                    exit = slideOutVertically { it } + fadeOut(),
+                    modifier = Modifier.background(Color.Transparent)
                 ) {
                     AppBottomBar(
                         items = bottomNavItems,
@@ -344,18 +356,104 @@ private fun AppBottomBar(
     selected: Int,
     onItemSelected: (Int) -> Unit
 ) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp
+    val barShape = RoundedCornerShape(34.dp)
+    val itemShape = RoundedCornerShape(24.dp)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClaySecondary)))
+            .navigationBarsPadding()
+            .padding(horizontal = 20.dp, vertical = 14.dp),
+        contentAlignment = Alignment.Center
     ) {
-        items.forEachIndexed { index, item ->
-            NavigationBarItem(
-                alwaysShowLabel = true,
-                selected = selected == index,
-                onClick = { onItemSelected(index) },
-                icon = { Icon(imageVector = item.icon, contentDescription = item.name) },
-                label = { Text(text = item.name) }
-            )
+        // Claymorphic Floating Capsule
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp)
+                // 1. सॉफ्ट डार्क शैडो (Bottom-Right)
+                .shadow(
+                    elevation = 20.dp,
+                    shape = barShape,
+                    ambientColor = ClayPrimary.copy(alpha = 0.35f),
+                    spotColor = Color(0xFF070B19).copy(alpha = 0.30f),
+                    clip = false
+                )
+                .clip(barShape)
+                // 2. सॉलिड क्ले बैकग्राउंड (Soft Light Matte/Clay Tone)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFFFFFFF), // टॉप पर हल्का ब्राइट
+                            Color(0xFFF0F3FA)  // नीचे क्ले बेस
+                        )
+                    )
+                )
+                // 3. टॉप-लेफ्ट लाइट रिम बॉर्डर (Clay 3D Highlight)
+                .border(
+                    width = 1.2.dp,
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.85f), // टॉप-लेफ्ट सॉफ्ट लाइट
+                            Color.White.copy(alpha = 0.15f), // मिडिल फेड
+                            Color.Transparent               // बॉटम-राइट पूरी तरह मेल्ट
+                        )
+                    ),
+                    shape = barShape
+                )
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            items.forEachIndexed { index, item ->
+                val isSelected = selected == index
+
+                Box(
+                    modifier = Modifier
+                        .height(48.dp)
+                        .clip(itemShape)
+                        .then(
+                            if (isSelected) {
+                                // Selected Tab: Pressed / Inset Clay Pill
+                                Modifier
+                                    .background(ClayPrimary.copy(alpha = 0.12f))
+                                    .border(
+                                        width = 1.dp,
+                                        color = ClayPrimary.copy(alpha = 0.25f),
+                                        shape = itemShape
+                                    )
+                            } else {
+                                Modifier.background(Color.Transparent)
+                            }
+                        )
+                        .clickable { onItemSelected(index) }
+                        .padding(horizontal = if (isSelected) 14.dp else 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.name,
+                            // सिलेक्टेड पर ClayPrimary और अनसिलेक्टेड पर म्यूटेड ग्रे
+                            tint = if (isSelected) ClayPrimary else Color(0xFF8A94A6),
+                            modifier = Modifier.size(22.dp)
+                        )
+                        if (isSelected) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = item.name,
+                                color = ClayPrimary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

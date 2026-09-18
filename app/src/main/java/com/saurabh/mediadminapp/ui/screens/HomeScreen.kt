@@ -82,7 +82,7 @@ import java.time.LocalDate
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
-fun HomeScreen(viewModel: MyViewModel, navController: NavController) {
+fun HomeScreen1(viewModel: MyViewModel, navController: NavController) {
     val state by viewModel.getAllUserState.collectAsState()
     val isApproved = viewModel.isApprovedUser.collectAsState()
 

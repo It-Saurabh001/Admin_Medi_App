@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.utils.utilityFunctions
 
+import android.R
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,34 +14,56 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarColors
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.theme.ClayPrimary
+import com.saurabh.mediadminapp.ui.theme.ClaySecondary
+
+
+
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun getTopBarForRoute(route: String?, navController: NavController, viewModel: MyViewModel, onMenuClick: () -> Unit) : (@Composable () -> Unit)? {
 
+    // 100% Transparent TopAppBar Colors Preset
+    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        titleContentColor = Color.White,
+        navigationIconContentColor = Color.White,
+        actionIconContentColor = Color.White
+    )
     return when{
         route?.contains("HomeRoutes") == true ->{
             {
-                Column {
+                Column (modifier = Modifier
+
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                     TopAppBar(title = {Text(
                         text = "Admin Management",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 9.dp)
+                        modifier = Modifier.padding(vertical = 9.dp).background(Color.Transparent)
                     )},
                         actions = {
                             IconButton(onClick = onMenuClick) {
                                 Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
                             }
-                        }
+                        },
+                        colors = transparentTopBarColors,
                     )
                     HorizontalDivider(
                         modifier = Modifier
@@ -54,7 +78,9 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
 
         route?.contains("productroutes") == true->{
             {
-                Column {
+                Column(modifier = Modifier
+
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                 TopAppBar(
                     title = {
                         Text(
@@ -71,7 +97,9 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                 contentDescription = "Open Drawer"
                             )
                         }
-                    })
+                    },
+                    colors = transparentTopBarColors,
+                )
                     HorizontalDivider(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -83,7 +111,9 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
         route?.contains("HistoryRoutes") == true->{
             {
-                Column {
+                Column(modifier = Modifier
+
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                     TopAppBar(title = {Text(
                         text = "History",
                         fontSize = 24.sp,
@@ -94,7 +124,9 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                             IconButton(onClick = onMenuClick) {
                                 Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
                             }
-                        })
+                        },
+                        colors = transparentTopBarColors
+                    )
                     HorizontalDivider(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -107,7 +139,9 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
         route?.contains("ordersRoutes") == true->{
             {
-                Column {
+                Column (modifier = Modifier
+
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))){
                     TopAppBar(title = {Text(
                         text = "Orders Screen",
                         fontSize = 24.sp,
@@ -118,7 +152,9 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                             IconButton(onClick = onMenuClick) {
                                 Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
                             }
-                        })
+                        },
+                        colors = transparentTopBarColors
+                    )
                     HorizontalDivider(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -131,7 +167,9 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
         route?.contains("UserSettingsRoutes") == true -> {
             {
-                Column {
+                Column (modifier = Modifier
+
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))){
                     TopAppBar(
                         title = {
                             Text(
@@ -148,7 +186,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                     contentDescription = "Home"
                                 )
                             }
-                        }
+                        },
+                        colors = transparentTopBarColors,
                     )
                     HorizontalDivider(
                         modifier = Modifier
@@ -163,7 +202,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
         route?.contains("AddProductRoutes") == true -> {
             {
-                Column {
+                Column(modifier = Modifier
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                     TopAppBar(
                         title = {
                             Text(
@@ -180,7 +220,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                     contentDescription = "Product"
                                 )
                             }
-                        }
+                        },
+                        colors = transparentTopBarColors,
                     )
                     HorizontalDivider(
                         modifier = Modifier
@@ -196,7 +237,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
 
         route?.contains("specificProductRoutes") == true -> {
             {
-                Column {
+                Column(modifier = Modifier
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                     TopAppBar(
                         title = {
                             Text(
@@ -215,7 +257,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                     contentDescription = "Product"
                                 )
                             }
-                        }
+                        },
+                        colors = transparentTopBarColors,
                     )
                     HorizontalDivider(
                         modifier = Modifier
@@ -230,7 +273,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
         route?.contains("updateProductRoutes") == true -> {
             {
-                Column {
+                Column(modifier = Modifier
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                     TopAppBar(
                         title = {
                             Text(
@@ -247,7 +291,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                     contentDescription = "Product"
                                 )
                             }
-                        }
+                        },
+                        colors = transparentTopBarColors,
                     )
                     HorizontalDivider(
                         modifier = Modifier
@@ -260,7 +305,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
         route?.contains("orderDetailRoutes") == true -> {
             {
-                Column {
+                Column(modifier = Modifier
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                     TopAppBar(
                         title = {
                             Text(
@@ -279,7 +325,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                     contentDescription = "BackToOrderDetailScreen"
                                 )
                             }
-                        }
+                        },
+                        colors = transparentTopBarColors,
                     )
                     HorizontalDivider(
                         modifier = Modifier
@@ -292,7 +339,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
         }
         route?.contains("specificOrderRoutes") == true -> {
             {
-                Column {
+                Column(modifier = Modifier
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
                     TopAppBar(
                         title = {
                             Text(
@@ -310,7 +358,8 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                     contentDescription = "BackToEachOrderScreen"
                                 )
                             }
-                        }
+                        },
+                        colors = transparentTopBarColors
                     )
                     HorizontalDivider(
                         modifier = Modifier

@@ -61,11 +61,7 @@ fun ClayLoadingScreen(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFFF5F3FF), Color(0xFFEDE9FE))
-                )
-            ),
+            ,
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -114,11 +110,7 @@ fun ClayErrorScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(Color(0xFFFFF5F5), Color(0xFFFFECEC))
-                )
-            ),
+            ,
         contentAlignment = Alignment.Center
     ) {
         Column(
