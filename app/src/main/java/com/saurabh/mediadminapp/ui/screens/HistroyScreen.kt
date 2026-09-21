@@ -38,7 +38,9 @@ import com.saurabh.mediadminapp.network.response.SellHistory
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayFilterChip
+import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
 import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
+
 import com.saurabh.mediadminapp.ui.screens.components.SalesCard
 import com.saurabh.mediadminapp.ui.screens.components.SalesFilter
 import com.saurabh.mediadminapp.ui.screens.components.DonutChart
@@ -62,25 +64,25 @@ fun HistoryScreen(viewModel: MyViewModel, navController: NavController){
         viewModel.getAllSellHistory()
     }
     
-    Scaffold(modifier = Modifier.background(ClayScreenBg)) { innerpadding ->
-        when {
-            state.value.isLoading -> {
-                ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
-            }
-            state.value.error != null -> {
-                Log.d("TAG", "HistoryScreen:  error :-> ${state.value.error}")
-                ClayErrorScreen(
-                    errorMessage = state.value.error.toString(),
-                    modifier = Modifier.padding(innerpadding)
-                )
-            }
-            state.value.success != null -> {
-                HistoryListScreen(
-                    histories = state.value.success!!.sell_history, 
-                    modifier = Modifier
-                        .padding(innerpadding)
-                        .background(ClayScreenBg)
-                )
+    Scaffold(containerColor = Color.Transparent) { innerpadding ->
+        ClayGradientBackdrop(gradient = ClayHistoryGradient) {
+            when {
+                state.value.isLoading -> {
+                    ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
+                }
+                state.value.error != null -> {
+                    Log.d("TAG", "HistoryScreen:  error :--> ${state.value.error}")
+                    ClayErrorScreen(
+                        errorMessage = state.value.error.toString(),
+                        modifier = Modifier.padding(innerpadding)
+                    )
+                }
+                state.value.success != null -> {
+                    HistoryListScreen(
+                        histories = state.value.success!!.sell_history,
+                        modifier = Modifier.padding(innerpadding)
+                    )
+                }
             }
         }
     }

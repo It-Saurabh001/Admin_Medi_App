@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,8 +16,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,18 +31,22 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.saurabh.mediadminapp.ui.theme.ClayAccent
 import com.saurabh.mediadminapp.ui.theme.ClayCardBg
 import com.saurabh.mediadminapp.ui.theme.ClayElevationCard
+import com.saurabh.mediadminapp.ui.theme.ClayGradient
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 
 // =============================================================================
-// ClayScreenShell.kt — Loading, Error, and Empty state screens
+// ClayScreenShell.kt — Loading, Error, Empty state screens + backdrop helpers
 // =============================================================================
 
 /**
@@ -59,9 +67,7 @@ fun ClayLoadingScreen(modifier: Modifier = Modifier) {
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            ,
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -108,9 +114,7 @@ fun ClayErrorScreen(
     onRetry: (() -> Unit)? = null
 ) {
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            ,
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -182,5 +186,89 @@ fun ClayEmptyState(
                 )
             }
         }
+    }
+}
+
+// =============================================================================
+// ClayGradientBackdrop — Full-screen Claymorphism canvas.
+//
+// Draws the global ClayGradient (vertical #6C63FF → #48CAE4) behind content,
+// with two decorative blobs:
+//   • Top-right: White @ 12% opacity, ~190dp
+//   • Bottom-left: ClayAccent (#FF6584) @ 22% opacity, ~130dp
+//
+// Usage: wrap the Scaffold content in this composable:
+//   ClayGradientBackdrop { /* screen content */ }
+// =============================================================================
+@Composable
+fun ClayGradientBackdrop(
+    modifier: Modifier = Modifier,
+    gradient: Brush = ClayGradient,
+    topBlobSize: Dp = 190.dp,
+    bottomBlobSize: Dp = 130.dp,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(brush = gradient)
+    ) {
+        // Top-right decorative blob — white light reflection
+        ClayBlobCircle(
+            size = topBlobSize,
+            color = Color.White.copy(alpha = 0.12f),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 8.dp, end = 8.dp)
+        )
+        // Bottom-left blob — warm accent glow (clay depth)
+        ClayBlobCircle(
+            size = bottomBlobSize,
+            color = ClayAccent.copy(alpha = 0.22f),
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(bottom = 48.dp, start = 8.dp)
+        )
+
+        content()
+    }
+}
+
+/**
+ * A soft circular blob used for decorative backdrop accents.
+ * Rendered as a circle with no border to keep it subtle.
+ */
+@Composable
+fun ClayBlobCircle(
+    size: Dp,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(color)
+    )
+}
+
+// =============================================================================
+// HorizontalScrollableText — scrollable single-line text for long product names
+// used in ProductScreen's EachProductCard.
+// =============================================================================
+@Composable
+fun HorizontalScrollableText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current
+) {
+    val scrollState = rememberScrollState()
+    Box(modifier = modifier.horizontalScroll(scrollState)) {
+        Text(
+            text = text,
+            style = style,
+            maxLines = 1,
+            softWrap = false
+        )
     }
 }

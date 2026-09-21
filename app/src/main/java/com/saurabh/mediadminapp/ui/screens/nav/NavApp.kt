@@ -2,13 +2,22 @@ package com.saurabh.mediadminapp.ui.screens.nav
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -32,18 +41,16 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,12 +60,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -101,12 +115,31 @@ fun NavApp(viewModel: MyViewModel) {
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
 
-    val drawerState = DrawerState(initialValue = DrawerValue.Closed)
-    // Observe backstack changes — drives isAuthRoute, topBar, bottomBar
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)    // Observe backstack changes — drives isAuthRoute, topBar, bottomBar
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val isHomeScreen = currentRoute?.contains("HomeRoutes", ignoreCase = true) == true
     Log.d("TAG", "Current drawerValue: ${drawerState.currentValue}, isAnimationRunning: ${drawerState.isAnimationRunning}, currentRoute: $currentRoute")
+
+
+    val bottomNavItems = remember {
+        listOf(
+            BottomNavigationItem("Dashboard", Icons.Filled.Home),
+            BottomNavigationItem("Products", Icons.Filled.Add),
+            BottomNavigationItem("Orders", Icons.Filled.ShoppingCart),
+            BottomNavigationItem("History", Icons.Filled.Menu)
+        )
+    }
+
+    // Login state + admin profile data
+    val isLoggedIn by viewModel.isAdminLoggedIn.collectAsState()
+    val adminState by viewModel.getAllAdminState.collectAsState()
+    val loggedInAdminId by viewModel.loggedInAdminId.collectAsState()
+    val admin: Admin? = adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
+
+
+
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // isAuthRoute: true when on auth screens OR backstack not yet settled (null)
@@ -132,6 +165,18 @@ fun NavApp(viewModel: MyViewModel) {
                 route.contains("HistoryRoutes", ignoreCase = true)
     } ?: false
 
+
+    LaunchedEffect(drawerState) {
+        snapshotFlow { drawerState.currentValue }.collect { newState ->
+            Log.e("DRAWER_DEBUG", "🎯 State Changed to: $newState | Route: $currentRoute")
+            if (newState == DrawerValue.Open) {
+                // यह स्टैक ट्रेस प्रिंट करेगा जिससे पता चलेगा कि ओपन कमांड कहाँ से फायर हुई
+                Log.e("DRAWER_DEBUG", "🚨 Drawer Opened! Stack Trace:", Exception("Tracking Drawer Open"))
+            }
+        }
+    }
+
+
     // Sync bottom-nav highlight with actual current route (handles back-nav desync)
     LaunchedEffect(currentRoute) {
         selected = when {
@@ -141,30 +186,17 @@ fun NavApp(viewModel: MyViewModel) {
             currentRoute?.contains("HistoryRoutes", ignoreCase = true) == true -> 3
             else -> -1 // Profile, Settings, About, Details आदि पर कोई टैब सेलेक्ट नहीं रहेगा
         }
-        if (!isHomeScreen && drawerState.isOpen) {
+        if (currentRoute != null && !isHomeScreen && drawerState.isOpen) {
             Log.d("TAG", " DRAWER_DEBUGRoute changed to: $currentRoute | drawer isOpen: ${drawerState.isOpen}")
             drawerState.close()
         }
 
     }
 
-    val bottomNavItems = remember {
-        listOf(
-            BottomNavigationItem("Dashboard", Icons.Filled.Home),
-            BottomNavigationItem("Products", Icons.Filled.Add),
-            BottomNavigationItem("Orders", Icons.Filled.ShoppingCart),
-            BottomNavigationItem("History", Icons.Filled.Menu)
-        )
-    }
 
-    // Login state + admin profile data
-    val isLoggedIn by viewModel.isAdminLoggedIn.collectAsState()
-    val adminState by viewModel.getAllAdminState.collectAsState()
-    val loggedInAdminId by viewModel.loggedInAdminId.collectAsState()
-    val admin: Admin? = adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
-
-
+    // ── 2. LAUNCHED EFFECTS TRACKER ──
     LaunchedEffect(isLoggedIn) {
+        Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(isLoggedIn) triggered: isLoggedIn=$isLoggedIn, isOpen=${drawerState.isOpen}")
         if (isLoggedIn) {
             viewModel.getAllAdmin()
             if (drawerState.isOpen) {
@@ -172,18 +204,17 @@ fun NavApp(viewModel: MyViewModel) {
             }
         }
     }
-    // ─────────────────────────────────────────────────────────────────────────
-    // Auth Redirect — keyed on BOTH isLoggedIn AND currentRoute.
-    // This re-fires once the backstack settles (null → real route string).
-    // currentRoute != null guard prevents acting on Frame-0 null state.
-    // ─────────────────────────────────────────────────────────────────────────
-    LaunchedEffect(isLoggedIn, isAuthRoute) {
-        if (!isLoggedIn && !isAuthRoute) {
-            Log.d("NAV", "User logged out -> navigating to SignIn")
-            navController.navigate(Routes.SignInRoutes) {
-                popUpTo(Routes.HomeRoutes.route) { inclusive = true }
-                launchSingleTop = true
-            }
+    LaunchedEffect(currentRoute) {
+        Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(currentRoute) triggered: Route changed to $currentRoute")
+        selected = when {
+            currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
+            currentRoute?.contains("productRoutes", ignoreCase = true) == true -> 1
+            currentRoute?.contains("OrdersRoutes", ignoreCase = true) == true -> 2
+            currentRoute?.contains("HistoryRoutes", ignoreCase = true) == true -> 3
+            else -> -1
+        }
+        if (currentRoute != null && !isHomeScreen && drawerState.isOpen) {
+            drawerState.close()
         }
     }
     LaunchedEffect(isLoggedIn, isAuthRoute) {
@@ -196,24 +227,11 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    // =========================================================================
-    // ARCHITECTURE: Single NavHost with conditional drawer wrapper.
-    //
-    // Auth screens render inside a plain Box — no drawer gesture detector
-    // is ever installed on the layout tree. Main screens render inside
-    // ModalNavigationDrawer where the gesture detector belongs.
-    //
-    // We use AnimatedContent to swap between the two shells smoothly
-    // while keeping a single NavController instance.
-    // =========================================================================
-
-
-
     ModalNavigationDrawer(
         drawerState = drawerState,
         gesturesEnabled = isHomeScreen,
         drawerContent = {
-            if (isHomeScreen) {
+
                 AppDrawerContent(
                     admin = admin,
                     currentRoute = currentRoute,
@@ -236,7 +254,7 @@ fun NavApp(viewModel: MyViewModel) {
                         }
                     }
                 )
-            }
+
         }
     ) {
         Scaffold(
@@ -356,52 +374,45 @@ private fun AppBottomBar(
     selected: Int,
     onItemSelected: (Int) -> Unit
 ) {
-    val barShape = RoundedCornerShape(34.dp)
-    val itemShape = RoundedCornerShape(24.dp)
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClaySecondary)))
+            .background(
+                brush = Brush.horizontalGradient(
+                    colors = listOf(
+                        ClayPrimary.copy(alpha = 0.08f),
+                        ClaySecondary.copy(alpha = 0.08f)
+                    )
+                )
+            )
+            .background(
+                brush = Brush.verticalGradient(
+                    0.0f to Color.White.copy(alpha = 0.16f),
+                    0.35f to Color.Transparent
+                )
+            )
+            .drawBehind {
+                drawLine(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.04f),
+                            Color.White.copy(alpha = 0.45f),
+                            Color.White.copy(alpha = 0.04f)
+                        )
+                    ),
+                    start = Offset(0f, 0f),
+                    end = Offset(size.width, 0f),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
             .navigationBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Claymorphic Floating Capsule
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(68.dp)
-                // 1. सॉफ्ट डार्क शैडो (Bottom-Right)
-                .shadow(
-                    elevation = 20.dp,
-                    shape = barShape,
-                    ambientColor = ClayPrimary.copy(alpha = 0.35f),
-                    spotColor = Color(0xFF070B19).copy(alpha = 0.30f),
-                    clip = false
-                )
-                .clip(barShape)
-                // 2. सॉलिड क्ले बैकग्राउंड (Soft Light Matte/Clay Tone)
-                .background(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFFFFFFFF), // टॉप पर हल्का ब्राइट
-                            Color(0xFFF0F3FA)  // नीचे क्ले बेस
-                        )
-                    )
-                )
-                // 3. टॉप-लेफ्ट लाइट रिम बॉर्डर (Clay 3D Highlight)
-                .border(
-                    width = 1.2.dp,
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.85f), // टॉप-लेफ्ट सॉफ्ट लाइट
-                            Color.White.copy(alpha = 0.15f), // मिडिल फेड
-                            Color.Transparent               // बॉटम-राइट पूरी तरह मेल्ट
-                        )
-                    ),
-                    shape = barShape
-                )
+                .height(64.dp)
                 .padding(horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
@@ -409,47 +420,216 @@ private fun AppBottomBar(
             items.forEachIndexed { index, item ->
                 val isSelected = selected == index
 
+                // FIX A ─ Uniform corners, 22dp = height÷2 = true capsule/oval
+                // Before: asymmetric 18dp top / 12dp bottom → flat bottom edges leaked white
+                // After:  uniform 22dp all sides → perfect stadium pill, no corner gaps
+                val animatedCorner by animateDpAsState(
+                    targetValue = if (isSelected) 22.dp else 18.dp,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    label = "cornerAnim"
+                )
+
+                // Drives shadow fade-in/out without needing elevation change
+                val animatedShadowAlpha by animateFloatAsState(
+                    targetValue = if (isSelected) 1f else 0f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "shadowAlpha"
+                )
+
+                val animatedIconTint by animateColorAsState(
+                    targetValue = if (isSelected) ClayPrimary else Color.White,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "iconTintAnim"
+                )
+
+                val currentShape = RoundedCornerShape(animatedCorner) // uniform all sides
+
                 Box(
                     modifier = Modifier
-                        .height(48.dp)
-                        .clip(itemShape)
+                        .height(44.dp)
+
+                        // FIX B ─ Replace graphicsLayer { shadowElevation } with
+                        //         drawBehind + BlurMaskFilter via nativeCanvas
+                        //
+                        // Why graphicsLayer caused white corners:
+                        //   When shadowElevation > 0, Android allocates a RenderNode for the
+                        //   compositing layer. That node's RECTANGULAR bounds get a white
+                        //   default background during shadow pass. Your rounded content only
+                        //   fills the pill area, so the four rectangular corners stay white.
+                        //
+                        // Why drawBehind + BlurMaskFilter doesn't:
+                        //   It draws directly on the same hardware canvas as everything else.
+                        //   No separate compositing layer → no white rectangle → no artifacts.
+                        .drawBehind {
+                            if (animatedShadowAlpha > 0f) {
+                                val cr = animatedCorner.toPx()
+                                drawIntoCanvas { canvas ->
+                                    canvas.nativeCanvas.drawRoundRect(
+                                        /* left   */ 3.dp.toPx(),
+                                        /* top    */ 4.dp.toPx(),
+                                        /* right  */ size.width - 3.dp.toPx(),
+                                        /* bottom */ size.height + 3.dp.toPx(),
+                                        /* rx     */ cr,
+                                        /* ry     */ cr,
+                                        android.graphics.Paint().apply {
+                                            isAntiAlias = true
+                                            color = android.graphics.Color.argb(
+                                                (55 * animatedShadowAlpha).toInt(),
+                                                0, 0, 0
+                                            )
+                                            maskFilter = android.graphics.BlurMaskFilter(
+                                                10.dp.toPx(),
+                                                android.graphics.BlurMaskFilter.Blur.NORMAL
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Pill base color
                         .then(
                             if (isSelected) {
-                                // Selected Tab: Pressed / Inset Clay Pill
-                                Modifier
-                                    .background(ClayPrimary.copy(alpha = 0.12f))
-                                    .border(
-                                        width = 1.dp,
-                                        color = ClayPrimary.copy(alpha = 0.25f),
-                                        shape = itemShape
-                                    )
+                                Modifier.background(
+                                    brush = Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color(0xFFFFFFFF), // Top — direct light
+                                            Color(0xFFF2F6FC), // Upper body
+                                            Color(0xFFE5EBF7), // Lower body
+                                            Color(0xFFD5DFEE)  // Bottom — contact zone
+                                        )
+                                    ),
+                                    shape = currentShape
+                                )
                             } else {
-                                Modifier.background(Color.Transparent)
+                                Modifier.background(
+                                    color = Color(0xFF1E293B).copy(alpha = 0.70f),
+                                    shape = currentShape
+                                )
                             }
                         )
-                        .clickable { onItemSelected(index) }
-                        .padding(horizontal = if (isSelected) 14.dp else 10.dp),
+
+                        // 5-layer pillow lighting model (unchanged, still fully valid)
+                        .drawWithContent {
+                            drawContent()
+                            if (isSelected) {
+                                val cr = CornerRadius(animatedCorner.toPx())
+                                val rimWidth = 1.8.dp.toPx()
+
+                                // Layer 1 — Top Specular Highlight
+                                drawRoundRect(
+                                    brush = Brush.verticalGradient(
+                                        0.00f to Color.White.copy(alpha = 0.80f),
+                                        0.30f to Color.White.copy(alpha = 0.18f),
+                                        0.52f to Color.White.copy(alpha = 0.00f)
+                                    ),
+                                    size = size,
+                                    cornerRadius = cr
+                                )
+
+                                // Layer 2 — Bottom Contact Shadow
+                                drawRoundRect(
+                                    brush = Brush.verticalGradient(
+                                        0.48f to Color.Black.copy(alpha = 0.00f),
+                                        0.78f to Color.Black.copy(alpha = 0.06f),
+                                        1.00f to Color.Black.copy(alpha = 0.22f)
+                                    ),
+                                    size = size,
+                                    cornerRadius = cr
+                                )
+
+                                // Layer 3 — Side Curvature Shading
+                                drawRoundRect(
+                                    brush = Brush.horizontalGradient(
+                                        0.00f to Color.Black.copy(alpha = 0.08f),
+                                        0.15f to Color.Black.copy(alpha = 0.00f),
+                                        0.85f to Color.Black.copy(alpha = 0.00f),
+                                        1.00f to Color.Black.copy(alpha = 0.08f)
+                                    ),
+                                    size = size,
+                                    cornerRadius = cr
+                                )
+
+                                // Layer 4 — Top Rim Highlight
+                                drawRoundRect(
+                                    brush = Brush.verticalGradient(
+                                        0.00f to Color.White.copy(alpha = 1.00f),
+                                        0.38f to Color.White.copy(alpha = 0.30f),
+                                        0.65f to Color.White.copy(alpha = 0.00f)
+                                    ),
+                                    size = size,
+                                    cornerRadius = cr,
+                                    style = Stroke(width = rimWidth)
+                                )
+
+                                // Layer 5 — Bottom Rim Shadow
+                                drawRoundRect(
+                                    brush = Brush.verticalGradient(
+                                        0.40f to Color.Black.copy(alpha = 0.00f),
+                                        0.78f to Color.Black.copy(alpha = 0.08f),
+                                        1.00f to Color.Black.copy(alpha = 0.22f)
+                                    ),
+                                    size = size,
+                                    cornerRadius = cr,
+                                    style = Stroke(width = rimWidth)
+                                )
+                            }
+                        }
+                        .clip(currentShape)
+                        .animateContentSize(
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) { onItemSelected(index) },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(
+                        modifier = Modifier.padding(
+                            horizontal = if (isSelected) 16.dp else 12.dp,
+                            vertical = 8.dp
+                        ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
                             imageVector = item.icon,
                             contentDescription = item.name,
-                            // सिलेक्टेड पर ClayPrimary और अनसिलेक्टेड पर म्यूटेड ग्रे
-                            tint = if (isSelected) ClayPrimary else Color(0xFF8A94A6),
-                            modifier = Modifier.size(22.dp)
+                            tint = animatedIconTint,
+                            modifier = Modifier.size(20.dp)
                         )
-                        if (isSelected) {
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = item.name,
-                                color = ClayPrimary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+
+                        AnimatedVisibility(
+                            visible = isSelected,
+                            enter = fadeIn(animationSpec = tween(180, delayMillis = 40)) +
+                                    expandHorizontally(
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioLowBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        )
+                                    ),
+                            exit = fadeOut(animationSpec = tween(100)) +
+                                    shrinkHorizontally(
+                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                                    )
+                        ) {
+                            Row {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = item.name,
+                                    color = ClayPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }

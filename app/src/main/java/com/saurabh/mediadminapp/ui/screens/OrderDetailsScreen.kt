@@ -43,7 +43,9 @@ import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClaySearchField
 import com.saurabh.mediadminapp.ui.screens.components.ClayStatCard
 import com.saurabh.mediadminapp.ui.screens.components.EachOrderCard
+import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
 import com.saurabh.mediadminapp.ui.theme.ClayOrderGradient
+
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayScreenBg
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
@@ -66,23 +68,19 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController) {
         }
     }
     
-    Scaffold(modifier = Modifier.background(ClayScreenBg)) { innerpadding ->
-        when {
-            response.value.isLoading -> {
-                ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
-            }
-            response.value.error != null -> {
-                ClayErrorScreen(
-                    errorMessage = response.value.error.toString(),
-                    modifier = Modifier.padding(innerpadding)
-                )
-            }
-            response.value.success != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(ClayScreenBg)
-                ) {
+    Scaffold(containerColor = Color.Transparent) { innerpadding ->
+        ClayGradientBackdrop(gradient = ClayOrderGradient) {
+            when {
+                response.value.isLoading -> {
+                    ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
+                }
+                response.value.error != null -> {
+                    ClayErrorScreen(
+                        errorMessage = response.value.error.toString(),
+                        modifier = Modifier.padding(innerpadding)
+                    )
+                }
+                response.value.success != null -> {
                     OrdersListScreen(
                         orders = response.value.success!!.orders,
                         navController = navController,

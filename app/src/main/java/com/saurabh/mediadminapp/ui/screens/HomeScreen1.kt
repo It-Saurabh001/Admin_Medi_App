@@ -1,6 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
 import android.annotation.SuppressLint
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -83,15 +84,24 @@ val ClayCardShadow = Color(0xFF6C63FF).copy(alpha = 0.25f)
 private val ClayApproved = Color(0xFF10B981)
 private val ClayPending = Color(0xFFF59E0B)
 
-
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
 fun HomeScreen(viewModel: MyViewModel, navController: NavController) {
+    // 1. ट्रैकिंग: होम स्क्रीन कब कंपोज़ होना शुरू हुई
+    Log.d("DRAWER_DEBUG", "🏠 HomeScreen: Composition Started")
+
     val state by viewModel.getAllUserState.collectAsState()
     val isApproved = viewModel.isApprovedUser.collectAsState()
 
     LaunchedEffect(Unit) {
+        // 2. ट्रैकिंग: API कॉल कब फायर हुई
+        Log.d("DRAWER_DEBUG", "🏠 HomeScreen: LaunchedEffect(Unit) Triggered -> Fetching users")
         viewModel.getAllUsers()
+    }
+
+    // 3. ट्रैकिंग: स्टेट कब-कब बदल रही है (Loading -> Success)
+    LaunchedEffect(state.isLoading, state.success, state.error) {
+        Log.d("DRAWER_DEBUG", "🏠 HomeScreen State Updated -> isLoading: ${state.isLoading}, isSuccess: ${state.success != null}, isError: ${state.error != null}")
     }
 
     // ── Full-screen vibrant SignIn background ──
@@ -118,15 +128,18 @@ fun HomeScreen(viewModel: MyViewModel, navController: NavController) {
 
         when {
             state.isLoading -> {
+                Log.d("DRAWER_DEBUG", "🏠 HomeScreen UI: Showing Loading Screen")
                 ClayLoadingScreen(modifier = Modifier.fillMaxSize())
             }
             state.error != null -> {
+                Log.d("DRAWER_DEBUG", "🏠 HomeScreen UI: Showing Error Screen")
                 ClayErrorScreen(
                     errorMessage = state.error.toString(),
                     modifier = Modifier.fillMaxSize()
                 )
             }
             state.success != null -> {
+                Log.d("DRAWER_DEBUG", "🏠 HomeScreen UI: Showing UserListScreen1")
                 UserListScreen1(
                     users = state.success!!.users,
                     userApprovalState = isApproved,
@@ -147,10 +160,12 @@ fun UserListScreen1(
     modifier: Modifier = Modifier,
     navController: NavController
 ) {
+    Log.d("DRAWER_DEBUG", "📜 UserListScreen1: Composition Started with ${users.size} users")
     var searchTerm by remember { mutableStateOf("") }
     var filterStatus by remember { mutableStateOf(FilterStatus.ALL) }
 
     val filteredUsers = remember(users, searchTerm, filterStatus) {
+        Log.d("DRAWER_DEBUG", "📜 UserListScreen1: Filtering users (Search: '$searchTerm', Status: $filterStatus)")
         users.filter { user ->
             val matchesSearch = user.name.lowercase().contains(searchTerm.lowercase()) ||
                     user.email.lowercase().contains(searchTerm.lowercase()) ||
@@ -656,7 +671,7 @@ fun EachUserCard(
 }
 
 @Composable
-private fun ClayBlob1(modifier: Modifier = Modifier, color: Color) {
+fun ClayBlob1(modifier: Modifier = Modifier, color: Color) {
     Box(
         modifier = modifier
             .clip(CircleShape)

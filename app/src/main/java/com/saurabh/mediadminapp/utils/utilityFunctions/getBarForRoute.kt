@@ -56,7 +56,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         text = "Admin Management",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 9.dp).background(Color.Transparent)
+                        modifier = Modifier.padding(vertical = 5.dp).background(Color.Transparent)
                     )},
                         actions = {
                             IconButton(onClick = onMenuClick) {
@@ -65,12 +65,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors,
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
 
             }
@@ -87,7 +87,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                             text = "All Product",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 16.dp)
+                            modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                         )
                     },
                     actions = {
@@ -100,12 +100,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                     },
                     colors = transparentTopBarColors,
                 )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
             }
         }
@@ -118,7 +118,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         text = "History",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                     )},
                         actions = {
                             IconButton(onClick = onMenuClick) {
@@ -127,12 +127,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
 
             }
@@ -146,7 +146,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         text = "Orders Screen",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(vertical = 16.dp)
+                        modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                     )},
                         actions = {
                             IconButton(onClick = onMenuClick) {
@@ -155,12 +155,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
 
             }
@@ -176,7 +176,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                 text = "User Detail Management",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                             )
                         },
                         navigationIcon = {
@@ -189,12 +189,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors,
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
 
 
@@ -210,7 +210,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                 text = "Add Product",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                             )
                         },
                         navigationIcon = {
@@ -223,12 +223,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors,
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
 
 
@@ -245,7 +245,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                 text = "ProductDetail",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                             )
                         },
                         navigationIcon = {
@@ -260,12 +260,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors,
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
 
 
@@ -281,7 +281,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                 text = "Update Product Details",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                             )
                         },
                         navigationIcon = {
@@ -294,12 +294,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors,
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
             }
         }
@@ -313,7 +313,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                 text = "Each User Orders",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                             )
                         },
                         navigationIcon = {
@@ -328,12 +328,12 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                         },
                         colors = transparentTopBarColors,
                     )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
-                    )
+//                    HorizontalDivider(
+//                        modifier = Modifier
+//                            .fillMaxWidth()
+//                            .padding(vertical = 1.dp),
+//                        thickness = 1.dp
+//                    )
                 }
             }
         }
@@ -347,7 +347,7 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                                 text = "Specific Order",
                                 fontSize = 24.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 16.dp)
+                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                             )
                         },
                         navigationIcon = {
@@ -360,12 +360,6 @@ fun getTopBarForRoute(route: String?, navController: NavController, viewModel: M
                             }
                         },
                         colors = transparentTopBarColors
-                    )
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 1.dp),
-                        thickness = 1.dp
                     )
                 }
             }

@@ -59,6 +59,8 @@ import com.saurabh.mediadminapp.ui.screens.components.ClayStatusBadge
 import com.saurabh.mediadminapp.ui.screens.components.DonutChart
 import com.saurabh.mediadminapp.ui.screens.components.buildProductStatsSegments
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
+
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeInStock
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeLowStock
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeOutStock
@@ -79,23 +81,19 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
         viewModel.getAllProduct()
     }
     
-    Scaffold(modifier = Modifier.background(ClayScreenBg)) { innerpadding ->
-        when {
-            productState.isLoading -> {
-                ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
-            }
-            productState.error != null -> {
-                ClayErrorScreen(
-                    errorMessage = productState.error,
-                    modifier = Modifier.padding(innerpadding)
-                )
-            }
-            productState.success != null -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(ClayScreenBg)
-                ) {
+    Scaffold(containerColor = Color.Transparent) { innerpadding ->
+        ClayGradientBackdrop(gradient = ClayProductGradient) {
+            when {
+                productState.isLoading -> {
+                    ClayLoadingScreen(modifier = Modifier.padding(innerpadding))
+                }
+                productState.error != null -> {
+                    ClayErrorScreen(
+                        errorMessage = productState.error,
+                        modifier = Modifier.padding(innerpadding)
+                    )
+                }
+                productState.success != null -> {
                     ProductListScreen(
                         products = productState.success.products,
                         navController = navController,
