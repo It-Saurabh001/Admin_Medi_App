@@ -217,11 +217,34 @@ fun NavApp(viewModel: MyViewModel) {
             drawerState.close()
         }
     }
+    // ── Login → Home ──────────────────────────────────────────────────────────
+    // If the app finds an active session while sitting on an auth screen (e.g.
+    // cold start with persisted tokens), skip to the Home graph.
     LaunchedEffect(isLoggedIn, isAuthRoute) {
         if (isLoggedIn && isAuthRoute) {
             Log.d("NAV", "Admin session active on auth screen -> forcing navigation to Home")
             navController.navigate(Routes.HomeRoutes()) {
                 popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // ── Session expiry / Logout → Login ──────────────────────────────────────
+    // Triggered by:
+    //   a) User pressing Logout (setAdminLoggedOut sets isLoggedIn = false)
+    //   b) Background token refresh failure: TokenAuthenticator calls
+    //      tokenManager.invalidateSession() → ViewModel.observeSessionExpiry()
+    //      sets isLoggedIn = false → this LaunchedEffect fires.
+    //
+    // popUpTo(0) { inclusive = true } clears every entry from the backstack,
+    // including nested graphs, so the Back button cannot return to a protected
+    // screen after the user has been logged out.
+    LaunchedEffect(isLoggedIn) {
+        if (!isLoggedIn && !isAuthRoute && currentRoute != null) {
+            Log.w("NAV", "Session lost on protected route ($currentRoute) -> redirecting to SignIn")
+            navController.navigate(Routes.SignInRoutes) {
+                popUpTo(0) { inclusive = true }
                 launchSingleTop = true
             }
         }

@@ -2,9 +2,7 @@ package com.saurabh.mediadminapp.network
 
 import android.content.Context
 import android.util.Log
-import com.google.gson.annotations.SerializedName
 import com.saurabh.mediadminapp.utils.BASE_URL1
-import com.saurabh.mediadminapp.utils.BASE_URL
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,16 +16,33 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
+// ── Qualifiers ────────────────────────────────────────────────────────────────
 
-
+/**
+ * Marks the unauthenticated Retrofit / OkHttpClient used exclusively for
+ * login and token refresh.  This client intentionally has NO AuthInterceptor
+ * and NO TokenAuthenticator, which breaks the circular dependency that would
+ * otherwise occur if the authenticator triggered a refresh request on the same
+ * client that owns the authenticator.
+ */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
-annotation class TempRetrofit
+annotation class AuthRetrofit
 
+/**
+ * ApiServices instance backed by [AuthRetrofit] — safe to inject into
+ * TokenAuthenticator without creating a recursive loop.
+ */
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class AuthApiService
+
+/** The primary authenticated Retrofit instance. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class MainRetrofit
 
+/** The primary authenticated ApiServices instance. */
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class MainApiService
@@ -36,7 +51,8 @@ annotation class MainApiService
 @InstallIn(SingletonComponent::class)
 object ApiProvider {
 
-    // Provide TokenManager
+    // ── TokenManager ──────────────────────────────────────────────────────────
+
     @Provides
     @Singleton
     fun provideTokenManager(@ApplicationContext context: Context): TokenManager {
@@ -44,7 +60,8 @@ object ApiProvider {
         return TokenManager.getInstance(context)
     }
 
-    // Provide Logging Interceptor
+    // ── Logging interceptor ───────────────────────────────────────────────────
+
     @Provides
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
@@ -53,18 +70,27 @@ object ApiProvider {
         }
     }
 
-    // Temporary Retrofit for Token Refresh (without auth to avoid circular dependency)
+    // ── Auth (unauthenticated) client — used ONLY for login + token refresh ──
+    //
+    // Why a separate client?
+    // OkHttp calls Authenticator.authenticate() on a response that came from the
+    // same OkHttpClient instance.  If the refresh request were sent through that
+    // same client, a 401 on the refresh endpoint would re-enter authenticate(),
+    // which would call refresh again, ad infinitum — a classic deadlock/loop.
+    // By isolating refresh on its own bare OkHttpClient (no Authenticator, no
+    // AuthInterceptor), that code path can never recurse.
+    // ─────────────────────────────────────────────────────────────────────────
+
     @Provides
     @Singleton
-    @TempRetrofit
-    fun provideTempRetrofit(
-        loggingInterceptor: HttpLoggingInterceptor
-    ): Retrofit {
+    @AuthRetrofit
+    fun provideAuthRetrofit(loggingInterceptor: HttpLoggingInterceptor): Retrofit {
         val client = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
+            // Intentionally NO authenticator and NO auth header interceptor.
             .build()
 
         return Retrofit.Builder()
@@ -74,31 +100,34 @@ object ApiProvider {
             .build()
     }
 
-    // Temporary ApiService for Token Refresh
     @Provides
     @Singleton
-    fun provideTempApiService(@TempRetrofit retrofit: Retrofit): ApiServices {
+    @AuthApiService
+    fun provideAuthApiService(@AuthRetrofit retrofit: Retrofit): ApiServices {
         return retrofit.create(ApiServices::class.java)
     }
 
-    // Provide AuthInterceptor
+    // ── Auth header interceptor ───────────────────────────────────────────────
+
     @Provides
     @Singleton
     fun provideAuthInterceptor(tokenManager: TokenManager): AuthInterceptor {
         return AuthInterceptor(tokenManager)
     }
 
-    // Provide TokenAuthenticator
+    // ── TokenAuthenticator — injected with the isolated auth service ──────────
+
     @Provides
     @Singleton
     fun provideTokenAuthenticator(
         tokenManager: TokenManager,
-        tempApiService: ApiServices
+        @AuthApiService authApiService: ApiServices
     ): TokenAuthenticator {
-        return TokenAuthenticator(tokenManager, tempApiService)
+        return TokenAuthenticator(tokenManager, authApiService)
     }
 
-    // Main OkHttpClient with Auth
+    // ── Main (authenticated) OkHttpClient ─────────────────────────────────────
+
     @Provides
     @Singleton
     fun provideHttpClient(
@@ -106,18 +135,19 @@ object ApiProvider {
         authInterceptor: AuthInterceptor,
         tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
-        Log.d("PERF_TRACE", "Hilt provideHttpClient (First OkHttpClient access) [Thread: ${Thread.currentThread().name}]")
+        Log.d("PERF_TRACE", "Hilt provideHttpClient [Thread: ${Thread.currentThread().name}]")
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            .addInterceptor(authInterceptor)
-            .authenticator(tokenAuthenticator)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor(authInterceptor)    // injects Bearer token on outgoing requests
+            .authenticator(tokenAuthenticator)  // retries with fresh token on 401 responses
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(15, TimeUnit.SECONDS)
+            .writeTimeout(15, TimeUnit.SECONDS)
             .build()
     }
 
-    // Main Retrofit with Auth
+    // ── Main Retrofit ─────────────────────────────────────────────────────────
+
     @Provides
     @Singleton
     @MainRetrofit
@@ -130,7 +160,8 @@ object ApiProvider {
             .build()
     }
 
-    // Main ApiService
+    // ── Main ApiService ───────────────────────────────────────────────────────
+
     @Provides
     @Singleton
     @MainApiService
@@ -138,16 +169,3 @@ object ApiProvider {
         return retrofit.create(ApiServices::class.java)
     }
 }
-
-
-data class RefreshTokenResponse(
-    @SerializedName("success")
-    val success: Boolean,
-
-    @SerializedName("message")
-    val message: String,
-
-    @SerializedName("accessToken")
-    val accessToken: String
-)
-

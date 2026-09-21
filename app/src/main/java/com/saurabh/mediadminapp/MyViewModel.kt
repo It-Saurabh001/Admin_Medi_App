@@ -139,28 +139,67 @@ class MyViewModel @Inject constructor(
     init {
         Log.d("PERF_TRACE", "MyViewModel init START [Thread: ${Thread.currentThread().name}]")
         checkLoginStatus()
+        observeSessionExpiry()
         Log.d("PERF_TRACE", "MyViewModel init END [Thread: ${Thread.currentThread().name}]")
     }
-    fun checkLoginStatus(){
+
+    /**
+     * Observes [TokenManager.sessionExpiredEvent].
+     * When the TokenAuthenticator exhausts all refresh attempts, it calls
+     * [TokenManager.invalidateSession] which emits on this flow.  We react by
+     * setting [_isAdminLoggedIn] to false, which causes NavApp to navigate to
+     * the Login screen automatically — no user action required.
+     */
+    private fun observeSessionExpiry() {
+        viewModelScope.launch {
+            tokenManager.sessionExpiredEvent.collect {
+                Log.w("MyViewModel", "Session expired event received — forcing logout")
+                _isAdminLoggedIn.value = false
+                _loggedInAdminId.value = null
+            }
+        }
+    }
+
+    fun checkLoginStatus() {
         Log.d("PERF_TRACE", "checkLoginStatus START [Thread: ${Thread.currentThread().name}]")
-        viewModelScope.launch (Dispatchers.IO){
+        viewModelScope.launch(Dispatchers.IO) {
             _isAdminLoggedIn.value = tokenManager.isLoggedIn()
             _loggedInAdminId.value = tokenManager.getAdminId()
             Log.d("TAG", "checkLoginStatus: admin logged in status: ${_isAdminLoggedIn.value}")
             Log.d("PERF_TRACE", "checkLoginStatus END [Thread: ${Thread.currentThread().name}]")
         }
     }
+
     fun setAdminLoggedIn() {
         _isAdminLoggedIn.value = true
         _loggedInAdminId.value = tokenManager.getAdminId()
         Log.d("TAG", "setAdminLoggedIn: Admin logged in, tokens saved")
     }
 
+    /**
+     * Optimistic local-first logout.
+     *
+     * Pattern: try { optional network call } finally { wipe local storage }
+     *
+     * The finally block runs unconditionally — even if the network is down,
+     * the server returns 401, or the coroutine is cancelled.  This guarantees
+     * the user can always log out, and they are never trapped on an error screen
+     * due to a failed backend logout call.
+     */
     fun setAdminLoggedOut() {
-        tokenManager.clearTokens()
-        _isAdminLoggedIn.value = false
-        _loggedInAdminId.value = null
-        Log.d("TAG", "setAdminLoggedIn: Admin logged out, tokens cleared")
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Optional: add a network logout call here if the backend
+                // provides a POST /logout endpoint in the future.
+                // e.g. repository.logout() — fire-and-forget, we don't care
+                // about its success because the finally block handles everything.
+            } finally {
+                tokenManager.clearTokens()
+                _isAdminLoggedIn.value = false
+                _loggedInAdminId.value = null
+                Log.d("TAG", "setAdminLoggedOut: Admin logged out, tokens cleared")
+            }
+        }
     }
 
     fun createAdmin(name: String, email: String, password: String, phoneNumber: String) {
