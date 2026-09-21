@@ -230,16 +230,6 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    // ── Session expiry / Logout → Login ──────────────────────────────────────
-    // Triggered by:
-    //   a) User pressing Logout (setAdminLoggedOut sets isLoggedIn = false)
-    //   b) Background token refresh failure: TokenAuthenticator calls
-    //      tokenManager.invalidateSession() → ViewModel.observeSessionExpiry()
-    //      sets isLoggedIn = false → this LaunchedEffect fires.
-    //
-    // popUpTo(0) { inclusive = true } clears every entry from the backstack,
-    // including nested graphs, so the Back button cannot return to a protected
-    // screen after the user has been logged out.
     LaunchedEffect(isLoggedIn) {
         if (!isLoggedIn && !isAuthRoute && currentRoute != null) {
             Log.w("NAV", "Session lost on protected route ($currentRoute) -> redirecting to SignIn")
@@ -431,7 +421,8 @@ private fun AppBottomBar(
             .navigationBarsPadding()
             .padding(horizontal = 10.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
-    ) {
+    )
+    {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

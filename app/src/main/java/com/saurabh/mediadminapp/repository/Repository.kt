@@ -37,8 +37,10 @@ import com.saurabh.mediadminapp.network.response.VerifyOtpResponse
 import com.saurabh.mediadminapp.utils.utilityFunctions.toTextRequestBody
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Response
 import javax.inject.Inject
 
@@ -323,11 +325,11 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
     suspend fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null, image: MultipartBody.Part? = null): Flow<ResultState<UpdateProductResponse>> = flow {
         emit(ResultState.Loading)
         try {
-            val productIdBody = productId.toTextRequestBody()
-            val nameBody = name?.toTextRequestBody()
-            val priceBody = price?.toString()?.toTextRequestBody()
-            val categoryBody = category?.toTextRequestBody()
-            val stockBody = stock?.toString()?.toTextRequestBody()
+            val productIdBody = productId.toRequestBody("text/plain".toMediaTypeOrNull())
+            val nameBody = name?.toRequestBody("text/plain".toMediaTypeOrNull())
+            val priceBody = price?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
+            val categoryBody = category?.toRequestBody("text/plain".toMediaTypeOrNull())
+            val stockBody = stock?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
             val response = apiServices.updateProduct(productIdBody, nameBody, priceBody, categoryBody, stockBody, image)
             if(response.isSuccessful && response.body() != null){
                 emit(ResultState.Success(response.body()!!))

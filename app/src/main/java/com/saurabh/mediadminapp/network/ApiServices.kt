@@ -43,6 +43,7 @@ import retrofit2.http.POST
 import retrofit2.http.Multipart
 import retrofit2.http.Part
 
+
 interface ApiServices {
     // need to define end points
     // ----------------------------
@@ -50,10 +51,10 @@ interface ApiServices {
     // ----------------------------
 
     @POST("admin/refreshToken")   //  Use /admin/refreshToken for consistency
-    suspend fun refreshToken(
+    fun refreshToken(
         @Header("Authorization") refreshToken: String
 
-    ): Response<RefreshTokenResponse>
+    ): retrofit2.Call<RefreshTokenResponse>
 
 
 
@@ -269,7 +270,7 @@ interface ApiServices {
     suspend fun getSellHistory() : Response<GetSellHistoryResponse>
 
     @FormUrlEncoded
-    @POST("/admin/user/getSellHistoryByUserId")
+    @POST("admin/user/getSellHistoryByUserId")
     suspend fun getusersellhistory(
         @Field("user_id") userId: String
     ) : Response<GetUserSellHistoryResponse>

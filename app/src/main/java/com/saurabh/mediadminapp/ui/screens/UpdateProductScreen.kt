@@ -9,7 +9,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,13 +25,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PriceChange
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,8 +46,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -55,15 +58,17 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
 import com.saurabh.mediadminapp.ui.screens.components.ClayOutlinedButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayTextField
-import com.saurabh.mediadminapp.ui.theme.ClayCardBg
-import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
+import com.saurabh.mediadminapp.utils.utilityFunctions.createImageUri
+import com.saurabh.mediadminapp.utils.utilityFunctions.getUCropIntent
 import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
+import com.yalantis.ucrop.UCrop
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @Composable
@@ -89,9 +94,45 @@ fun UpdateProductScreen(
     var isInitialized by remember { mutableStateOf(false) }
     var newImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    val launcher = rememberLauncherForActivityResult(
+    // ── Dialog & Camera States ──────────────────────────────────────────────
+    var showImageSourceDialog by remember { mutableStateOf(false) }
+    var tempCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+
+    // 1. Crop Result Launcher (Yeh Composable ke andar rahega)
+    val cropLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val resultUri = UCrop.getOutput(result.data!!)
+            if (resultUri != null) {
+                newImageUri = resultUri // Cropped image yahan set ho jayegi
+            }
+        } else if (result.resultCode == UCrop.RESULT_ERROR) {
+            val cropError = UCrop.getError(result.data!!)
+            Toast.makeText(context, "Crop error: ${cropError?.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 2. Gallery Launcher (Jab gallery se select ho, toh utility function call karo)
+    val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri -> newImageUri = uri }
+    ) { uri ->
+        if (uri != null) {
+            val cropIntent = getUCropIntent(context, uri) // 👈 Utility function ka use
+            cropLauncher.launch(cropIntent)
+        }
+    }
+
+// 3. Camera Launcher (Jab camera se click ho, toh utility function call karo)
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && tempCameraUri != null) {
+            val cropIntent = getUCropIntent(context, tempCameraUri!!) // 👈 Utility function ka use
+            cropLauncher.launch(cropIntent)
+        }
+    }
 
     LaunchedEffect(productState.success) {
         productState.success?.product?.let { product ->
@@ -122,12 +163,12 @@ fun UpdateProductScreen(
     }
 
     DismissKeyboardOnTapScreen {
-        Scaffold(containerColor = Color.Transparent) { innerPadding ->
+        Box(modifier = modifier.fillMaxSize().background(Color.Transparent)) {
+            // ── Background gradient ───────────────────────────────
             ClayGradientBackdrop {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(innerPadding)
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -163,16 +204,28 @@ fun UpdateProductScreen(
                     } else {
                         val currentImageUrl = productState.success?.product?.image_url
 
-                        // ── Image preview / picker ────────────────────────────
+                        // ── Image preview / picker — hardware canvas shadow ──
                         Box(
                             modifier = Modifier
                                 .size(130.dp)
-                                .shadow(
-                                    elevation = 20.dp,
-                                    shape = RoundedCornerShape(24.dp),
-                                    ambientColor = ClayPrimary.copy(0.3f),
-                                    spotColor = ClayPrimary.copy(0.3f)
-                                )
+                                .drawBehind {
+                                    val cr = 24.dp.toPx()
+                                    drawIntoCanvas { canvas ->
+                                        canvas.nativeCanvas.drawRoundRect(
+                                            5.dp.toPx(), 7.dp.toPx(),
+                                            size.width - 5.dp.toPx(), size.height + 5.dp.toPx(),
+                                            cr, cr,
+                                            android.graphics.Paint().apply {
+                                                isAntiAlias = true
+                                                color = android.graphics.Color.argb(65, 108, 99, 255)
+                                                maskFilter = android.graphics.BlurMaskFilter(
+                                                    18.dp.toPx(),
+                                                    android.graphics.BlurMaskFilter.Blur.NORMAL
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
                                 .clip(RoundedCornerShape(24.dp))
                                 .background(Color.White.copy(alpha = 0.15f))
                                 .border(1.5.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
@@ -197,35 +250,23 @@ fun UpdateProductScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
+                        // Trigger dialog on click instead of direct gallery launcher
                         ClayOutlinedButton(
                             text = if (newImageUri == null && currentImageUrl.isNullOrEmpty())
                                 "Select Product Image" else "Change Image",
                             onClick = {
-                                launcher.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
+                                showImageSourceDialog = true
                             },
                             leadingIcon = Icons.Default.AddCircle
                         )
 
                         Spacer(modifier = Modifier.height(28.dp))
 
-                        // ── Form Card ─────────────────────────────────────────
-                        Column(
+                        // ── Form Card — uses ClayCard (hardware shadow) ───────
+                        ClayCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 20.dp)
-                                .shadow(
-                                    elevation = 20.dp,
-                                    shape = RoundedCornerShape(28.dp),
-                                    ambientColor = ClayPrimary.copy(0.18f),
-                                    spotColor = ClayPrimary.copy(0.22f)
-                                )
-                                .clip(RoundedCornerShape(28.dp))
-                                .background(ClayCardBg)
-                                .border(1.5.dp, Color.White, RoundedCornerShape(28.dp))
-                                .padding(24.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
                             Text(
                                 text = "Edit Product Details",
@@ -234,24 +275,29 @@ fun UpdateProductScreen(
                                 color = ClayTextPrimary
                             )
 
+                            Spacer(modifier = Modifier.height(16.dp))
+
                             ClayTextField(
                                 value = name,
                                 onValueChange = { name = it },
                                 label = "Product Name",
                                 leadingIcon = { Icon(Icons.Default.MedicalServices, contentDescription = null) }
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
                             ClayTextField(
                                 value = price,
                                 onValueChange = { price = it },
                                 label = "Price (₹)",
                                 leadingIcon = { Icon(Icons.Default.PriceChange, contentDescription = null) }
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
                             ClayTextField(
                                 value = category,
                                 onValueChange = { category = it },
                                 label = "Category",
                                 leadingIcon = { Icon(Icons.Default.Category, contentDescription = null) }
                             )
+                            Spacer(modifier = Modifier.height(12.dp))
                             ClayTextField(
                                 value = stock,
                                 onValueChange = { stock = it },
@@ -259,7 +305,7 @@ fun UpdateProductScreen(
                                 leadingIcon = { Icon(Icons.Default.Inventory, contentDescription = null) }
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
                             ClayPrimaryButton(
                                 text = if (response.value.isLoading) "Updating..." else "Update Product",
@@ -297,5 +343,39 @@ fun UpdateProductScreen(
                 }
             }
         }
+    }
+
+    // ── Image Source Selection Dialog (Camera / Gallery) ───────────────────
+    if (showImageSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageSourceDialog = false },
+            title = { Text("Choose Image Source") },
+            text = {
+                Column {
+                    ClayOutlinedButton(
+                        text = "Camera",
+                        onClick = {
+                            showImageSourceDialog = false
+                            tempCameraUri = context.createImageUri()
+                            cameraLauncher.launch(tempCameraUri!!)
+                        },
+                        leadingIcon = Icons.Default.CameraAlt,
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    )
+                    ClayOutlinedButton(
+                        text = "Gallery",
+                        onClick = {
+                            showImageSourceDialog = false
+                            galleryLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        leadingIcon = Icons.Default.PhotoLibrary,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {}
+        )
     }
 }

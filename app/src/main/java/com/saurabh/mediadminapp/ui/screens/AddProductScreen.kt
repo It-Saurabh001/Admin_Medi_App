@@ -6,9 +6,6 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -48,9 +44,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -59,18 +56,15 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
 import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayOutlinedButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayTextField
-import com.saurabh.mediadminapp.ui.theme.ClayBorder
-import com.saurabh.mediadminapp.ui.theme.ClayCardBg
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
-import com.saurabh.mediadminapp.ui.theme.ClaySecondary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
-import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
 
@@ -150,17 +144,29 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
                                 )
                             }
 
-                            // ── Image well / picker on gradient ───────────────
+                            // ── Image well / picker — hardware canvas shadow ──
                             Spacer(modifier = Modifier.height(16.dp))
                             Box(
                                 modifier = Modifier
                                     .size(130.dp)
-                                    .shadow(
-                                        elevation = 20.dp,
-                                        shape = RoundedCornerShape(24.dp),
-                                        ambientColor = ClayPrimary.copy(0.3f),
-                                        spotColor = ClayPrimary.copy(0.3f)
-                                    )
+                                    .drawBehind {
+                                        val cr = 24.dp.toPx()
+                                        drawIntoCanvas { canvas ->
+                                            canvas.nativeCanvas.drawRoundRect(
+                                                5.dp.toPx(), 7.dp.toPx(),
+                                                size.width - 5.dp.toPx(), size.height + 5.dp.toPx(),
+                                                cr, cr,
+                                                android.graphics.Paint().apply {
+                                                    isAntiAlias = true
+                                                    color = android.graphics.Color.argb(65, 108, 99, 255)
+                                                    maskFilter = android.graphics.BlurMaskFilter(
+                                                        18.dp.toPx(),
+                                                        android.graphics.BlurMaskFilter.Blur.NORMAL
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    }
                                     .clip(RoundedCornerShape(24.dp))
                                     .background(Color.White.copy(alpha = 0.15f))
                                     .border(1.5.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
@@ -193,22 +199,11 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
 
                             Spacer(modifier = Modifier.height(28.dp))
 
-                            // ── Form Card ─────────────────────────────────────
-                            Column(
+                            // ── Form Card — uses ClayCard (hardware shadow) ───
+                            ClayCard(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 20.dp)
-                                    .shadow(
-                                        elevation = 20.dp,
-                                        shape = RoundedCornerShape(28.dp),
-                                        ambientColor = ClayPrimary.copy(0.18f),
-                                        spotColor = ClayPrimary.copy(0.22f)
-                                    )
-                                    .clip(RoundedCornerShape(28.dp))
-                                    .background(ClayCardBg)
-                                    .border(1.5.dp, Color.White, RoundedCornerShape(28.dp))
-                                    .padding(24.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 Text(
                                     text = "Product Details",
@@ -217,24 +212,29 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
                                     color = ClayTextPrimary
                                 )
 
+                                Spacer(modifier = Modifier.height(16.dp))
+
                                 ClayTextField(
                                     value = name.value,
                                     onValueChange = { name.value = it },
                                     label = "Product Name",
                                     leadingIcon = { Icon(Icons.Default.MedicalServices, contentDescription = null, tint = ClayPrimary) }
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
                                 ClayTextField(
                                     value = price.value,
                                     onValueChange = { price.value = it },
                                     label = "Price (₹)",
                                     leadingIcon = { Icon(Icons.Default.PriceChange, contentDescription = null, tint = ClayPrimary) }
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
                                 ClayTextField(
                                     value = category.value,
                                     onValueChange = { category.value = it },
                                     label = "Category",
                                     leadingIcon = { Icon(Icons.Default.Category, contentDescription = null, tint = ClayPrimary) }
                                 )
+                                Spacer(modifier = Modifier.height(12.dp))
                                 ClayTextField(
                                     value = stock.value,
                                     onValueChange = { stock.value = it },
@@ -242,7 +242,7 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
                                     leadingIcon = { Icon(Icons.Default.Inventory, contentDescription = null, tint = ClayPrimary) }
                                 )
 
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(20.dp))
 
                                 ClayPrimaryButton(
                                     text = "Add Product",

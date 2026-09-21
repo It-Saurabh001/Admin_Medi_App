@@ -5,6 +5,7 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,11 +30,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +50,7 @@ import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.ProductItem
+import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayDangerButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
@@ -55,10 +63,10 @@ import com.saurabh.mediadminapp.ui.theme.ClayBadgeInStock
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeLowStock
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeOutStock
 import com.saurabh.mediadminapp.ui.theme.ClayBorder
-import com.saurabh.mediadminapp.ui.theme.ClayCardBg
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
+import com.saurabh.mediadminapp.utils.utilityFunctions.FullscreenImagePreviewDialog
 import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
 import java.text.NumberFormat
 import java.util.Locale
@@ -82,7 +90,6 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
             navController.popBackStack()
         }
     }
-
     LaunchedEffect(deleteProductResponse.value.error != null) {
         deleteProductResponse.value.error?.let {
             Toast.makeText(context, "Error deleting Product", Toast.LENGTH_SHORT).show()
@@ -91,15 +98,15 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
         }
     }
 
-    Scaffold(containerColor = Color.Transparent) { innerPadding ->
+    Box(modifier = Modifier.fillMaxSize()){
         when {
             productstate.value.isLoading -> {
-                ClayLoadingScreen(modifier = Modifier.padding(innerPadding))
+                ClayLoadingScreen(modifier = Modifier)
             }
             productstate.value.error != null -> {
                 ClayErrorScreen(
                     errorMessage = productstate.value.error.toString(),
-                    modifier = Modifier.padding(innerPadding)
+                    modifier = Modifier
                 )
             }
             productstate.value.success != null -> {
@@ -113,12 +120,12 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
                                 viewModel.deleteProduct(productId)
                                 Toast.makeText(context, "Deleting Product...", Toast.LENGTH_SHORT).show()
                             },
-                            modifier = Modifier.padding(innerPadding)
+                            modifier = Modifier
                         )
                     }
                 } else {
                     Box(
-                        modifier = Modifier.fillMaxSize().padding(innerPadding),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(text = "Product not found or has been deleted", fontSize = 18.sp, color = ClayTextPrimary)
@@ -150,6 +157,8 @@ fun EachProduct(
         else -> "In Stock"
     }
 
+    var showZoomDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -157,43 +166,35 @@ fun EachProduct(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // ── AppBar on gradient ────────────────────────────────────────────────
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White
-                )
-            }
-            Text(
-                text = "Product Details",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // ── Product Image Hero ────────────────────────────────────────────────
+        // ── Product Image Hero — hardware canvas shadow ──────────────────────
         Box(
             modifier = Modifier
                 .size(200.dp)
-                .shadow(
-                    elevation = 24.dp,
-                    shape = RoundedCornerShape(28.dp),
-                    ambientColor = ClayPrimary.copy(alpha = 0.3f),
-                    spotColor = ClayPrimary.copy(alpha = 0.3f)
-                )
+                .drawBehind {
+                    val cr = 28.dp.toPx()
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.drawRoundRect(
+                            6.dp.toPx(), 8.dp.toPx(),
+                            size.width - 6.dp.toPx(), size.height + 6.dp.toPx(),
+                            cr, cr,
+                            android.graphics.Paint().apply {
+                                isAntiAlias = true
+                                color = android.graphics.Color.argb(70, 108, 99, 255)
+                                maskFilter = android.graphics.BlurMaskFilter(
+                                    22.dp.toPx(),
+                                    android.graphics.BlurMaskFilter.Blur.NORMAL
+                                )
+                            }
+                        )
+                    }
+                }
                 .clip(RoundedCornerShape(28.dp))
                 .background(Color.White.copy(alpha = 0.18f))
-                .border(2.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(28.dp)),
+                .border(2.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(28.dp))
+                .clickable(enabled = !productItem.image_url.isNullOrEmpty()) {
+                    showZoomDialog = true // 👈 Click par dialog open hoga
+                },
             contentAlignment = Alignment.Center
         ) {
             val imageUrl = productItem.image_url
@@ -214,6 +215,14 @@ fun EachProduct(
             }
         }
 
+        // ── Show Fullscreen Dialog if triggered ────────────────────────────
+        if (showZoomDialog && !productItem.image_url.isNullOrEmpty()) {
+            FullscreenImagePreviewDialog(
+                imageUrl = productItem.image_url!!,
+                onDismiss = { showZoomDialog = false }
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Product name + stock badge on gradient
@@ -228,22 +237,11 @@ fun EachProduct(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // ── Details Card ──────────────────────────────────────────────────────
-        Column(
+        // ── Details Card — uses ClayCard (hardware shadow + pillow lighting) ──
+        ClayCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
-                .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(28.dp),
-                    ambientColor = ClayPrimary.copy(0.18f),
-                    spotColor = ClayPrimary.copy(0.22f)
-                )
-                .clip(RoundedCornerShape(28.dp))
-                .background(ClayCardBg)
-                .border(1.5.dp, Color.White, RoundedCornerShape(28.dp))
-                .padding(24.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Text(
                 text = "Product Information",

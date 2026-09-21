@@ -196,47 +196,6 @@ fun UserListScreen1(
         verticalArrangement = Arrangement.spacedBy(18.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-//        // ── 1. Floating Pill / Dome Badge ──────────────────────────────────
-//        item {
-//            Box(
-//                modifier = Modifier
-//                    .size(80.dp)
-//                    .shadow(
-//                        elevation = 18.dp,
-//                        shape = CircleShape,
-//                        ambientColor = ClayCardShadow,
-//                        spotColor = ClayCardShadow
-//                    )
-//                    .clip(CircleShape)
-//                    .background(Color.White)
-//                    .border(2.dp, Color.White.copy(alpha = 0.8f), CircleShape),
-//                contentAlignment = Alignment.Center
-//            ) {
-//                Text(
-//                    text = "👥",
-//                    fontSize = 36.sp
-//                )
-//            }
-//        }
-//
-//        // ── 2. Screen Titles (Bold White like SignIn) ───────────────────────
-//        item {
-//            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-//                Text(
-//                    text = "Admin Dashboard",
-//                    fontSize = 28.sp,
-//                    fontWeight = FontWeight.ExtraBold,
-//                    color = Color.White
-//                )
-//                Spacer(modifier = Modifier.height(4.dp))
-//                Text(
-//                    text = "Manage and verify platform users",
-//                    fontSize = 14.sp,
-//                    color = Color.White.copy(alpha = 0.85f)
-//                )
-//            }
-//        }
-
         // ── 3. Chunky Hero Overview Card ────────────────────────────────────
         item {
             ClayHeroOverviewCard(stats = stats)

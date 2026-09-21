@@ -27,7 +27,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -39,7 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.saurabh.mediadminapp.ui.theme.ClayAccent
 import com.saurabh.mediadminapp.ui.theme.ClayCardBg
-import com.saurabh.mediadminapp.ui.theme.ClayElevationCard
+
 import com.saurabh.mediadminapp.ui.theme.ClayGradient
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
@@ -77,12 +79,24 @@ fun ClayLoadingScreen(modifier: Modifier = Modifier) {
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                    .shadow(
-                        elevation = ClayElevationCard,
-                        shape = RoundedCornerShape(24.dp),
-                        ambientColor = ClayPrimary.copy(0.2f),
-                        spotColor = ClayPrimary.copy(0.2f)
-                    )
+                    .drawBehind {
+                        val cr = 24.dp.toPx()
+                        drawIntoCanvas { canvas ->
+                            canvas.nativeCanvas.drawRoundRect(
+                                4.dp.toPx(), 6.dp.toPx(),
+                                size.width - 4.dp.toPx(), size.height + 4.dp.toPx(),
+                                cr, cr,
+                                android.graphics.Paint().apply {
+                                    isAntiAlias = true
+                                    color = android.graphics.Color.argb(50, 108, 99, 255)
+                                    maskFilter = android.graphics.BlurMaskFilter(
+                                        14.dp.toPx(),
+                                        android.graphics.BlurMaskFilter.Blur.NORMAL
+                                    )
+                                }
+                            )
+                        }
+                    }
                     .clip(RoundedCornerShape(24.dp))
                     .background(ClayCardBg),
                 contentAlignment = Alignment.Center
@@ -211,7 +225,7 @@ fun ClayGradientBackdrop(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(brush = gradient)
+            .background(brush = ClayGradient)
     ) {
         // Top-right decorative blob — white light reflection
         ClayBlobCircle(

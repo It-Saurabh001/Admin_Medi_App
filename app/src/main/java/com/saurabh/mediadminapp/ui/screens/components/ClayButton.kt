@@ -2,6 +2,7 @@ package com.saurabh.mediadminapp.ui.screens.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -34,10 +35,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -47,37 +53,44 @@ import androidx.compose.ui.unit.sp
 import com.saurabh.mediadminapp.ui.theme.ClayBorder
 import com.saurabh.mediadminapp.ui.theme.ClayButtonGradient
 import com.saurabh.mediadminapp.ui.theme.ClayCardBg
-import com.saurabh.mediadminapp.ui.theme.ClayElevationButton
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayRadiusMedium
 import com.saurabh.mediadminapp.ui.theme.ClayRadiusPill
 import com.saurabh.mediadminapp.ui.theme.ClayTextOnDark
-import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 
 // =============================================================================
-// ClayButton.kt — Gradient primary button, outlined variant, and filter chips
+// ClayButton.kt — Hardware-canvas shadow buttons with pillow lighting
 // =============================================================================
 
 /**
- * Primary gradient pill button with spring press animation and loading indicator.
+ * Primary gradient pill button with spring press animation, BlurMaskFilter hardware
+ * shadow, and loading indicator. No Modifier.shadow() to avoid RenderNode artifacts.
  */
 @Composable
 fun ClayPrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
     isLoading: Boolean = false,
     enabled: Boolean = true,
     gradient: Brush = ClayButtonGradient,
-    cornerRadius: Dp = ClayRadiusPill,
-    elevation: Dp = ClayElevationButton
+    cornerRadius: Dp = ClayRadiusPill
 ) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.95f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
         label = "btnPress"
+    )
+    val shadowAlpha by animateFloatAsState(
+        targetValue = if (pressed) 0.5f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMedium),
+        label = "btnShadowAlpha"
     )
     val alpha = if (enabled) 1f else 0.6f
     val shape = RoundedCornerShape(cornerRadius)
@@ -85,57 +98,96 @@ fun ClayPrimaryButton(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(52.dp)
+            .height(54.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale; this.alpha = alpha }
-            .shadow(
-                elevation = if (pressed) 4.dp else elevation,
-                shape = shape,
-                ambientColor = ClayPrimary.copy(0.3f),
-                spotColor = ClayPrimary.copy(0.3f)
-            )
+            // Hardware canvas shadow — no RenderNode compositing artifacts
+            .drawBehind {
+                val cr = cornerRadius.toPx()
+                drawIntoCanvas { canvas ->
+                    canvas.nativeCanvas.drawRoundRect(
+                        4.dp.toPx(), 6.dp.toPx(),
+                        size.width - 4.dp.toPx(), size.height + 4.dp.toPx(),
+                        cr, cr,
+                        android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            color = android.graphics.Color.argb(
+                                (65 * shadowAlpha).toInt(),
+                                108, 99, 255
+                            )
+                            maskFilter = android.graphics.BlurMaskFilter(
+                                14.dp.toPx(),
+                                android.graphics.BlurMaskFilter.Blur.NORMAL
+                            )
+                        }
+                    )
+                }
+            }
+            .background(brush = gradient, shape = shape)
+            .drawWithContent {
+                drawContent()
+                val cr = CornerRadius(cornerRadius.toPx())
+                val rimW = 1.5.dp.toPx()
+                // Top specular highlight
+                drawRoundRect(
+                    brush = Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.40f),
+                        0.5f to Color.White.copy(alpha = 0f)
+                    ),
+                    size = size, cornerRadius = cr
+                )
+                // Top rim
+                drawRoundRect(
+                    brush = Brush.verticalGradient(
+                        0f to Color.White.copy(alpha = 0.90f),
+                        0.4f to Color.White.copy(alpha = 0f)
+                    ),
+                    size = size, cornerRadius = cr, style = Stroke(rimW)
+                )
+                // Bottom rim shadow
+                drawRoundRect(
+                    brush = Brush.verticalGradient(
+                        0.5f to Color.Black.copy(alpha = 0f),
+                        1f to Color.Black.copy(alpha = 0.15f)
+                    ),
+                    size = size, cornerRadius = cr, style = Stroke(rimW)
+                )
+            }
             .clip(shape)
-            .background(brush = gradient)
             .pointerInput(enabled, onClick) {
                 if (!enabled) return@pointerInput
                 detectTapGestures(
-                    onPress = {
-                        pressed = true
-                        tryAwaitRelease()
-                        pressed = false
-                    },
+                    onPress = { pressed = true; tryAwaitRelease(); pressed = false },
                     onTap = { if (!isLoading) onClick() }
                 )
             },
         contentAlignment = Alignment.Center
     ) {
-        AnimatedVisibility(
-            visible = isLoading,
-            enter = fadeIn(tween(150)),
-            exit = fadeOut(tween(150))
-        ) {
-            CircularProgressIndicator(
-                color = ClayTextOnDark,
-                strokeWidth = 2.5.dp,
-                modifier = Modifier.size(24.dp)
-            )
+        AnimatedVisibility(visible = isLoading, enter = fadeIn(tween(150)), exit = fadeOut(tween(150))) {
+            CircularProgressIndicator(color = ClayTextOnDark, strokeWidth = 2.5.dp, modifier = Modifier.size(24.dp))
         }
-        AnimatedVisibility(
-            visible = !isLoading,
-            enter = fadeIn(tween(150)),
-            exit = fadeOut(tween(150))
-        ) {
-            Text(
-                text = text,
-                color = ClayTextOnDark,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
+        AnimatedVisibility(visible = !isLoading, enter = fadeIn(tween(150)), exit = fadeOut(tween(150))) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = ClayTextOnDark,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(text = text, color = ClayTextOnDark, fontSize = 15.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
+            }
         }
     }
 }
 
 /**
- * Outlined clay button — bordered with ClayPrimary color, transparent background.
+ * Outlined clay button — ClayCardBg surface with primary-colored border.
+ * Hardware shadow replaces Modifier.shadow().
  */
 @Composable
 fun ClayOutlinedButton(
@@ -159,10 +211,26 @@ fun ClayOutlinedButton(
         modifier = modifier
             .height(44.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(6.dp, shape, ambientColor = accentColor.copy(0.1f), spotColor = accentColor.copy(0.1f))
-            .clip(shape)
-            .background(ClayCardBg)
+            .drawBehind {
+                val cr = cornerRadius.toPx()
+                drawIntoCanvas { canvas ->
+                    canvas.nativeCanvas.drawRoundRect(
+                        3.dp.toPx(), 4.dp.toPx(),
+                        size.width - 3.dp.toPx(), size.height + 2.dp.toPx(),
+                        cr, cr,
+                        android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            color = android.graphics.Color.argb(30, 108, 99, 255)
+                            maskFilter = android.graphics.BlurMaskFilter(
+                                8.dp.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL
+                            )
+                        }
+                    )
+                }
+            }
+            .background(ClayCardBg, shape)
             .border(1.5.dp, accentColor.copy(if (enabled) 1f else 0.4f), shape)
+            .clip(shape)
             .pointerInput(enabled, onClick) {
                 if (!enabled) return@pointerInput
                 detectTapGestures(
@@ -177,12 +245,7 @@ fun ClayOutlinedButton(
             modifier = Modifier.padding(horizontal = 16.dp)
         ) {
             if (leadingIcon != null) {
-                Icon(
-                    imageVector = leadingIcon,
-                    contentDescription = text,
-                    tint = accentColor,
-                    modifier = Modifier.size(16.dp)
-                )
+                Icon(imageVector = leadingIcon, contentDescription = text, tint = accentColor, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
             }
             Text(
@@ -202,9 +265,8 @@ data class FilterOption<T>(
 )
 
 /**
- * Filter chip used in Home/Product/Order filter rows.
- * Selected state: gradient background + white text.
- * Unselected state: clay card background + primary-tinted text.
+ * Filter chip — selected: gradient bg + white text. Unselected: clay card + primary text.
+ * Spring physics on selection, hardware shadow instead of Modifier.shadow().
  */
 @Composable
 fun ClayFilterChip(
@@ -215,25 +277,49 @@ fun ClayFilterChip(
     icon: ImageVector? = null,
     gradient: Brush = ClayButtonGradient
 ) {
-    val shape = RoundedCornerShape(ClayRadiusPill)
-    val alpha by animateFloatAsState(
-        targetValue = if (selected) 1f else 0.7f,
-        label = "chipAlpha"
+    val cornerRadius by animateDpAsState(
+        targetValue = if (selected) 22.dp else 18.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "chipCorner"
     )
+    val shadowAlpha by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "chipShadow"
+    )
+    val shape = RoundedCornerShape(cornerRadius)
+
     Box(
         modifier = modifier
             .wrapContentSize()
-            .shadow(
-                elevation = if (selected) 8.dp else 2.dp,
-                shape = shape,
-                ambientColor = ClayPrimary.copy(0.15f),
-                spotColor = ClayPrimary.copy(0.15f)
-            )
-            .clip(shape)
-            .background(if (selected) Color.Transparent else ClayCardBg)
+            // Hardware shadow — fires only when selected (chip is "lifted")
+            .drawBehind {
+                if (shadowAlpha > 0f) {
+                    val cr = cornerRadius.toPx()
+                    drawIntoCanvas { canvas ->
+                        canvas.nativeCanvas.drawRoundRect(
+                            2.dp.toPx(), 3.dp.toPx(),
+                            size.width - 2.dp.toPx(), size.height + 2.dp.toPx(),
+                            cr, cr,
+                            android.graphics.Paint().apply {
+                                isAntiAlias = true
+                                color = android.graphics.Color.argb(
+                                    (50 * shadowAlpha).toInt(), 108, 99, 255
+                                )
+                                maskFilter = android.graphics.BlurMaskFilter(
+                                    8.dp.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL
+                                )
+                            }
+                        )
+                    }
+                }
+            }
             .then(
                 if (selected) Modifier.background(brush = gradient, shape = shape)
-                else Modifier.border(1.dp, ClayBorder, shape)
+                else Modifier.background(ClayCardBg, shape).border(1.dp, ClayBorder, shape)
             )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
@@ -242,40 +328,35 @@ fun ClayFilterChip(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (selected) ClayTextOnDark else ClayTextSecondary,
-                    modifier = Modifier
-                        .size(16.dp)
-                        .graphicsLayer { this.alpha = alpha }
+                    tint = if (selected) Color.White else ClayTextSecondary,
+                    modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
             }
             Text(
                 text = label,
-                color = if (selected) ClayTextOnDark else ClayTextSecondary,
+                color = if (selected) Color.White else ClayTextSecondary,
                 fontSize = 13.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                modifier = Modifier.graphicsLayer { this.alpha = alpha }
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
             )
         }
     }
 }
 
 /**
- * Danger button (delete actions) with a red-tinted gradient.
+ * Danger/destructive button (delete actions) — red-tinted gradient, same shadow model.
  */
 @Composable
 fun ClayDangerButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
     isLoading: Boolean = false,
     enabled: Boolean = true
 ) {
@@ -283,6 +364,7 @@ fun ClayDangerButton(
         text = text,
         onClick = onClick,
         modifier = modifier,
+        icon = icon,
         isLoading = isLoading,
         enabled = enabled,
         gradient = Brush.horizontalGradient(

@@ -49,6 +49,13 @@ val ClayBadgeInStock   = ClaySuccess
 val ClayBadgeLowStock  = ClayWarning
 val ClayBadgeOutStock  = ClayError
 
+val ClayStateApproved  = ClaySuccess
+val ClayStatePending   = ClayWarning
+val ClayStateBlocked   = ClayAccent
+val StateApproved      = ClaySuccess
+val StatePending       = ClayWarning
+val StateBlocked       = ClayAccent
+
 // ── Gradients ─────────────────────────────────────────────────────────────────
 val ClayPrimaryGradient = Brush.horizontalGradient(
     colors = listOf(ClayPrimary, ClaySecondary)

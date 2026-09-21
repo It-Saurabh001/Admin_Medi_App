@@ -57,12 +57,15 @@ class TokenManager private constructor(context: Context) {
         }
     }
 
-    fun updateTokens(newAccessToken: String, newRefreshToken: String?) {
+    fun updateTokens(newAccessToken: String, newRefreshToken: String?,role: String? = null) {
         val editor = prefs.edit()
             .putString(KEY_ACCESS_TOKEN, newAccessToken)
         
         if (!newRefreshToken.isNullOrBlank()) {
             editor.putString(KEY_REFRESH_TOKEN, newRefreshToken)
+        }
+        if (role != null) {
+            editor.putString("USER_ROLE", role) // Apna actual key name use karein
         }
         
         val committed = editor.commit() // synchronous — must not be apply()
@@ -99,8 +102,15 @@ class TokenManager private constructor(context: Context) {
     }
 
     fun invalidateSession() {
-        clearTokens()
-        val emitted = _sessionExpiredEvent.tryEmit(Unit)
-        Log.w("TokenManager", "TokenManager=> invalidateSession: session cleared, event emitted=$emitted")
+        val editor = prefs.edit()
+        editor.clear()
+
+        val isCleared = editor.commit()
+        if (isCleared) {
+            // UI ko batao ki session perfectly out ho gaya hai
+            val emitted = _sessionExpiredEvent.tryEmit(Unit)
+            Log.w("TokenManager", "TokenManager=> invalidateSession Ab signinscreen pr jaana hai : session cleared, event emitted=$emitted")
+
+        }
     }
 }

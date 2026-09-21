@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.saurabh.mediadminapp.utils.BASE_URL1
 import dagger.Module
+import dagger.Lazy
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -87,9 +88,9 @@ object ApiProvider {
     fun provideAuthRetrofit(loggingInterceptor: HttpLoggingInterceptor): Retrofit {
         val client = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(90, TimeUnit.SECONDS)
+            .readTimeout(90, TimeUnit.SECONDS)
+            .writeTimeout(90, TimeUnit.SECONDS)
             // Intentionally NO authenticator and NO auth header interceptor.
             .build()
 
@@ -121,9 +122,9 @@ object ApiProvider {
     @Singleton
     fun provideTokenAuthenticator(
         tokenManager: TokenManager,
-        @AuthApiService authApiService: ApiServices
+        @AuthApiService authApiServiceProvider: Lazy<ApiServices>
     ): TokenAuthenticator {
-        return TokenAuthenticator(tokenManager, authApiService)
+        return TokenAuthenticator(tokenManager, authApiServiceProvider)
     }
 
     // ── Main (authenticated) OkHttpClient ─────────────────────────────────────
@@ -140,9 +141,9 @@ object ApiProvider {
             .addInterceptor(loggingInterceptor)
             .addInterceptor(authInterceptor)    // injects Bearer token on outgoing requests
             .authenticator(tokenAuthenticator)  // retries with fresh token on 401 responses
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(90, TimeUnit.SECONDS)
+            .readTimeout(90, TimeUnit.SECONDS)
+            .writeTimeout(90, TimeUnit.SECONDS)
             .build()
     }
 

@@ -1,17 +1,18 @@
 package com.saurabh.mediadminapp.network
 
 import android.util.Log
-import kotlinx.coroutines.runBlocking
+import dagger.Lazy
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 import java.util.concurrent.locks.ReentrantLock
+import javax.inject.Inject
 import kotlin.concurrent.withLock
 
-class TokenAuthenticator(
+class TokenAuthenticator @Inject constructor(
     private val tokenManager: TokenManager,
-    private val authApiService: ApiServices
+    private val apiServiceProvider: Lazy<ApiServices>
 ) : Authenticator {
 
     private val refreshLock = ReentrantLock()
@@ -23,7 +24,7 @@ class TokenAuthenticator(
 
         if (response.code != 401) return null
         if (responseCount(response) >= 2) {
-            Log.e("TAG", "Authenticator=>Already retried once — aborting, clearing session ${response}")
+            Log.e("TAG", "Authenticator=>Already retried once — aborting, clearing session $response")
             tokenManager.invalidateSession()
             return null
         }
@@ -48,12 +49,11 @@ class TokenAuthenticator(
                 // A concurrent thread already refreshed — reuse its result.
                 Log.d("TAG", "Authenticator=>Token already rotated by another thread, reusing")
                 return@withLock response.request.newBuilder()
-                    .header("Authorization", "Bearer currentStoredToken $currentStoredToken")
+                    .header("Authorization", "Bearer $currentStoredToken")
                     .build()
             }
-            val newToken = runBlocking {
-                refreshAccessToken(refreshToken)
-            }
+            val newToken = refreshAccessToken(refreshToken)
+
             if (newToken != null) {
                 Log.d("TAG", "Authenticator=>Token refreshed successfully — retrying request")
                 response.request.newBuilder()
@@ -67,19 +67,22 @@ class TokenAuthenticator(
         }
     }
 
-    private suspend fun refreshAccessToken(refreshToken: String): String? {
+    private fun refreshAccessToken(refreshToken: String): String? {
         return try {
             Log.d("TAG", "Calling /admin/refreshToken endpoint")
-            val response = authApiService.refreshToken("Bearer $refreshToken")
+
+            val authApiService = apiServiceProvider.get()
+            val response = authApiService.refreshToken("Bearer $refreshToken").execute()
 
             if (response.isSuccessful && response.body() != null) {
                 val newToken = response.body()!!.access_token
                 val newRefreshToken = response.body()!!.refresh_token
-                if (newToken.isNullOrBlank()) {
+                val newRole = response.body()!!.role
+                if (newToken.isNullOrBlank() || newRefreshToken.isNullOrBlank() ) {
                     Log.e("TAG", "Refresh response body had null/blank access_token")
                     return null
                 }
-                tokenManager.updateTokens(newToken, newRefreshToken)
+                tokenManager.updateTokens(newToken, newRefreshToken, newRole)
                 Log.d("TAG", "Authenticator=>Access token and refresh token rotated and persisted")
                 newToken
             } else {
