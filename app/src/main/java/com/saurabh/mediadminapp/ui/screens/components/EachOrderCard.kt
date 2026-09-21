@@ -56,29 +56,8 @@ fun EachOrderCard(
     onApprovalToggle: (String, Boolean) -> Unit
 ) {
     val scrollState = rememberScrollState()
-    var isApproved by remember(order.order_id) {
-        mutableStateOf(order.isApproved)
-    }
+    val isApproved = order.isApproved
     val currentOrder = isApproveOrder.value[order.order_id]
-    var pendingToggle by rememberSaveable(order.order_id) {
-        mutableStateOf(false)
-    }
-
-    LaunchedEffect(currentOrder?.success) {
-        if (currentOrder?.success != null && pendingToggle) {
-            pendingToggle = false
-        }
-    }
-    LaunchedEffect(currentOrder?.error) {
-        if (currentOrder?.error != null && pendingToggle) {
-            pendingToggle = false
-        }
-    }
-    LaunchedEffect(order.isApproved) {
-        if (!pendingToggle) {
-            isApproved = order.isApproved
-        }
-    }
     val isLoading = currentOrder?.isLoading == true
 
     ClayCard(
@@ -120,13 +99,7 @@ fun EachOrderCard(
                         } else {
                             Switch(
                                 checked = isApproved,
-                                onCheckedChange = { isChecked ->
-                                    if (isChecked != isApproved) {
-                                        pendingToggle = true
-                                        isApproved = isChecked
-                                        onApprovalToggle(order.order_id, isChecked)
-                                    }
-                                },
+                                onCheckedChange = { onApprovalToggle(order.order_id, it) },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
                                     checkedTrackColor = ClayBadgeApproved,

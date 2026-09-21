@@ -522,7 +522,7 @@ fun EachUserCard(
     navController: NavController
 ) {
     val currentUserState = userApprovalState.value[userItem.user_id]
-    var isApproved by remember(userItem.user_id) { mutableStateOf(userItem.isApproved) }
+    val isApproved = userItem.isApproved
     val isLoading = currentUserState?.isLoading == true
 
     Box(

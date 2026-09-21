@@ -29,7 +29,6 @@ import com.saurabh.mediadminapp.network.response.GetUsersOrdersResponse
 import com.saurabh.mediadminapp.network.response.IsApproveUserResponse
 import com.saurabh.mediadminapp.network.response.PasswordResetOtpResponse
 import com.saurabh.mediadminapp.network.response.PasswordResetResponse
-import com.saurabh.mediadminapp.network.response.RefreshTokenResponse
 import com.saurabh.mediadminapp.network.response.UpdateAdminResponse
 import com.saurabh.mediadminapp.network.response.UpdateOrderResponse
 import com.saurabh.mediadminapp.network.response.UpdateProductResponse
@@ -47,20 +46,6 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
 
     init {
         Log.d("PERF_TRACE", "Repository instantiated (First Repository access) [Thread: ${Thread.currentThread().name}]")
-    }
-
-    // ----------------------------
-    // REFRESH TOKEN
-    // ----------------------------
-    suspend fun refreshToken(refreshToken: String): Flow<ResultState<RefreshTokenResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.refreshToken(refreshToken)
-            handleResponse("refreshToken", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "refreshToken exception: ${e.message}")
-        }
     }
 
     // ----------------------------

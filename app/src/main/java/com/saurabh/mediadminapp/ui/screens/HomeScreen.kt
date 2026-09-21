@@ -271,29 +271,13 @@ fun EachUserCard1(
     navController: NavController
 ) {
     val currentUserState = userApprovalState.value[userItem.user_id]
-    var isApproved by remember(userItem.user_id) {
-        mutableStateOf(userItem.isApproved)
-    }
-    var pendingToggle by rememberSaveable(userItem.user_id) {
-        mutableStateOf(false)
-    }
+    val isApproved = userItem.isApproved
     
     val scale by animateFloatAsState(
         targetValue = if (isApproved) 1.1f else 1f,
         animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
         label = "thumbScale"
     )
-
-    LaunchedEffect(currentUserState?.success) {
-        if (currentUserState?.success != null && pendingToggle) {
-            pendingToggle = false
-        }
-    }
-    LaunchedEffect(currentUserState?.error) {
-        if (currentUserState?.error != null && pendingToggle) {
-            pendingToggle = false
-        }
-    }
 
     val isLoading = currentUserState?.isLoading == true
 
@@ -402,7 +386,6 @@ fun EachUserCard1(
                         Switch(
                             checked = isApproved,
                             onCheckedChange = {
-                                pendingToggle = true
                                 onApprovalToggle(userItem.user_id, it)
                             },
                             colors = SwitchDefaults.colors(
