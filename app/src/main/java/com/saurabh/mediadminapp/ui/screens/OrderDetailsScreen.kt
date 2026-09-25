@@ -1,7 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -20,13 +18,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,7 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -155,7 +151,23 @@ fun OrdersListScreen(
         verticalArrangement = Arrangement.spacedBy(16.dp),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 100.dp)
     ) {
-        // ── 1. DOMAIN HERO FOCAL POINT: DISPATCH RADAR DECK ──────────────
+        // ── 1. RECESSED SEARCH FIELD ─────────────────────────────────────
+        item {
+            ClaySearchField(
+
+                value = searchTerm,
+                onValueChange = { searchTerm = it },
+                placeholder = "Search by order ID, buyer, or drug...",
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = ClayPrimary
+                    )
+                },
+            )
+        }
+        // ── 2. DOMAIN HERO FOCAL POINT: DISPATCH RADAR DECK ──────────────
         item {
             ClayCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -163,7 +175,7 @@ fun OrdersListScreen(
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -182,22 +194,24 @@ fun OrdersListScreen(
                                     imageVector = Icons.Default.LocalShipping,
                                     contentDescription = null,
                                     tint = ClayBadgeApproved,
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(17.dp)
                                 )
                             }
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(7.dp))
                             Column {
                                 Text(
                                     text = "Fulfillment Hub",
-                                    fontSize = 18.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = ClayTextPrimary
+                                    color = ClayTextPrimary,
+                                    maxLines = 1
                                 )
                                 Text(
                                     text = "Incoming Orders & Dispatches",
-                                    fontSize = 12.sp,
+                                    fontSize = 11.sp,
                                     color = ClayTextSecondary,
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Medium,
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -206,16 +220,18 @@ fun OrdersListScreen(
                         Column(horizontalAlignment = Alignment.End) {
                             Text(
                                 text = "TOTAL PIPELINE",
-                                fontSize = 9.sp,
+                                fontSize = 7.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = ClayTextSecondary,
-                                letterSpacing = 1.sp
+                                letterSpacing = 1.sp,
+                                maxLines = 1
                             )
                             Text(
                                 text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(stats["totalValue"] ?: 0)}",
-                                fontSize = 17.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = ClayBadgeApproved
+                                color = ClayBadgeApproved,
+                                maxLines = 1
                             )
                         }
                     }
@@ -230,7 +246,7 @@ fun OrdersListScreen(
                             value = stats["total"].toString(),
                             label = "All Orders",
                             accentColor = ClayTextPrimary,
-                            icon = Icons.Default.List
+                            icon = Icons.AutoMirrored.Filled.List
                         )
                         ClayStatCard(
                             modifier = Modifier.weight(1f),
@@ -251,26 +267,12 @@ fun OrdersListScreen(
             }
         }
 
-        // ── 2. RECESSED SEARCH FIELD ─────────────────────────────────────
-        item {
-            ClaySearchField(
-                value = searchTerm,
-                onValueChange = { searchTerm = it },
-                placeholder = "Search by order ID, buyer, or drug...",
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = ClayPrimary
-                    )
-                }
-            )
-        }
+
 
         // ── 3. FLOATING STATUS FILTER DOCK ───────────────────────────────
         item {
             val filterOptions = listOf(
-                FilterOption(FilterStatus.ALL, "All Orders", Icons.Default.List),
+                FilterOption(FilterStatus.ALL, "All Orders", Icons.AutoMirrored.Filled.List),
                 FilterOption(FilterStatus.PENDING, "Pending", Icons.Default.HourglassEmpty),
                 FilterOption(FilterStatus.APPROVED, "Approved", Icons.Default.CheckCircle)
             )

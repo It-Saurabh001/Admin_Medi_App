@@ -206,12 +206,12 @@ fun ClaySearchField(
     leadingIcon: @Composable (() -> Unit)? = null,
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
-    val shape = RoundedCornerShape(50.dp)
+    val shape = RoundedCornerShape(7.dp)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         modifier = modifier.fillMaxWidth(),
-        placeholder = { Text(placeholder, color = ClayTextMuted) },
+        placeholder = { Text(placeholder, color = ClayTextMuted, maxLines = 1) },
         leadingIcon = leadingIcon,
         singleLine = true,
         shape = shape,
