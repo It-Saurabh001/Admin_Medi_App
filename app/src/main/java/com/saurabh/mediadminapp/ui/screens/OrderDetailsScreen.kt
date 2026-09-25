@@ -80,17 +80,16 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController) {
             viewModel.clearGetAllProductState()
         }
     }
-
-    Scaffold(containerColor = Color.Transparent) { innerPadding ->
+    Box(modifier = Modifier.fillMaxSize()){
         ClayGradientBackdrop(gradient = ClayOrderGradient) {
             when {
                 response.value.isLoading -> {
-                    ClayLoadingScreen(modifier = Modifier.padding(innerPadding))
+                    ClayLoadingScreen(modifier = Modifier)
                 }
                 response.value.error != null -> {
                     ClayErrorScreen(
                         errorMessage = response.value.error.toString(),
-                        modifier = Modifier.padding(innerPadding),
+                        modifier = Modifier,
                         onRetry = { viewModel.getAllOrders() }
                     )
                 }
@@ -98,7 +97,7 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController) {
                     OrdersListScreen(
                         orders = response.value.success!!.orders,
                         navController = navController,
-                        modifier = Modifier.padding(innerPadding),
+                        modifier = Modifier,
                         isApproveOrder = isApproveOrder,
                         onApprovalToggle = viewModel::isApproveOrder,
                         viewModel = viewModel
@@ -107,6 +106,10 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController) {
             }
         }
     }
+
+//    Scaffold(containerColor = Color.Transparent) { innerPadding ->
+//
+//    }
 }
 
 @Composable

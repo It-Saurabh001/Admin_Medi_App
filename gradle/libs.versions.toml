@@ -1,6 +1,7 @@
 [versions]
 agp = "9.1.1"
 converterGson = "3.0.0"
+dotenvKotlin = "6.5.1"
 hiltAndroid = "2.60.1"
 kotlin = "2.4.0"
 coreKtx = "1.18.0"
@@ -20,6 +21,7 @@ ucrop = "2.2.8"
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }
 converter-gson = { module = "com.squareup.retrofit2:converter-gson", version.ref = "converterGson" }
+dotenv-kotlin = { module = "io.github.cdimascio:dotenv-kotlin", version.ref = "dotenvKotlin" }
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-android-compiler = { module = "com.google.dagger:hilt-android-compiler", version.ref = "hiltAndroid" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }

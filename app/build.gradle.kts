@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
 //    alias(libs.plugins.kotlin.android)
@@ -6,6 +8,22 @@ plugins {
     id("com.google.dagger.hilt.android")
     kotlin("plugin.serialization") version "2.1.20"
 }
+
+
+
+val secretProperties = Properties()
+val secretPropertiesFile = rootProject.file("secrets.properties")
+
+if (secretPropertiesFile.exists()) {
+    secretPropertiesFile.inputStream().use {
+        secretProperties.load(it)
+    }
+}
+
+val wirelessDeviceUrl = secretProperties.getProperty(
+    "WirelessPhysicalDevice",
+    "http://10.0.2.2:5000/"
+)
 android {
     namespace = "com.saurabh.mediadminapp"
     compileSdk = 37
@@ -18,6 +36,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "WirelessPhysicalDevice",
+            "\"$wirelessDeviceUrl\""
+        )
     }
 
     buildTypes {
@@ -33,12 +57,15 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 kotlin{
-    compilerOptions { org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17 }
+    compilerOptions {
+        jvmTarget.set( org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
 }
 
 dependencies {
@@ -77,4 +104,5 @@ dependencies {
 
     implementation(libs.androidx.security.crypto)
     implementation(libs.ucrop)
+    implementation(libs.dotenv.kotlin)
 }

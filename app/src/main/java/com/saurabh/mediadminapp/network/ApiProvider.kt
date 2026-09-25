@@ -1,8 +1,8 @@
 package com.saurabh.mediadminapp.network
 
+import com.saurabh.mediadminapp.BuildConfig
 import android.content.Context
 import android.util.Log
-import com.saurabh.mediadminapp.utils.BASE_URL1
 import dagger.Module
 import dagger.Lazy
 import dagger.Provides
@@ -17,15 +17,10 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
+
 // ── Qualifiers ────────────────────────────────────────────────────────────────
 
-/**
- * Marks the unauthenticated Retrofit / OkHttpClient used exclusively for
- * login and token refresh.  This client intentionally has NO AuthInterceptor
- * and NO TokenAuthenticator, which breaks the circular dependency that would
- * otherwise occur if the authenticator triggered a refresh request on the same
- * client that owns the authenticator.
- */
+
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
 annotation class AuthRetrofit
@@ -51,6 +46,7 @@ annotation class MainApiService
 @Module
 @InstallIn(SingletonComponent::class)
 object ApiProvider {
+    val BASE_URL1 = BuildConfig.WirelessPhysicalDevice
 
     // ── TokenManager ──────────────────────────────────────────────────────────
 
