@@ -1,11 +1,11 @@
 # 🏥 MediAdminApp — Healthcare & Pharmacy Admin Dashboard
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" />
-  <img src="https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" />
-  <img src="https://img.shields.io/badge/Jetpack%20Compose-2026.09.00-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Compose" />
-  <img src="https://img.shields.io/badge/Architecture-Clean%20MVVM-FF6F00?style=for-the-badge" alt="MVVM" />
-  <img src="https://img.shields.io/badge/Design-Claymorphism-E0AAFF?style=for-the-badge" alt="Claymorphism" />
+  <img src="https://img.shields.io/badge/Platform-Android-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android" title="Android"/>
+  <img src="https://img.shields.io/badge/Kotlin-2.4.0-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white" alt="Kotlin" title="Kotlin"/>
+  <img src="https://img.shields.io/badge/Jetpack%20Compose-2026.09.00-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white" alt="Compose" title="Jetpack Compose"/>
+  <img src="https://img.shields.io/badge/Architecture-Clean%20MVVM-FF6F00?style=for-the-badge" alt="MVVM" title="Clean MVVM"/>
+  <img src="https://img.shields.io/badge/Design-Claymorphism-E0AAFF?style=for-the-badge" alt="Claymorphism" title="Claymorphism"/>
 </p>
 
 <p align="center">
