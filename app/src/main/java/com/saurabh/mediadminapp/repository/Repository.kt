@@ -2,6 +2,8 @@ package com.saurabh.mediadminapp.repository
 
 import android.util.Log
 import androidx.compose.material3.ExposedDropdownMenuBox
+import com.google.gson.Gson
+import com.saurabh.mediadminapp.network.response.ApiErrorResponse
 import com.saurabh.mediadminapp.network.response.GetAllUserResponse
 import com.saurabh.mediadminapp.common.ResultState
 import com.saurabh.mediadminapp.network.ApiServices
@@ -191,6 +193,39 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
             val error = response.errorBody()?.string() ?: "Unknown error"
             emitter.emit(ResultState.Error(Exception(error)))
             Log.e("AdminRepository", "$tag error: $error")
+        }
+    }
+
+    private fun parseErrorMessage(rawJson: String?): String? {
+        if (rawJson.isNullOrBlank()) return null
+        return try {
+            val errorResponse = Gson().fromJson(rawJson, ApiErrorResponse::class.java)
+            errorResponse?.displayMessage ?: rawJson
+        } catch (_: Exception) {
+            rawJson
+        }
+    }
+
+    private suspend fun <T> safeApiCall(
+        apiCall: suspend () -> Response<T>
+    ): Flow<ResultState<T>> = flow {
+        emit(ResultState.Loading)
+        try {
+            val response = apiCall()
+            if (response.isSuccessful) {
+                val body = response.body()
+                if (body != null) {
+                    emit(ResultState.Success(body))
+                } else {
+                    emit(ResultState.Error(Exception("Empty response body with HTTP ${response.code()}")))
+                }
+            } else {
+                val rawError = response.errorBody()?.string()
+                val parsedMessage = parseErrorMessage(rawError) ?: "Request failed with HTTP ${response.code()}"
+                emit(ResultState.Error(Exception(parsedMessage)))
+            }
+        } catch (e: Exception) {
+            emit(ResultState.Error(e))
         }
     }
 
