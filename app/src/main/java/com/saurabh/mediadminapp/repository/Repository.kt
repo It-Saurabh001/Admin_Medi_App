@@ -200,95 +200,36 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         val stockBody = stock.toString().toTextRequestBody()
         apiServices.addProduct(nameBody, priceBody, categoryBody, stockBody, image)
     }
-    suspend fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null, image: MultipartBody.Part? = null): Flow<ResultState<UpdateProductResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val productIdBody = productId.toRequestBody("text/plain".toMediaTypeOrNull())
-            val nameBody = name?.toRequestBody("text/plain".toMediaTypeOrNull())
-            val priceBody = price?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
-            val categoryBody = category?.toRequestBody("text/plain".toMediaTypeOrNull())
-            val stockBody = stock?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
-            val response = apiServices.updateProduct(productIdBody, nameBody, priceBody, categoryBody, stockBody, image)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "updateProduct: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "updateProduct: repository error : ${response.errorBody()?.string()}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun updateProduct(
+        productId: String,
+        name: String? = null,
+        price: Double? = null,
+        category: String? = null,
+        stock: Int? = null,
+        image: MultipartBody.Part? = null
+    ): Flow<ResultState<UpdateProductResponse>> = safeApiCall {
+        val productIdBody = productId.toRequestBody("text/plain".toMediaTypeOrNull())
+        val nameBody = name?.toRequestBody("text/plain".toMediaTypeOrNull())
+        val priceBody = price?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
+        val categoryBody = category?.toRequestBody("text/plain".toMediaTypeOrNull())
+        val stockBody = stock?.toString()?.toRequestBody("text/plain".toMediaTypeOrNull())
+        apiServices.updateProduct(productIdBody, nameBody, priceBody, categoryBody, stockBody, image)
     }
 
-    suspend fun deleteProduct(productId: String): Flow<ResultState<DeleteProductResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.deleteProduct(productId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "deleteProduct: repository : $${ResultState.Success(response.body())}")
-            }
-            else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-            }
-        }
-        catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun deleteProduct(productId: String): Flow<ResultState<DeleteProductResponse>> = safeApiCall {
+        apiServices.deleteProduct(productId)
     }
 
-
-    suspend fun getSpecificProduct(productId: String): Flow<ResultState<GetSpecificProductResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getSpecificProduct(productId)
-            if(response.isSuccessful && response.body() != null) {
-                emit(ResultState.Success(response.body()!!))
-                Log.d(
-                    "TAG",
-                    "getSpecificProduct: repository : ${ResultState.Success(response.body())}"
-                )
-            } else {
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getSpecificProduct: repository error : ${emit(ResultState.Error(Exception(response.body().toString())))}")
-            }
-        }
-        catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getSpecificProduct(productId: String): Flow<ResultState<GetSpecificProductResponse>> = safeApiCall {
+        apiServices.getSpecificProduct(productId)
     }
 
-    suspend fun getAllOrders(): Flow<ResultState<GetAllOrdersResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getAllOrders()
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getAllOrders: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getAllOrders: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getAllOrders(): Flow<ResultState<GetAllOrdersResponse>> = safeApiCall {
+        apiServices.getAllOrders()
     }
 
-    suspend fun getUserOrders(userId: String): Flow<ResultState<GetUsersOrdersResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getUserOrders(userId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getUserOrders: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getUserOrders: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getUserOrders(userId: String): Flow<ResultState<GetUsersOrdersResponse>> = safeApiCall {
+        apiServices.getUserOrders(userId)
     }
 
     suspend fun getOrdersById(orderId: String): Flow<ResultState<GetOrderByIdResponse>> = flow {
