@@ -60,15 +60,8 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         password: String,
         email: String,
         phoneNumber: String
-    ): Flow<ResultState<CreateAdminResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.createAdmin(name, password, email, phoneNumber)
-            handleResponse("createAdmin", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "createAdmin exception: ${e.message}")
-        }
+    ): Flow<ResultState<CreateAdminResponse>> = safeApiCall {
+        apiServices.createAdmin(name, password, email, phoneNumber)
     }
 
     // ----------------------------
@@ -77,17 +70,8 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
     suspend fun loginAdmin(
         email: String,
         password: String
-    ): Flow<ResultState<AdminLoginResponse>> = flow {
-        Log.d("PERF_TRACE", "Repository loginAdmin START [Thread: ${Thread.currentThread().name}]")
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.loginAdmin(email, password)
-            handleResponse("loginAdmin", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "loginAdmin exception: ${e.message}")
-        }
-        Log.d("PERF_TRACE", "Repository loginAdmin END [Thread: ${Thread.currentThread().name}]")
+    ): Flow<ResultState<AdminLoginResponse>> = safeApiCall {
+        apiServices.loginAdmin(email, password)
     }
 
     // ----------------------------
@@ -96,44 +80,23 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
     suspend fun verifyAdminOtp(
         adminId: String,
         otp: String
-    ): Flow<ResultState<VerifyOtpResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.verifyAdminOtp(adminId, otp)
-            handleResponse("verifyAdminOtp", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "verifyAdminOtp exception: ${e.message}")
-        }
+    ): Flow<ResultState<VerifyOtpResponse>> = safeApiCall {
+        apiServices.verifyAdminOtp(adminId, otp)
     }
 
     // ----------------------------
     // PASSWORD RESET
     // ----------------------------
-    suspend fun requestAdminPasswordReset(email: String): Flow<ResultState<PasswordResetResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.requestAdminPasswordReset(email)
-            handleResponse("requestAdminPasswordReset", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "requestAdminPasswordReset exception: ${e.message}")
-        }
+    suspend fun requestAdminPasswordReset(email: String): Flow<ResultState<PasswordResetResponse>> = safeApiCall {
+        apiServices.requestAdminPasswordReset(email)
     }
 
     suspend fun resetAdminPasswordWithOtp(
         adminId: String,
         otp: String,
         newPassword: String
-    ): Flow<ResultState<PasswordResetOtpResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.resetAdminPasswordWithOtp(adminId, otp, newPassword)
-            handleResponse("resetAdminPasswordWithOtp", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "resetAdminPasswordWithOtp exception: ${e.message}")
-        }
+    ): Flow<ResultState<PasswordResetOtpResponse>> = safeApiCall {
+        apiServices.resetAdminPasswordWithOtp(adminId, otp, newPassword)
     }
 
     // ----------------------------
