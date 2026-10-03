@@ -46,6 +46,10 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
         if (response.code == 401) {
             Log.w("AuthInterceptor", "Intercepter=>Received 401 for $path, token might be invalid or expired")
         }
+        if (response.code == 422) {
+            Log.w("AuthInterceptor", "Received 422 for $path: corrupt or invalid JWT. Invalidating session.")
+            tokenManager.invalidateSession()
+        }
         return response
     }
 }
