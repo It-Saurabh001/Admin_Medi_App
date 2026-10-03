@@ -259,68 +259,20 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
     suspend fun getAllSellHistory(): Flow<ResultState<GetSellHistoryResponse>> = safeApiCall {
         apiServices.getSellHistory()
     }
-    suspend fun recordSellHistory(orderId: String): Flow<ResultState<GetRecordSellHistoryResoponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.recordSellHistory(orderId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "recordSellHistory: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "recordSellHistory: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun recordSellHistory(orderId: String): Flow<ResultState<GetRecordSellHistoryResoponse>> = safeApiCall {
+        apiServices.recordSellHistory(orderId)
     }
 
-    suspend fun getUserSellHistory(userId: String): Flow<ResultState<GetUserSellHistoryResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getusersellhistory(userId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getUserSellHistory: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getUserSellHistory: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getUserSellHistory(userId: String): Flow<ResultState<GetUserSellHistoryResponse>> = safeApiCall {
+        apiServices.getusersellhistory(userId)
     }
 
-    suspend fun getProductSellHistory(productId: String): Flow<ResultState<GetProductSellHistoryResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getProductSellHistory(productId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getProductSellHistory: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getProductSellHistory: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getProductSellHistory(productId: String): Flow<ResultState<GetProductSellHistoryResponse>> = safeApiCall {
+        apiServices.getProductSellHistory(productId)
     }
 
-    suspend fun deleteSellHistory(sellId: String): Flow<ResultState<GetDeleteSellHistoryResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.deleteSellHistory(sellId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "deleteSellHistory: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "deleteSellHistory: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun deleteSellHistory(sellId: String): Flow<ResultState<GetDeleteSellHistoryResponse>> = safeApiCall {
+        apiServices.deleteSellHistory(sellId)
     }
 
 }
