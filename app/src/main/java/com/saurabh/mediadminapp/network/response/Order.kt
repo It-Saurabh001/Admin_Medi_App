@@ -8,7 +8,7 @@ data class Order(
     val id: Int,
     @SerializedName("isApproved")
     var _isApproved: Any? = null,
-    val message: String,
+    val message: String? = null,
     val order_id: String,
     val price: Double,
     val product_id: String,

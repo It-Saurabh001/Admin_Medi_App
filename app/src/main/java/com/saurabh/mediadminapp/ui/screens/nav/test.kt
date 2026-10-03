@@ -332,7 +332,7 @@ fun EachOrder(order : Order, navController: NavController) {
         )
         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
         Text(
-            text = "Message: "+order.message,
+            text = "Message: " + (order.message ?: ""),
             style = TextStyle(fontWeight = FontWeight.Medium, fontSize = 18.sp),
             modifier = Modifier.fillMaxWidth()
         )

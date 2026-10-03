@@ -348,7 +348,7 @@ fun SpecificOrderReceiptView(
                     MetadataClusterRow(Icons.Default.QrCode, "Product ID", order.product_id)
                     MetadataClusterRow(Icons.Default.CalendarMonth, "Order Date", order.date_of_order_creation)
 
-                    if (order.message.isNotEmpty()) {
+                    if (!order.message.isNullOrEmpty()) {
                         HorizontalDivider(
                             color = ClayBorder.copy(alpha = 0.4f),
                             modifier = Modifier.padding(vertical = 4.dp)
