@@ -175,6 +175,30 @@ fun ClayCard(
         content = content
     )
 }
+@Composable
+fun ClayCardOrderScreen(
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = ClayRadiusLarge,
+    bgColor: Color = ClayCardBg,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val shape = RoundedCornerShape(cornerRadius)
+    Column(
+        modifier = modifier
+            .clayHardwareShadow(cornerRadius)
+            .background(
+                brush = Brush.verticalGradient(
+                    listOf(Color(0xFFFFFFFF), Color(0xFFF8F7FF), Color(0xFFF2F0FF))
+                ),
+                shape = shape
+            )
+            .clayPillowLighting(cornerRadius)
+            .border(1.5.dp, Color.White, shape)
+            .clip(shape)
+            .padding(10.dp),
+        content = content
+    )
+}
 
 /**
  * Stat card — used in Home/Product summary rows.
@@ -276,8 +300,10 @@ fun ClayInfoRow(
 /**
  * Status badge — pill-shaped with tinted background + hairline border at 25% alpha.
  */
+
 @Composable
-fun ClayStatusBadge(text: String, color: Color) {
+fun ClayStatusBadge(text: String, color: Color
+) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50.dp))
@@ -295,6 +321,28 @@ fun ClayStatusBadge(text: String, color: Color) {
     }
 }
 
+@Composable
+fun ClayStatusBadgeOrderDetail(text: String, color: Color
+) {
+    Box(
+        modifier = Modifier.fillMaxWidth(0.5f)
+            .clip(RoundedCornerShape(7.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(0.5.dp, color.copy(alpha = 0.5f), RoundedCornerShape(7.dp))
+            .padding(horizontal = 1.dp, vertical = 0.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text.uppercase(),
+            maxLines = 1,
+            color = color,
+            fontSize = 8.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 1.sp
+        )
+    }
+}
+
 /**
  * "Details" action button for list cards — spring-reactive, 44dp height,
  * BlurMaskFilter hardware shadow. Matches the 5-layer pillow lighting spec.
@@ -305,7 +353,8 @@ fun ClayDetailButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     accentColor: Color = ClayPrimary
-) {
+)
+{
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.96f else 1f,
@@ -388,6 +437,99 @@ fun ClayDetailButton(
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.5.sp,
             modifier = Modifier.padding(horizontal = 20.dp)
+        )
+    }
+}
+@Composable
+fun ClayDetailButtonOrderScreen(
+    text: String = "Details",
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    accentColor: Color = ClayPrimary
+)
+{
+    var pressed by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "detailBtnScale"
+    )
+    val cornerRadius by animateDpAsState(
+        targetValue = if (pressed) 7.dp else 8.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "detailBtnCorner"
+    )
+    val shape = RoundedCornerShape(cornerRadius)
+
+    Box(
+        modifier = modifier.fillMaxWidth()
+            .height(37.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .drawBehind {
+                val cr = cornerRadius.toPx()
+                drawIntoCanvas { canvas ->
+                    canvas.nativeCanvas.drawRoundRect(
+                        2.dp.toPx(), 3.dp.toPx(),
+                        size.width - 2.dp.toPx(), size.height + 2.dp.toPx(),
+                        cr, cr,
+                        android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            color = android.graphics.Color.argb(50, 108, 99, 255)
+                            maskFilter = android.graphics.BlurMaskFilter(
+                                8.dp.toPx(),
+                                android.graphics.BlurMaskFilter.Blur.NORMAL
+                            )
+                        }
+                    )
+                }
+            }
+            .background(
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFF6C63FF), Color(0xFF48CAE4))
+                ),
+                shape = shape
+            )
+            .drawWithContent {
+                drawContent()
+                val cr = CornerRadius(cornerRadius.toPx())
+                val rimW = 1.5.dp.toPx()
+                // Top specular
+                drawRoundRect(
+                    brush = Brush.verticalGradient(
+                        0f to Color.White.copy(0.35f), 0.5f to Color.White.copy(0f)
+                    ),
+                    size = size, cornerRadius = cr
+                )
+                // Top rim
+                drawRoundRect(
+                    brush = Brush.verticalGradient(
+                        0f to Color.White.copy(0.80f), 0.4f to Color.White.copy(0f)
+                    ),
+                    size = size, cornerRadius = cr, style = Stroke(rimW)
+                )
+            }
+            .clip(shape)
+            .pointerInput(onClick) {
+                detectTapGestures(
+                    onPress = { pressed = true; tryAwaitRelease(); pressed = false },
+                    onTap = { onClick() }
+                )
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "$text >",
+            color = Color.White,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp,
+            modifier = Modifier.padding(horizontal = 3.dp)
         )
     }
 }

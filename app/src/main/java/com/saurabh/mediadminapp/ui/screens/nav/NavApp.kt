@@ -179,6 +179,7 @@ fun NavApp(viewModel: MyViewModel) {
 
     // Sync bottom-nav highlight with actual current route (handles back-nav desync)
     LaunchedEffect(currentRoute) {
+        Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(currentRoute) triggered: Route changed to $currentRoute")
         selected = when {
             currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
             currentRoute?.contains("productRoutes", ignoreCase = true) == true -> 1
@@ -204,27 +205,15 @@ fun NavApp(viewModel: MyViewModel) {
             }
         }
     }
-    LaunchedEffect(currentRoute) {
-        Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(currentRoute) triggered: Route changed to $currentRoute")
-        selected = when {
-            currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
-            currentRoute?.contains("productRoutes", ignoreCase = true) == true -> 1
-            currentRoute?.contains("OrdersRoutes", ignoreCase = true) == true -> 2
-            currentRoute?.contains("HistoryRoutes", ignoreCase = true) == true -> 3
-            else -> -1
-        }
-        if (currentRoute != null && !isHomeScreen && drawerState.isOpen) {
-            drawerState.close()
-        }
-    }
+
     // ── Login → Home ──────────────────────────────────────────────────────────
     // If the app finds an active session while sitting on an auth screen (e.g.
     // cold start with persisted tokens), skip to the Home graph.
-    LaunchedEffect(isLoggedIn, isAuthRoute) {
-        if (isLoggedIn && isAuthRoute) {
+    LaunchedEffect(isLoggedIn, isAuthRoute,currentRoute) {
+        if (isLoggedIn && isAuthRoute && currentRoute != null) {
             Log.d("NAV", "Admin session active on auth screen -> forcing navigation to Home")
             navController.navigate(Routes.HomeRoutes()) {
-                popUpTo(navController.graph.id) { inclusive = true }
+                popUpTo(0) { inclusive = true }
                 launchSingleTop = true
             }
         }

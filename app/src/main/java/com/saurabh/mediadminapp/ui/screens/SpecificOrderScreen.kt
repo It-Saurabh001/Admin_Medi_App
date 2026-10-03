@@ -84,15 +84,16 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
     }
 
     DismissKeyboardOnTapScreen {
-        Scaffold(containerColor = Color.Transparent) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize()){
+
             when {
                 response.value.isLoading -> {
-                    ClayLoadingScreen(modifier = Modifier.padding(innerPadding))
+                    ClayLoadingScreen(modifier = Modifier)
                 }
                 response.value.error != null -> {
                     ClayErrorScreen(
                         errorMessage = response.value.error.toString(),
-                        modifier = Modifier.padding(innerPadding),
+                        modifier = Modifier,
                         onRetry = { viewModel.getOrderById(orderId) }
                     )
                 }
@@ -102,12 +103,13 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
                             order = response.value.success!!.order,
                             navController = navController,
                             viewModel = viewModel,
-                            modifier = Modifier.padding(innerPadding)
+                            modifier = Modifier
                         )
                     }
                 }
             }
         }
+
     }
 }
 
@@ -133,40 +135,45 @@ fun SpecificOrderReceiptView(
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp)
     ) {
         // ── 1. APP BAR & ORDER IDENTITY ──────────────────────────────────
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                    Text(
-                        text = "Order Receipt",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 4.dp)
-                    )
-                }
-
-                ClayStatusBadge(
-                    text = order.order_id,
-                    color = Color.White
-                )
-            }
-        }
+//        item {
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(vertical = 8.dp),
+//                verticalAlignment = Alignment.CenterVertically,
+//                horizontalArrangement = Arrangement.SpaceBetween
+//            ) {
+//                Row(verticalAlignment = Alignment.CenterVertically) {
+//                    IconButton(onClick = { navController.popBackStack() }) {
+//                        Icon(
+//                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+//                            contentDescription = "Back",
+//                            tint = Color.White
+//                        )
+//                    }
+//                    Text(
+//                        text = "Order Receipt",
+//                        fontSize = 22.sp,
+//                        fontWeight = FontWeight.ExtraBold,
+//                        color = Color.White,
+//                        modifier = Modifier.padding(start = 4.dp)
+//                    )
+//                }
+//
+//
+//            }
+//        }
 
         // ── 2. MILESTONE PROGRESS TRACK (Order Lifecycle) ─────────────────
         item {
+            ClayStatusBadge(
+                text = order.order_id,
+                color = Color.White
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+
             ClayCard(
                 modifier = Modifier.fillMaxWidth(),
                 cornerRadius = 24.dp

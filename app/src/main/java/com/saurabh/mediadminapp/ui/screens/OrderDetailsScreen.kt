@@ -1,5 +1,11 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +49,7 @@ import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.network.response.Order
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
+import com.saurabh.mediadminapp.ui.screens.components.ClayCardOrderScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
 import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayFilterChip
@@ -168,106 +175,113 @@ fun OrdersListScreen(
             )
         }
         // ── 2. DOMAIN HERO FOCAL POINT: DISPATCH RADAR DECK ──────────────
-        item {
-            ClayCard(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 28.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+        if(searchTerm.isBlank()){
+            item {
+                AnimatedVisibility(visible = searchTerm.isBlank(),
+                    enter = slideInVertically(animationSpec = tween(durationMillis = 600),initialOffsetY = {-it})+ fadeIn(animationSpec = tween(durationMillis = 600),),
+                    exit = slideOutVertically (animationSpec = tween(durationMillis = 600),targetOffsetY = {-it})+ fadeOut(animationSpec = tween(durationMillis = 600),)
                 ) {
-                    Row(
+                    ClayCard(
                         modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(ClayBadgeApproved.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
+                        cornerRadius = 28.dp
+                    )
+                    {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.LocalShipping,
-                                    contentDescription = null,
-                                    tint = ClayBadgeApproved,
-                                    modifier = Modifier.size(17.dp)
-                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(ClayBadgeApproved.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.LocalShipping,
+                                            contentDescription = null,
+                                            tint = ClayBadgeApproved,
+                                            modifier = Modifier.size(17.dp)
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(7.dp))
+                                    Column {
+                                        Text(
+                                            text = "Fulfillment Hub",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = ClayTextPrimary,
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = "Incoming Orders & Dispatches",
+                                            fontSize = 11.sp,
+                                            color = ClayTextSecondary,
+                                            fontWeight = FontWeight.Medium,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+
+                                // Hero Valuation Tag
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "TOTAL PIPELINE",
+                                        fontSize = 7.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ClayTextSecondary,
+                                        letterSpacing = 1.sp,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(stats["totalValue"] ?: 0)}",
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ClayBadgeApproved,
+                                        maxLines = 1
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.width(7.dp))
-                            Column {
-                                Text(
-                                    text = "Fulfillment Hub",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = ClayTextPrimary,
-                                    maxLines = 1
+
+                            // Stat Metrics Cluster
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                ClayStatCard(
+                                    modifier = Modifier.weight(1f),
+                                    value = stats["total"].toString(),
+                                    label = "All Orders",
+                                    accentColor = ClayTextPrimary,
+                                    icon = Icons.AutoMirrored.Filled.List
                                 )
-                                Text(
-                                    text = "Incoming Orders & Dispatches",
-                                    fontSize = 11.sp,
-                                    color = ClayTextSecondary,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1
+                                ClayStatCard(
+                                    modifier = Modifier.weight(1f),
+                                    value = stats["pending"].toString(),
+                                    label = "Pending",
+                                    accentColor = ClayBadgePending,
+                                    icon = Icons.Default.HourglassEmpty
+                                )
+                                ClayStatCard(
+                                    modifier = Modifier.weight(1f),
+                                    value = stats["approved"].toString(),
+                                    label = "Approved",
+                                    accentColor = ClayBadgeApproved,
+                                    icon = Icons.Default.CheckCircle
                                 )
                             }
                         }
-
-                        // Hero Valuation Tag
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "TOTAL PIPELINE",
-                                fontSize = 7.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = ClayTextSecondary,
-                                letterSpacing = 1.sp,
-                                maxLines = 1
-                            )
-                            Text(
-                                text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(stats["totalValue"] ?: 0)}",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = ClayBadgeApproved,
-                                maxLines = 1
-                            )
-                        }
-                    }
-
-                    // Stat Metrics Cluster
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        ClayStatCard(
-                            modifier = Modifier.weight(1f),
-                            value = stats["total"].toString(),
-                            label = "All Orders",
-                            accentColor = ClayTextPrimary,
-                            icon = Icons.AutoMirrored.Filled.List
-                        )
-                        ClayStatCard(
-                            modifier = Modifier.weight(1f),
-                            value = stats["pending"].toString(),
-                            label = "Pending",
-                            accentColor = ClayBadgePending,
-                            icon = Icons.Default.HourglassEmpty
-                        )
-                        ClayStatCard(
-                            modifier = Modifier.weight(1f),
-                            value = stats["approved"].toString(),
-                            label = "Approved",
-                            accentColor = ClayBadgeApproved,
-                            icon = Icons.Default.CheckCircle
-                        )
                     }
                 }
+
             }
         }
-
-
 
         // ── 3. FLOATING STATUS FILTER DOCK ───────────────────────────────
         item {
@@ -303,15 +317,33 @@ fun OrdersListScreen(
                 )
             }
         } else {
-            itemsIndexed(filteredOrders, key = { _, item -> item.order_id }) { index, orderItem ->
-                val bgTint = cardColors[index % cardColors.size]
-                EachOrderCard(
-                    order = orderItem,
-                    navController = navController,
-                    bgColor = bgTint,
-                    isApproveOrder = isApproveOrder,
-                    onApprovalToggle = onApprovalToggle
-                )
+            itemsIndexed(
+                items = filteredOrders.chunked(2),
+                key = { _, rowOrders ->
+                    rowOrders.joinToString(separator = "_") { it.order_id }
+                }
+            ) { rowIndex, rowOrders ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    rowOrders.forEachIndexed { colIndex, orderItem ->
+                        val globalIndex = rowIndex * 2 + colIndex
+                        val bgTint = cardColors[globalIndex % cardColors.size]
+                        Box(modifier = Modifier.weight(1f)) {
+                            EachOrderCard(
+                                order = orderItem,
+                                navController = navController,
+                                bgColor = bgTint,
+                                isApproveOrder = isApproveOrder,
+                                onApprovalToggle = onApprovalToggle
+                            )
+                        }
+                    }
+                    if (rowOrders.size == 1) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
             }
         }
     }
