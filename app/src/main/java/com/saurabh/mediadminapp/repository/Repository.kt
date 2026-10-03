@@ -102,15 +102,8 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
     // ----------------------------
     // ADMIN MANAGEMENT
     // ----------------------------
-    suspend fun getAllAdmins(): Flow<ResultState<GetAllAdminResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getAllAdmins()
-            handleResponse("getAllAdmins", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "getAllAdmins exception: ${e.message}")
-        }
+    suspend fun getAllAdmins(): Flow<ResultState<GetAllAdminResponse>> = safeApiCall {
+        apiServices.getAllAdmins()
     }
 
     suspend fun updateAdmin(
@@ -119,46 +112,17 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         password: String? = null,
         email: String? = null,
         phoneNumber: String? = null
-    ): Flow<ResultState<UpdateAdminResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.updateAdmin(adminId, name, password, email, phoneNumber)
-            handleResponse("updateAdmin", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "updateAdmin exception: ${e.message}")
-        }
+    ): Flow<ResultState<UpdateAdminResponse>> = safeApiCall {
+        apiServices.updateAdmin(adminId, name, password, email, phoneNumber)
     }
 
-    suspend fun deleteAdmin(adminId: String): Flow<ResultState<DeleteAdminResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.deleteAdmin(adminId)
-            handleResponse("deleteAdmin", response, this)
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("AdminRepository", "deleteAdmin exception: ${e.message}")
-        }
+    suspend fun deleteAdmin(adminId: String): Flow<ResultState<DeleteAdminResponse>> = safeApiCall {
+        apiServices.deleteAdmin(adminId)
     }
 
     // ----------------------------
-    // Helper Function
+    // Helper Functions
     // ----------------------------
-    private suspend fun <T> handleResponse(
-        tag: String,
-        response: Response<T>,
-        emitter: kotlinx.coroutines.flow.FlowCollector<ResultState<T>>
-    ) {
-        if (response.isSuccessful && response.body() != null) {
-            emitter.emit(ResultState.Success(response.body()!!))
-            Log.d("AdminRepository", "$tag success: ${response.body()}")
-        } else {
-            val error = response.errorBody()?.string() ?: "Unknown error"
-            emitter.emit(ResultState.Error(Exception(error)))
-            Log.e("AdminRepository", "$tag error: $error")
-        }
-    }
-
     private fun parseErrorMessage(rawJson: String?): String? {
         if (rawJson.isNullOrBlank()) return null
         return try {
@@ -194,40 +158,12 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
 
     suspend fun getSpecificUser(
         userId: String
-    ): Flow<ResultState<GetSpecificUserResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getSpecificUser(userId)
-            if (response.isSuccessful && response.body() != null) {
-                emit(ResultState.Success(response.body()!!))
-                Log.d("UserRepository", "getSpecificUser success: ${response.body()}")
-            } else {
-                val error = response.errorBody()?.string() ?: "Unknown error"
-                emit(ResultState.Error(Exception(error)))
-                Log.e("UserRepository", "getSpecificUser error: $error")
-            }
-        } catch (e: Exception) {
-            emit(ResultState.Error(e))
-            Log.e("UserRepository", "getSpecificUser exception: ${e.message}")
-        }
+    ): Flow<ResultState<GetSpecificUserResponse>> = safeApiCall {
+        apiServices.getSpecificUser(userId)
     }
 
-    suspend fun getAllUsers(): Flow<ResultState<GetAllUserResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getAllUsers()
-            if (response.isSuccessful  && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getSpecificUser repository: ${ResultState.Success(response.body()!!)}")
-            }
-            else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getSpecificUser: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }
-        catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getAllUsers(): Flow<ResultState<GetAllUserResponse>> = safeApiCall {
+        apiServices.getAllUsers()
     }
 
     suspend fun updateUser(userId: String, name: String? = null, password : String?=null, isApproved: Boolean? = null, block : Boolean?=null, address : String?=null, email: String? = null, phonenumber: String? = null, pincode: String? = null, role: String? = "user"): Flow<ResultState<UpdateUserResponse>> = flow {
