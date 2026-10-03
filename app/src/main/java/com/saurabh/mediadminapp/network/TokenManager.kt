@@ -65,7 +65,7 @@ class TokenManager private constructor(context: Context) {
             editor.putString(KEY_REFRESH_TOKEN, newRefreshToken)
         }
         if (role != null) {
-            editor.putString("USER_ROLE", role) // Apna actual key name use karein
+            editor.putString(KEY_ADMIN_ROLE, role)
         }
         
         val committed = editor.commit() // synchronous — must not be apply()
