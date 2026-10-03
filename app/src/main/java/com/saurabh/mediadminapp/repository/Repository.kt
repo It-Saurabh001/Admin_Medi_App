@@ -232,85 +232,32 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         apiServices.getUserOrders(userId)
     }
 
-    suspend fun getOrdersById(orderId: String): Flow<ResultState<GetOrderByIdResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getOrderById(orderId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getUserOrdersById: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getUserOrdersById: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getOrdersById(orderId: String): Flow<ResultState<GetOrderByIdResponse>> = safeApiCall {
+        apiServices.getOrderById(orderId)
     }
 
-    suspend fun updateOrder(orderId: String, isApproved: Int? = null, quantity: Int?= null, price: Float?=null, total_amount: Float?=null, product_name: String?=null, message: String?=null): Flow<ResultState<UpdateOrderResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.updateOrder(orderId, isApproved, quantity, price, total_amount, product_name, message)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "updateOrder: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "updateOrder: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun updateOrder(
+        orderId: String,
+        isApproved: Int? = null,
+        quantity: Int? = null,
+        price: Float? = null,
+        total_amount: Float? = null,
+        product_name: String? = null,
+        message: String? = null
+    ): Flow<ResultState<UpdateOrderResponse>> = safeApiCall {
+        apiServices.updateOrder(orderId, isApproved, quantity, price, total_amount, product_name, message)
     }
 
-    suspend fun deleteOrder(orderId: String): Flow<ResultState<DeleteOrderResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.deleteOrder(orderId)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "deleteOrder: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "deleteOrder: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun deleteOrder(orderId: String): Flow<ResultState<DeleteOrderResponse>> = safeApiCall {
+        apiServices.deleteOrder(orderId)
     }
 
-    suspend fun approveOrder(orderId: String, isApproved: Boolean): Flow<ResultState<ApproveOrderResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.approveOrder(orderId, isApproved)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "approveOrder: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "approveOrder: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun approveOrder(orderId: String, isApproved: Boolean): Flow<ResultState<ApproveOrderResponse>> = safeApiCall {
+        apiServices.approveOrder(orderId, isApproved)
     }
 
-    suspend fun getAllSellHistory(): Flow<ResultState<GetSellHistoryResponse>> = flow {
-        emit(ResultState.Loading)
-
-        try {
-            val response = apiServices.getSellHistory()
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getAllSellHistory: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getAllSellHistory: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getAllSellHistory(): Flow<ResultState<GetSellHistoryResponse>> = safeApiCall {
+        apiServices.getSellHistory()
     }
     suspend fun recordSellHistory(orderId: String): Flow<ResultState<GetRecordSellHistoryResoponse>> = flow {
         emit(ResultState.Loading)
