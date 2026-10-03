@@ -168,7 +168,7 @@ fun UserListScreen1(
         Log.d("DRAWER_DEBUG", "📜 UserListScreen1: Filtering users (Search: '$searchTerm', Status: $filterStatus)")
         users.filter { user ->
             val matchesSearch = user.name.lowercase().contains(searchTerm.lowercase()) ||
-                    user.email.lowercase().contains(searchTerm.lowercase()) ||
+                    (user.email ?: "").lowercase().contains(searchTerm.lowercase()) ||
                     user.user_id.lowercase().contains(searchTerm.lowercase())
 
             val matchesFilter = when (filterStatus) {

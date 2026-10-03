@@ -100,10 +100,10 @@ private fun UpdateUserForm(
 ) {
     val context = LocalContext.current
     var name by remember(user) { mutableStateOf(user.name) }
-    var email by remember(user) { mutableStateOf(user.email) }
-    var phone by remember(user) { mutableStateOf(user.phone_number) }
-    var address by remember(user) { mutableStateOf(user.address) }
-    var pinCode by remember(user) { mutableStateOf(user.pin_code) }
+    var email by remember(user) { mutableStateOf(user.email ?: "") }
+    var phone by remember(user) { mutableStateOf(user.phone_number ?: "") }
+    var address by remember(user) { mutableStateOf(user.address ?: "") }
+    var pinCode by remember(user) { mutableStateOf(user.pin_code ?: "") }
     var isApproved by remember(user) { mutableStateOf(user.isApproved) }
     var isBlocked by remember(user) { mutableStateOf(user.block) }
     var isSaving by remember { mutableStateOf(false) }

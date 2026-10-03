@@ -3,18 +3,18 @@ package com.saurabh.mediadminapp.network.response
 import com.google.gson.annotations.SerializedName
 
 data class UserItem(
-    val address: String,
+    val address: String? = null,
     @SerializedName("block")
      val _block: Any? = null,
     val date_of_account_creation: String,
-    val email: String,
+    val email: String? = null,
     val id: Int,
     @SerializedName("isApproved")
     val _isApproved: Any? = null,
     val name: String,
-    val password: String,
-    val phone_number: String,
-    val pin_code: String,
+    val password: String? = null,
+    val phone_number: String? = null,
+    val pin_code: String? = null,
     val role: String,
     val user_id: String
 ){

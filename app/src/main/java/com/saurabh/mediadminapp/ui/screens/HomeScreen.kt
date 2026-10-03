@@ -136,7 +136,7 @@ fun UserListScreen(
     val filteredUsers = remember(users, searchTerm, filterStatus) {
         users.filter { user ->
             val matchesSearch = user.name.lowercase().contains(searchTerm.lowercase()) ||
-                    user.email.lowercase().contains(searchTerm.lowercase()) ||
+                    (user.email ?: "").lowercase().contains(searchTerm.lowercase()) ||
                     user.user_id.lowercase().contains(searchTerm.lowercase())
 
             val matchesFilter = when (filterStatus) {

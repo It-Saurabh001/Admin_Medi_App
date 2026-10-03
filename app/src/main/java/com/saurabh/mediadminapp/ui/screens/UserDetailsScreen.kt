@@ -364,22 +364,22 @@ fun UserDetailsHub(
                     RecessedSpecRow(
                         icon = Icons.Default.Phone,
                         label = "Telephone Number",
-                        value = user.phone_number.ifEmpty { "Not Provided" }
+                        value = (user.phone_number ?: "").ifEmpty { "Not Provided" }
                     )
                     RecessedSpecRow(
                         icon = Icons.Default.Email,
                         label = "Email Address",
-                        value = user.email.ifEmpty { "Not Provided" }
+                        value = (user.email ?: "").ifEmpty { "Not Provided" }
                     )
                     RecessedSpecRow(
                         icon = Icons.Default.Home,
                         label = "Street Address",
-                        value = user.address.ifEmpty { "Not Provided" }
+                        value = (user.address ?: "").ifEmpty { "Not Provided" }
                     )
                     RecessedSpecRow(
                         icon = Icons.Default.LocationOn,
                         label = "Postal Pincode",
-                        value = user.pin_code.ifEmpty { "Not Provided" }
+                        value = (user.pin_code ?: "").ifEmpty { "Not Provided" }
                     )
                 }
             }
