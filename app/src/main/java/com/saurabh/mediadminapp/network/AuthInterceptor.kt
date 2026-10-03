@@ -9,7 +9,6 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
     companion object {
         val EXCLUDED_PATHS = listOf(
             "/admin/login",
-            "/admin/create",
             "/admin/verifyOtp",
             "/admin/requestAdminPasswordReset",
             "/admin/resetAdminPasswordWithOtp"
