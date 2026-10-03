@@ -124,12 +124,11 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
                         )
                     }
                 } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "Product not found or has been deleted", fontSize = 18.sp, color = ClayTextPrimary)
-                    }
+                    ClayErrorScreen(
+                        errorMessage = productstate.value.success?.message?.takeIf { it.isNotBlank() } ?: "Product not found or has been deleted",
+                        modifier = Modifier,
+                        onRetry = { viewModel.getSpecificProduct(productId) }
+                    )
                 }
             }
         }

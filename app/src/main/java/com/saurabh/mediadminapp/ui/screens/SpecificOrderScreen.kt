@@ -98,12 +98,21 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
                     )
                 }
                 response.value.success != null -> {
-                    ClayGradientBackdrop(gradient = ClayOrderGradient) {
-                        SpecificOrderReceiptView(
-                            order = response.value.success!!.order,
-                            navController = navController,
-                            viewModel = viewModel,
-                            modifier = Modifier
+                    val order = response.value.success?.order
+                    if (order != null) {
+                        ClayGradientBackdrop(gradient = ClayOrderGradient) {
+                            SpecificOrderReceiptView(
+                                order = order,
+                                navController = navController,
+                                viewModel = viewModel,
+                                modifier = Modifier
+                            )
+                        }
+                    } else {
+                        ClayErrorScreen(
+                            errorMessage = response.value.success?.message?.takeIf { it.isNotBlank() } ?: "Order not found",
+                            modifier = Modifier,
+                            onRetry = { viewModel.getOrderById(orderId) }
                         )
                     }
                 }
