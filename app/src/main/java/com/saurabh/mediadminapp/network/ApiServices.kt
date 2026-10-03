@@ -97,8 +97,7 @@ interface ApiServices {
         @Field("name") name: String? = null,
         @Field("password") password: String? = null,
         @Field("email") email: String? = null,
-        @Field("phone_number") phoneNumber: String? = null,
-        @Field("role") role: String? = "admin"
+        @Field("phone_number") phoneNumber: String? = null
     ): Response<UpdateAdminResponse>
 
 
@@ -237,8 +236,7 @@ interface ApiServices {
         @Field("price") price: Float?=null,
         @Field("total_amount") total_amount: Float?=null,
         @Field("product_name") product_name: String?=null,
-        @Field("message") message: String?=null,
-        @Field("sold") sold: Int? = null
+        @Field("message") message: String?=null
     ): Response<UpdateOrderResponse>
 
     @FormUrlEncoded

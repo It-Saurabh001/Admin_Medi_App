@@ -153,12 +153,11 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         name: String? = null,
         password: String? = null,
         email: String? = null,
-        phoneNumber: String? = null,
-        role: String? = "admin"
+        phoneNumber: String? = null
     ): Flow<ResultState<UpdateAdminResponse>> = flow {
         emit(ResultState.Loading)
         try {
-            val response = apiServices.updateAdmin(adminId, name, password, email, phoneNumber, role)
+            val response = apiServices.updateAdmin(adminId, name, password, email, phoneNumber)
             handleResponse("updateAdmin", response, this)
         } catch (e: Exception) {
             emit(ResultState.Error(e))
