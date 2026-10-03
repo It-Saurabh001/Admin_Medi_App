@@ -166,94 +166,39 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         apiServices.getAllUsers()
     }
 
-    suspend fun updateUser(userId: String, name: String? = null, password : String?=null, isApproved: Boolean? = null, block : Boolean?=null, address : String?=null, email: String? = null, phonenumber: String? = null, pincode: String? = null, role: String? = "user"): Flow<ResultState<UpdateUserResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            // get response from api
-            val response = apiServices.updateUser(userId, name, password, isApproved, block, address, email, phonenumber, pincode, role = role)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "updateUser: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "updateUser: repository error : ${emit(ResultState.Error(Exception(response.body().toString())))}")
-            }
-        }
-        catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun updateUser(
+        userId: String,
+        name: String? = null,
+        password: String? = null,
+        isApproved: Boolean? = null,
+        block: Boolean? = null,
+        address: String? = null,
+        email: String? = null,
+        phonenumber: String? = null,
+        pincode: String? = null,
+        role: String? = "user"
+    ): Flow<ResultState<UpdateUserResponse>> = safeApiCall {
+        apiServices.updateUser(userId, name, password, isApproved, block, address, email, phonenumber, pincode, role = role)
     }
 
-    suspend fun isApprovedUser(user_id : String, isApproved: Boolean): Flow<ResultState<IsApproveUserResponse>> = flow {
-        emit(ResultState.Loading)
-        try{
-            val response = apiServices.isApprovedUser(user_id,isApproved)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "isApprovedUser: repository : ${ResultState.Success(response.body())}")
-            }
-            else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "isApprovedUser: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }
-        catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
-    }
-    suspend fun deleteUser(user_id: String): Flow<ResultState<DeleteUserResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.deleteUser(user_id)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "deleteUser: repository : ${ResultState.Success(response.body())}")
-            }
-            else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "deleteUser: repository error : ${emit(ResultState.Error(Exception(response.body().toString())))}")
-            }
-        }
-        catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun isApprovedUser(user_id: String, isApproved: Boolean): Flow<ResultState<IsApproveUserResponse>> = safeApiCall {
+        apiServices.isApprovedUser(user_id, isApproved)
     }
 
-    suspend fun getAllProduct(): Flow<ResultState<GetAllProductResponse>> = flow{
-        emit(ResultState.Loading)
-        try {
-            val response = apiServices.getAppProducts()
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getAllProduct: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getAllProduct: repository error : ${emit(ResultState.Error(Exception(response.errorBody().toString())))}")
-            }
-        }catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun deleteUser(user_id: String): Flow<ResultState<DeleteUserResponse>> = safeApiCall {
+        apiServices.deleteUser(user_id)
     }
 
-    suspend fun getAddProduct(name: String, price: Double, category: String, stock: Int, image: MultipartBody.Part? = null): Flow<ResultState<GetAddProductResponse>> = flow {
-        emit(ResultState.Loading)
-        try {
-            val nameBody = name.toTextRequestBody()
-            val priceBody = price.toString().toTextRequestBody()
-            val categoryBody = category.toTextRequestBody()
-            val stockBody = stock.toString().toTextRequestBody()
-            val response = apiServices.addProduct(nameBody, priceBody, categoryBody, stockBody, image)
-            if(response.isSuccessful && response.body() != null){
-                emit(ResultState.Success(response.body()!!))
-                Log.d("TAG", "getAddProduct: repository : ${ResultState.Success(response.body())}")
-            }else{
-                emit(ResultState.Error(Exception(response.errorBody()?.string())))
-                Log.d("TAG", "getAddProduct: repository error : ${response.errorBody()?.string()}")
-            }
-        }
-        catch (e: Exception){
-            emit(ResultState.Error(e))
-        }
+    suspend fun getAllProduct(): Flow<ResultState<GetAllProductResponse>> = safeApiCall {
+        apiServices.getAppProducts()
+    }
+
+    suspend fun getAddProduct(name: String, price: Double, category: String, stock: Int, image: MultipartBody.Part? = null): Flow<ResultState<GetAddProductResponse>> = safeApiCall {
+        val nameBody = name.toTextRequestBody()
+        val priceBody = price.toString().toTextRequestBody()
+        val categoryBody = category.toTextRequestBody()
+        val stockBody = stock.toString().toTextRequestBody()
+        apiServices.addProduct(nameBody, priceBody, categoryBody, stockBody, image)
     }
     suspend fun updateProduct(productId: String, name: String? = null, price: Double? = null, category: String? = null, stock: Int? = null, image: MultipartBody.Part? = null): Flow<ResultState<UpdateProductResponse>> = flow {
         emit(ResultState.Loading)
