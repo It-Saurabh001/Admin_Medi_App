@@ -308,9 +308,10 @@ class MyViewModel @Inject constructor(
         }
     }
 
-    fun resetPasswordOtp(userId: String, otp: String,newPassword: String) {
+    fun resetPasswordOtp(userId: String? = null, otp: String, newPassword: String) {
+        val targetAdminId = userId ?: _passwordResetState.value.success?.userId.orEmpty()
         viewModelScope.launch(Dispatchers.IO) {
-            repository.resetAdminPasswordWithOtp(userId,otp,newPassword).collect { result ->
+            repository.resetAdminPasswordWithOtp(targetAdminId, otp, newPassword).collect { result ->
                 when (result) {
                     is ResultState.Loading -> _passwordResetOtpState.value = PasswordResetOtpState(isLoading = true)
                     is ResultState.Error -> _passwordResetOtpState.value = PasswordResetOtpState(error = result.exception.message)
