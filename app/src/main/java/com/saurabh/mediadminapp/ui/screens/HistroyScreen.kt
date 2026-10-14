@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,14 +20,17 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,6 +40,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -60,7 +64,6 @@ import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeApproved
 import com.saurabh.mediadminapp.ui.theme.ClayBadgePending
 import com.saurabh.mediadminapp.ui.theme.ClayChartColors
-import com.saurabh.mediadminapp.ui.theme.ClayFieldBg
 import com.saurabh.mediadminapp.ui.theme.ClayHistoryGradient
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
@@ -72,34 +75,67 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(viewModel: MyViewModel, navController: NavController) {
+fun HistoryScreen(viewModel: MyViewModel, navController: NavController, onMenuClick: () -> Unit) {
     val state = viewModel.getSellHistory.collectAsState()
 
     LaunchedEffect(key1 = Unit) {
         viewModel.getAllSellHistory()
     }
 
-    Scaffold(containerColor = Color.Transparent) { innerPadding ->
-        ClayGradientBackdrop(gradient = ClayHistoryGradient) {
-            when {
-                state.value.isLoading -> {
-                    ClayLoadingScreen(modifier = Modifier.padding(innerPadding))
-                }
-                state.value.error != null -> {
-                    Log.d("TAG", "HistoryScreen error: ${state.value.error}")
-                    ClayErrorScreen(
-                        errorMessage = state.value.error.toString(),
-                        modifier = Modifier.padding(innerPadding),
-                        onRetry = { viewModel.getAllSellHistory() }
-                    )
-                }
-                state.value.success != null -> {
-                    HistoryLedgerScreen(
-                        histories = state.value.success!!.sell_history,
-                        navController = navController,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        titleContentColor = Color.White,
+        navigationIconContentColor = Color.White,
+        actionIconContentColor = Color.White
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "History",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
+                        )
+                    },
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+
+//                    navigationIcon = {
+//                        IconButton(onClick = onMenuClick) {
+//                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
+//                        }
+//                    },
+                    colors = transparentTopBarColors
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                ClayGradientBackdrop(gradient = ClayHistoryGradient) {
+                    when {
+                        state.value.isLoading -> {
+                            ClayLoadingScreen(modifier = Modifier)
+                        }
+                        state.value.error != null -> {
+                            Log.d("TAG", "HistoryScreen error: ${state.value.error}")
+                            ClayErrorScreen(
+                                errorMessage = state.value.error.toString(),
+                                modifier = Modifier,
+                                onRetry = { viewModel.getAllSellHistory() }
+                            )
+                        }
+                        state.value.success != null -> {
+                            HistoryLedgerScreen(
+                                histories = state.value.success!!.sell_history,
+                                navController = navController,
+                                modifier = Modifier
+                            )
+                        }
+                    }
                 }
             }
         }

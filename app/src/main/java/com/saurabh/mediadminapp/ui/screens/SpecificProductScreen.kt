@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -71,6 +72,12 @@ import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
 import java.text.NumberFormat
 import java.util.Locale
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.graphics.Brush
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navController: NavController) {
     val productstate = viewModel.getSpecificProductState.collectAsState()
@@ -98,37 +105,74 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()){
-        when {
-            productstate.value.isLoading -> {
-                ClayLoadingScreen(modifier = Modifier)
-            }
-            productstate.value.error != null -> {
-                ClayErrorScreen(
-                    errorMessage = productstate.value.error.toString(),
-                    modifier = Modifier
+    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        titleContentColor = Color.White,
+        navigationIconContentColor = Color.White,
+        actionIconContentColor = Color.White
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "ProductDetail",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
+                        )
+                    },
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+
+                    navigationIcon = {
+                        IconButton(onClick = { navController.navigate(Routes.ProductRoutes()){
+                            popUpTo(Routes.ProductRoutes()){inclusive = true}    // on click back button navigate to product screen and cleat back stack entry
+                        } }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Product"
+                            )
+                        }
+                    },
+                    colors = transparentTopBarColors,
                 )
             }
-            productstate.value.success != null -> {
-                val productItem = productstate.value.success?.product
-                if (productItem != null) {
-                    ClayGradientBackdrop {
-                        EachProduct(
-                            productItem = productItem,
-                            navController = navController,
-                            onDeleteClick = {
-                                viewModel.deleteProduct(productId)
-                                Toast.makeText(context, "Deleting Product...", Toast.LENGTH_SHORT).show()
-                            },
+            Box(modifier = Modifier.weight(1f)) {
+                when {
+                    productstate.value.isLoading -> {
+                        ClayLoadingScreen(modifier = Modifier)
+                    }
+                    productstate.value.error != null -> {
+                        ClayErrorScreen(
+                            errorMessage = productstate.value.error.toString(),
                             modifier = Modifier
                         )
                     }
-                } else {
-                    ClayErrorScreen(
-                        errorMessage = productstate.value.success?.message?.takeIf { it.isNotBlank() } ?: "Product not found or has been deleted",
-                        modifier = Modifier,
-                        onRetry = { viewModel.getSpecificProduct(productId) }
-                    )
+                    productstate.value.success != null -> {
+                        val productItem = productstate.value.success?.product
+                        if (productItem != null) {
+                            ClayGradientBackdrop {
+                                EachProduct(
+                                    productItem = productItem,
+                                    navController = navController,
+                                    onDeleteClick = {
+                                        viewModel.deleteProduct(productId)
+                                        Toast.makeText(context, "Deleting Product...", Toast.LENGTH_SHORT).show()
+                                    },
+                                    modifier = Modifier
+                                )
+                            }
+                        } else {
+                            ClayErrorScreen(
+                                errorMessage = productstate.value.success?.message?.takeIf { it.isNotBlank() } ?: "Product not found or has been deleted",
+                                modifier = Modifier,
+                                onRetry = { viewModel.getSpecificProduct(productId) }
+                            )
+                        }
+                    }
                 }
             }
         }

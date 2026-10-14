@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -75,6 +76,11 @@ import com.saurabh.mediadminapp.ui.theme.ClayStatePending
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: NavController) {
     val usersState = viewModel.getAllUserState.collectAsState()
@@ -102,38 +108,73 @@ fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: Na
         }
     }
 
-    Scaffold(containerColor = Color.Transparent) { innerPadding ->
-        ClayGradientBackdrop {
-            when {
-                usersState.value.isLoading -> {
-                    ClayLoadingScreen(modifier = Modifier.padding(innerPadding))
-                }
-                usersState.value.error != null -> {
-                    ClayErrorScreen(
-                        errorMessage = usersState.value.error.toString(),
-                        modifier = Modifier.padding(innerPadding),
-                        onRetry = { viewModel.getAllUsers() }
-                    )
-                }
-                usersState.value.success != null -> {
-                    val users = usersState.value.success?.users
-                    val user = users?.find { it.user_id == user_id }
+    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        titleContentColor = Color.White,
+        navigationIconContentColor = Color.White,
+        actionIconContentColor = Color.White
+    )
 
-                    if (user != null) {
-                        UserDetailsHub(
-                            user = user,
-                            isDeleting = deleteState.isLoading,
-                            onDeleteClick = { viewModel.deleteUser(user.user_id) },
-                            onUpdateClick = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.user_id)) },
-                            navController = navController,
-                            modifier = Modifier.padding(innerPadding)
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "User Detail Management",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
                         )
-                    } else {
-                        ClayEmptyState(
-                            message = "User not found or has been deleted",
-                            emoji = "👤",
-                            modifier = Modifier.padding(innerPadding)
-                        )
+                    },
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Home"
+                            )
+                        }
+                    },
+                    colors = transparentTopBarColors,
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                ClayGradientBackdrop {
+                    when {
+                        usersState.value.isLoading -> {
+                            ClayLoadingScreen(modifier = Modifier)
+                        }
+                        usersState.value.error != null -> {
+                            ClayErrorScreen(
+                                errorMessage = usersState.value.error.toString(),
+                                modifier = Modifier,
+                                onRetry = { viewModel.getAllUsers() }
+                            )
+                        }
+                        usersState.value.success != null -> {
+                            val users = usersState.value.success?.users
+                            val user = users?.find { it.user_id == user_id }
+
+                            if (user != null) {
+                                UserDetailsHub(
+                                    user = user,
+                                    isDeleting = deleteState.isLoading,
+                                    onDeleteClick = { viewModel.deleteUser(user.user_id) },
+                                    onUpdateClick = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.user_id)) },
+                                    navController = navController,
+                                    modifier = Modifier
+                                )
+                            } else {
+                                ClayEmptyState(
+                                    message = "User not found or has been deleted",
+                                    emoji = "👤",
+                                    modifier = Modifier
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -165,32 +206,7 @@ fun UserDetailsHub(
         verticalArrangement = Arrangement.spacedBy(18.dp),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp)
     ) {
-        // ── 1. TOP APP BAR ───────────────────────────────────────────────
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
-                Text(
-                    text = "User Dossier",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White,
-                    modifier = Modifier.padding(start = 4.dp)
-                )
-            }
-        }
-
-        // ── 2. AVATAR-CENTRIC IDENTITY HUB ───────────────────────────────
+        // ── 1. AVATAR-CENTRIC IDENTITY HUB ───────────────────────────────
         item {
             Column(
                 modifier = Modifier.fillMaxWidth(),

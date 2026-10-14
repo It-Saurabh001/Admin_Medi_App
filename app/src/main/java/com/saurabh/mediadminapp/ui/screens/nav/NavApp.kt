@@ -106,7 +106,6 @@ import com.saurabh.mediadminapp.ui.screens.UpdateUserDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.UserDetailsScreen
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClaySecondary
-import com.saurabh.mediadminapp.utils.utilityFunctions.getTopBarForRoute
 import kotlinx.coroutines.launch
 
 
@@ -259,20 +258,14 @@ fun NavApp(viewModel: MyViewModel) {
 
         }
     ) {
+        val openDrawer = {
+            Log.i("TAG", "DRAWER_DEBUG TopBar menu icon CLICKED on route: $currentRoute")
+            if (isHomeScreen) coroutineScope.launch { drawerState.open() }
+        }
+
         Scaffold(
             containerColor = Color.Transparent,
             modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClaySecondary))),
-            topBar = {
-
-                if (!isAuthRoute) {
-                    getTopBarForRoute(currentRoute, navController, viewModel) {
-                        Log.i("TAG", " DRAWER_DEBUG TopBar hamburger/menu icon CLICKED on route: $currentRoute")
-                        if (isHomeScreen) {
-                            coroutineScope.launch { drawerState.open() }
-                        }
-                    }?.invoke()
-                }
-            },
             bottomBar = {
                 AnimatedVisibility(
                     visible = isBottomBarVisible,
@@ -323,11 +316,11 @@ fun NavApp(viewModel: MyViewModel) {
                 }
 
                 composable(Routes.HomeRoutes.route) {
-                    HomeScreen(viewModel, navController)
+                    HomeScreen(viewModel, navController, onMenuClick = openDrawer)
                 }
 
                 navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
-                    composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController) }
+                    composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController, onMenuClick = openDrawer) }
                     composable(
                         Routes.SpecificProductRoutes.route,
                         arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -340,14 +333,14 @@ fun NavApp(viewModel: MyViewModel) {
                 }
 
                 navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
-                    composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController) }
+                    composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController, onMenuClick = openDrawer) }
                     composable(
                         Routes.SpecificOrderRoutes.route,
                         arguments = listOf(navArgument("orderId") { type = NavType.StringType })
                     ) { b -> SpecificOrderScreen(b.arguments?.getString("orderId")!!, viewModel, navController) }
                 }
 
-                composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController) }
+                composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController, onMenuClick = openDrawer) }
                 composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
                 composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
                 composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }

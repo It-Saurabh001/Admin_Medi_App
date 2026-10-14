@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -81,38 +82,79 @@ import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
 import java.text.NumberFormat
 import java.util.Locale
 
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductScreen(viewModel: MyViewModel, navController: NavController) {
+fun ProductScreen(viewModel: MyViewModel, navController: NavController, onMenuClick: () -> Unit) {
     val productState = viewModel.getAllProduct.collectAsState().value
 
     LaunchedEffect(key1 = Unit) {
         viewModel.getAllProduct()
     }
-    Box(modifier = Modifier.fillMaxSize()){
-        ClayGradientBackdrop(gradient = ClayProductGradient) {
-            when {
-                productState.isLoading -> {
-                    ClayLoadingScreen(modifier = Modifier)
-                }
-                productState.error != null -> {
-                    ClayErrorScreen(
-                        errorMessage = productState.error,
-                        modifier = Modifier,
-                        onRetry = { viewModel.getAllProduct() }
-                    )
-                }
-                productState.success != null -> {
-                    ProductCatalogShowcase(
-                        products = productState.success.products,
-                        navController = navController,
-                        modifier = Modifier
-                    )
+
+    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        titleContentColor = Color.White,
+        navigationIconContentColor = Color.White,
+        actionIconContentColor = Color.White
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = "All Product",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
+                        )
+                    },
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+
+//                    navigationIcon = {
+//                        IconButton(onClick = onMenuClick) {
+//                            Icon(
+//                                imageVector = Icons.Default.Menu,
+//                                contentDescription = "Open Drawer"
+//                            )
+//                        }
+//                    },
+                    colors = transparentTopBarColors,
+                )
+            }
+            Box(modifier = Modifier.weight(1f)) {
+                ClayGradientBackdrop(gradient = ClayProductGradient) {
+                    when {
+                        productState.isLoading -> {
+                            ClayLoadingScreen(modifier = Modifier)
+                        }
+                        productState.error != null -> {
+                            ClayErrorScreen(
+                                errorMessage = productState.error,
+                                modifier = Modifier,
+                                onRetry = { viewModel.getAllProduct() }
+                            )
+                        }
+                        productState.success != null -> {
+                            ProductCatalogShowcase(
+                                products = productState.success.products,
+                                navController = navController,
+                                modifier = Modifier
+                            )
+                        }
+                    }
                 }
             }
         }
     }
-
-
 }
 
 @Composable

@@ -70,6 +70,11 @@ import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
 import java.text.NumberFormat
 import java.util.Locale
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: NavController) {
     BackHandler {
@@ -83,42 +88,74 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
         viewModel.getOrderById(orderId)
     }
 
-    DismissKeyboardOnTapScreen {
-        Box(modifier = Modifier.fillMaxSize()){
+    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        titleContentColor = Color.White,
+        navigationIconContentColor = Color.White,
+        actionIconContentColor = Color.White
+    )
 
-            when {
-                response.value.isLoading -> {
-                    ClayLoadingScreen(modifier = Modifier)
-                }
-                response.value.error != null -> {
-                    ClayErrorScreen(
-                        errorMessage = response.value.error.toString(),
-                        modifier = Modifier,
-                        onRetry = { viewModel.getOrderById(orderId) }
+    DismissKeyboardOnTapScreen {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Specific Order",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack()
+                            viewModel.clearGetOrderByIdState()}) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "BackToEachOrderScreen"
+                                )
+                            }
+                        },
+                        colors = transparentTopBarColors
                     )
                 }
-                response.value.success != null -> {
-                    val order = response.value.success?.order
-                    if (order != null) {
-                        ClayGradientBackdrop(gradient = ClayOrderGradient) {
-                            SpecificOrderReceiptView(
-                                order = order,
-                                navController = navController,
-                                viewModel = viewModel,
-                                modifier = Modifier
+                Box(modifier = Modifier.weight(1f)) {
+                    when {
+                        response.value.isLoading -> {
+                            ClayLoadingScreen(modifier = Modifier)
+                        }
+                        response.value.error != null -> {
+                            ClayErrorScreen(
+                                errorMessage = response.value.error.toString(),
+                                modifier = Modifier,
+                                onRetry = { viewModel.getOrderById(orderId) }
                             )
                         }
-                    } else {
-                        ClayErrorScreen(
-                            errorMessage = response.value.success?.message?.takeIf { it.isNotBlank() } ?: "Order not found",
-                            modifier = Modifier,
-                            onRetry = { viewModel.getOrderById(orderId) }
-                        )
+                        response.value.success != null -> {
+                            val order = response.value.success?.order
+                            if (order != null) {
+                                ClayGradientBackdrop(gradient = ClayOrderGradient) {
+                                    SpecificOrderReceiptView(
+                                        order = order,
+                                        navController = navController,
+                                        viewModel = viewModel,
+                                        modifier = Modifier
+                                    )
+                                }
+                            } else {
+                                ClayErrorScreen(
+                                    errorMessage = response.value.success?.message?.takeIf { it.isNotBlank() } ?: "Order not found",
+                                    modifier = Modifier,
+                                    onRetry = { viewModel.getOrderById(orderId) }
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
-
     }
 }
 

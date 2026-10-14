@@ -57,6 +57,13 @@ object ApiProvider {
         return TokenManager.getInstance(context)
     }
 
+    // Provide Custom Logging Interceptor
+    @Provides
+    @Singleton
+    fun provideLoggingInterceptor(): LoggingInterceptor {
+        return LoggingInterceptor()
+    }
+
     // ── Logging interceptor ───────────────────────────────────────────────────
 
     @Provides
@@ -82,9 +89,10 @@ object ApiProvider {
     @Provides
     @Singleton
     @AuthRetrofit
-    fun provideAuthRetrofit(loggingInterceptor: HttpLoggingInterceptor): Retrofit {
+    fun provideAuthRetrofit(loggingInterceptor: HttpLoggingInterceptor,customLoggingInterceptor: LoggingInterceptor): Retrofit {
         val client = OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .addInterceptor(customLoggingInterceptor)
             .connectTimeout(90, TimeUnit.SECONDS)
             .readTimeout(90, TimeUnit.SECONDS)
             .writeTimeout(90, TimeUnit.SECONDS)
@@ -130,12 +138,14 @@ object ApiProvider {
     @Singleton
     fun provideHttpClient(
         loggingInterceptor: HttpLoggingInterceptor,
+        customLoggingInterceptor: LoggingInterceptor,
         authInterceptor: AuthInterceptor,
         tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
         Log.d("PERF_TRACE", "Hilt provideHttpClient [Thread: ${Thread.currentThread().name}]")
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .addInterceptor(customLoggingInterceptor)
             .addInterceptor(authInterceptor)    // injects Bearer token on outgoing requests
             .authenticator(tokenAuthenticator)  // retries with fresh token on 401 responses
             .connectTimeout(90, TimeUnit.SECONDS)

@@ -40,6 +40,7 @@ import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 // =============================================================================
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -207,6 +208,11 @@ fun ClaySearchField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     val shape = RoundedCornerShape(7.dp)
+//    val searchFieldHeight = when (windowSizeClass.heightSizeClass) {
+//        WindowHeightSizeClass.Compact -> 40.dp  // Chote phones ya landscape mode
+//        WindowHeightSizeClass.Medium -> 48.dp   // Standard/Bade phones
+//        else -> 56.dp                           // Tablets
+//    }
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -233,6 +239,8 @@ fun ClaySearchField(
             unfocusedLeadingIconColor = ClayTextSecondary,
             focusedPlaceholderColor   = ClayTextMuted,
             unfocusedPlaceholderColor = ClayTextMuted
-        )
+        ),
+//        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+
     )
 }

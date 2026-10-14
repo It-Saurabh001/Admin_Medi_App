@@ -79,49 +79,58 @@ fun EachOrderCard(
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.Start
         ) {
-            // ── Header: Product Name  ───────────────────────────────────────
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center){
-                Text(
-                    text = order.product_name.capitalizeEachWord(),
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = ClayTextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            // icon + order ID
-            Row( modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.Top)
+            Column(
+            verticalArrangement = Arrangement.Top,
+            horizontalAlignment = Alignment.Start
+            )
             {
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(ClayFieldBg)
-                        .border(1.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.LocalShipping,
-                        contentDescription = null,
-                        tint = ClayPrimary,
-                        modifier = Modifier.size(16.dp)
+
+                // ── Header: Product Name  ───────────────────────────────────────
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                    Text(
+                        text = order.product_name.capitalizeEachWord(),
+                        modifier = Modifier.horizontalScroll(rememberScrollState()),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = ClayTextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center){
-                    Text(
-                        text = "${order.order_id} ",
-                        fontWeight = FontWeight.ExtraBold,
-                        color = ClayTextPrimary,
-                        maxLines = 2,
-                        fontSize = 15.sp,
-                    )
+                // icon + order ID
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.Top
+                )
+                {
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(ClayFieldBg)
+                            .border(1.dp, Color.White, CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocalShipping,
+                            contentDescription = null,
+                            tint = ClayPrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(1.dp))
+                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                        Text(
+                            text = "${order.order_id} ",
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ClayTextPrimary,
+                            maxLines = 1,
+                            fontSize = 11.sp,
+                        )
+                    }
                 }
             }
             Row(
@@ -173,5 +182,5 @@ fun EachOrderCard(
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        }
     }
+}

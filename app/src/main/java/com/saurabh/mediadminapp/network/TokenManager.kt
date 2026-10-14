@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import androidx.core.content.edit
 import androidx.security.crypto.MasterKey
+import com.saurabh.mediadminapp.utils.AppLogger
 
 
 class TokenManager private constructor(context: Context) {
@@ -93,11 +94,16 @@ class TokenManager private constructor(context: Context) {
 
     fun getAdminId(): String? = prefs.getString(KEY_ADMIN_ID, null)
 
-    fun isLoggedIn(): Boolean = !getAccessToken().isNullOrEmpty()
-
+    fun isLoggedIn():Boolean {
+        val loggedIn = !getAccessToken().isNullOrEmpty()
+        AppLogger.d(AppLogger.TAG_AUTH,"Checking login status: $loggedIn")
+        return loggedIn
+    }
     // ── Eviction helpers ──────────────────────────────────────────────────────
 
     fun clearTokens() {
+        AppLogger.d(AppLogger.TAG_AUTH,"Clearing all tokens")
+
         prefs.edit(commit = true) { clear() }            // synchronous — must not be apply()
     }
 

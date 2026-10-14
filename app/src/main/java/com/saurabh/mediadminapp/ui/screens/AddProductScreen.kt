@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -33,7 +34,12 @@ import androidx.compose.material.icons.filled.PriceChange
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.graphics.Brush
+import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -68,6 +74,7 @@ import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modifier: Modifier = Modifier) {
     val response = viewModel.addProductState.collectAsState()
@@ -99,173 +106,251 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
         }
     }
 
+    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
+        containerColor = Color.Transparent,
+        scrolledContainerColor = Color.Transparent,
+        titleContentColor = Color.White,
+        navigationIconContentColor = Color.White,
+        actionIconContentColor = Color.White
+    )
+
     DismissKeyboardOnTapScreen {
-        Scaffold(containerColor = Color.Transparent) { innerPadding ->
-            when {
-                response.value.isLoading -> {
-                    ClayLoadingScreen(modifier = Modifier.padding(innerPadding))
-                }
-                response.value.error != null -> {
-                    ClayErrorScreen(
-                        errorMessage = response.value.error.toString(),
-                        modifier = Modifier.padding(innerPadding),
-                        onRetry = { viewModel.clearAddProductState() }
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.background(
+                        brush = Brush.horizontalGradient(
+                            listOf(
+                                ClayPrimary,
+                                ClayPrimary
+                            )
+                        )
                     )
-                }
-                else -> {
-                    ClayGradientBackdrop {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding)
-                                .verticalScroll(rememberScrollState()),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            // ── Header bar on gradient ────────────────────────
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 8.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                IconButton(onClick = { navController.popBackStack() }) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Back",
-                                        tint = Color.White
-                                    )
-                                }
-                                Text(
-                                    text = "Add New Product",
-                                    fontSize = 24.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White,
-                                    modifier = Modifier.padding(start = 4.dp)
+                ) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = "Add Product",
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 16.dp)
+                                    .background(Color.Transparent)
+                            )
+                        },
+                        windowInsets = WindowInsets(0, 0, 0, 0),
+
+                        navigationIcon = {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Product"
                                 )
                             }
+                        },
+                        colors = transparentTopBarColors,
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    when {
+                        response.value.isLoading -> {
+                            ClayLoadingScreen(modifier = Modifier)
+                        }
 
-                            // ── Image well / picker — hardware canvas shadow ──
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(130.dp)
-                                    .drawBehind {
-                                        val cr = 24.dp.toPx()
-                                        drawIntoCanvas { canvas ->
-                                            canvas.nativeCanvas.drawRoundRect(
-                                                5.dp.toPx(), 7.dp.toPx(),
-                                                size.width - 5.dp.toPx(), size.height + 5.dp.toPx(),
-                                                cr, cr,
-                                                android.graphics.Paint().apply {
-                                                    isAntiAlias = true
-                                                    color = android.graphics.Color.argb(65, 108, 99, 255)
-                                                    maskFilter = android.graphics.BlurMaskFilter(
-                                                        18.dp.toPx(),
-                                                        android.graphics.BlurMaskFilter.Blur.NORMAL
+                        response.value.error != null -> {
+                            ClayErrorScreen(
+                                errorMessage = response.value.error.toString(),
+                                modifier = Modifier,
+                                onRetry = { viewModel.clearAddProductState() }
+                            )
+                        }
+
+                        else -> {
+                            ClayGradientBackdrop {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .verticalScroll(rememberScrollState()),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+
+                                    // ── Image well / picker — hardware canvas shadow ──
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(130.dp)
+                                            .drawBehind {
+                                                val cr = 24.dp.toPx()
+                                                drawIntoCanvas { canvas ->
+                                                    canvas.nativeCanvas.drawRoundRect(
+                                                        5.dp.toPx(),
+                                                        7.dp.toPx(),
+                                                        size.width - 5.dp.toPx(),
+                                                        size.height + 5.dp.toPx(),
+                                                        cr,
+                                                        cr,
+                                                        android.graphics.Paint().apply {
+                                                            isAntiAlias = true
+                                                            color = android.graphics.Color.argb(
+                                                                65,
+                                                                108,
+                                                                99,
+                                                                255
+                                                            )
+                                                            maskFilter =
+                                                                android.graphics.BlurMaskFilter(
+                                                                    18.dp.toPx(),
+                                                                    android.graphics.BlurMaskFilter.Blur.NORMAL
+                                                                )
+                                                        }
                                                     )
                                                 }
+                                            }
+                                            .clip(RoundedCornerShape(24.dp))
+                                            .background(Color.White.copy(alpha = 0.15f))
+                                            .border(
+                                                1.5.dp,
+                                                Color.White.copy(alpha = 0.5f),
+                                                RoundedCornerShape(24.dp)
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (imageUri != null) {
+                                            Image(
+                                                painter = rememberAsyncImagePainter(imageUri),
+                                                contentDescription = "Product Image Preview",
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.AddAPhoto,
+                                                contentDescription = "Add Photo",
+                                                tint = Color.White.copy(0.8f),
+                                                modifier = Modifier.size(40.dp)
                                             )
                                         }
                                     }
-                                    .clip(RoundedCornerShape(24.dp))
-                                    .background(Color.White.copy(alpha = 0.15f))
-                                    .border(1.5.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(24.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (imageUri != null) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(imageUri),
-                                        contentDescription = "Product Image Preview",
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    ClayOutlinedButton(
+                                        text = if (imageUri == null) "Select Product Image" else "Change Image",
+                                        onClick = {
+                                            launcher.launch(
+                                                PickVisualMediaRequest(
+                                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                                )
+                                            )
+                                        },
+                                        leadingIcon = Icons.Default.AddCircle
                                     )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.AddAPhoto,
-                                        contentDescription = "Add Photo",
-                                        tint = Color.White.copy(0.8f),
-                                        modifier = Modifier.size(40.dp)
-                                    )
+
+                                    Spacer(modifier = Modifier.height(28.dp))
+
+                                    // ── Form Card — uses ClayCard (hardware shadow) ───
+                                    ClayCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 20.dp)
+                                    ) {
+                                        Text(
+                                            text = "Product Details",
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ClayTextPrimary
+                                        )
+
+                                        Spacer(modifier = Modifier.height(16.dp))
+
+                                        ClayTextField(
+                                            value = name.value,
+                                            onValueChange = { name.value = it },
+                                            label = "Product Name",
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.MedicalServices,
+                                                    contentDescription = null,
+                                                    tint = ClayPrimary
+                                                )
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        ClayTextField(
+                                            value = price.value,
+                                            onValueChange = { price.value = it },
+                                            label = "Price (₹)",
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.PriceChange,
+                                                    contentDescription = null,
+                                                    tint = ClayPrimary
+                                                )
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        ClayTextField(
+                                            value = category.value,
+                                            onValueChange = { category.value = it },
+                                            label = "Category",
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.Category,
+                                                    contentDescription = null,
+                                                    tint = ClayPrimary
+                                                )
+                                            }
+                                        )
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                        ClayTextField(
+                                            value = stock.value,
+                                            onValueChange = { stock.value = it },
+                                            label = "Stock Quantity",
+                                            leadingIcon = {
+                                                Icon(
+                                                    Icons.Default.Inventory,
+                                                    contentDescription = null,
+                                                    tint = ClayPrimary
+                                                )
+                                            }
+                                        )
+
+                                        Spacer(modifier = Modifier.height(20.dp))
+
+                                        ClayPrimaryButton(
+                                            text = "Add Product",
+                                            onClick = {
+                                                if (validateInput(
+                                                        name.value,
+                                                        price.value,
+                                                        category.value,
+                                                        stock.value
+                                                    )
+                                                ) {
+                                                    val imagePart = imageUri?.toMultipartBodyPart(
+                                                        context,
+                                                        "image"
+                                                    )
+                                                    viewModel.addProduct(
+                                                        name.value,
+                                                        price.value.toDouble(),
+                                                        category.value,
+                                                        stock.value.toInt(),
+                                                        imagePart
+                                                    )
+                                                } else {
+                                                    Toast.makeText(
+                                                        context,
+                                                        "Please fill all the fields correctly",
+                                                        Toast.LENGTH_LONG
+                                                    ).show()
+                                                }
+                                            },
+                                            enabled = !response.value.isLoading,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(32.dp))
                                 }
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
-                            ClayOutlinedButton(
-                                text = if (imageUri == null) "Select Product Image" else "Change Image",
-                                onClick = {
-                                    launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                                },
-                                leadingIcon = Icons.Default.AddCircle
-                            )
-
-                            Spacer(modifier = Modifier.height(28.dp))
-
-                            // ── Form Card — uses ClayCard (hardware shadow) ───
-                            ClayCard(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp)
-                            ) {
-                                Text(
-                                    text = "Product Details",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = ClayTextPrimary
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                ClayTextField(
-                                    value = name.value,
-                                    onValueChange = { name.value = it },
-                                    label = "Product Name",
-                                    leadingIcon = { Icon(Icons.Default.MedicalServices, contentDescription = null, tint = ClayPrimary) }
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                ClayTextField(
-                                    value = price.value,
-                                    onValueChange = { price.value = it },
-                                    label = "Price (₹)",
-                                    leadingIcon = { Icon(Icons.Default.PriceChange, contentDescription = null, tint = ClayPrimary) }
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                ClayTextField(
-                                    value = category.value,
-                                    onValueChange = { category.value = it },
-                                    label = "Category",
-                                    leadingIcon = { Icon(Icons.Default.Category, contentDescription = null, tint = ClayPrimary) }
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                ClayTextField(
-                                    value = stock.value,
-                                    onValueChange = { stock.value = it },
-                                    label = "Stock Quantity",
-                                    leadingIcon = { Icon(Icons.Default.Inventory, contentDescription = null, tint = ClayPrimary) }
-                                )
-
-                                Spacer(modifier = Modifier.height(20.dp))
-
-                                ClayPrimaryButton(
-                                    text = "Add Product",
-                                    onClick = {
-                                        if (validateInput(name.value, price.value, category.value, stock.value)) {
-                                            val imagePart = imageUri?.toMultipartBodyPart(context, "image")
-                                            viewModel.addProduct(
-                                                name.value,
-                                                price.value.toDouble(),
-                                                category.value,
-                                                stock.value.toInt(),
-                                                imagePart
-                                            )
-                                        } else {
-                                            Toast.makeText(context, "Please fill all the fields correctly", Toast.LENGTH_LONG).show()
-                                        }
-                                    },
-                                    enabled = !response.value.isLoading,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(32.dp))
                         }
                     }
                 }
@@ -274,7 +359,7 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
     }
 }
 
-private fun validateInput(name: String, price: String, category: String, stock: String): Boolean {
+fun validateInput(name: String, price: String, category: String, stock: String): Boolean {
     return name.isNotBlank() &&
             price.isNotBlank() &&
             category.isNotBlank() &&
