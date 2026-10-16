@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -87,15 +88,19 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductScreen(viewModel: MyViewModel, navController: NavController, onMenuClick: () -> Unit) {
+fun ProductScreen(viewModel: MyViewModel, navController: NavController, onMenuClick: () -> Unit,scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()) {
     val productState = viewModel.getAllProduct.collectAsState().value
 
     LaunchedEffect(key1 = Unit) {
         viewModel.getAllProduct()
     }
+//    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
         containerColor = Color.Transparent,
@@ -105,9 +110,10 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController, onMenuCl
         actionIconContentColor = Color.White
     )
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary))).statusBarsPadding() // Keeps status bar always colored ClayPrimary while TopAppBar collapses beneath it
+                .clipToBounds()) {
                 TopAppBar(
                     title = {
                         Text(
@@ -118,15 +124,7 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController, onMenuCl
                         )
                     },
                     windowInsets = WindowInsets(0, 0, 0, 0),
-
-//                    navigationIcon = {
-//                        IconButton(onClick = onMenuClick) {
-//                            Icon(
-//                                imageVector = Icons.Default.Menu,
-//                                contentDescription = "Open Drawer"
-//                            )
-//                        }
-//                    },
+                    scrollBehavior = scrollBehavior,
                     colors = transparentTopBarColors,
                 )
             }

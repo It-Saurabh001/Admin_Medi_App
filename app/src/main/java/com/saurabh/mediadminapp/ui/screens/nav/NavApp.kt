@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens.nav
 
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -24,6 +25,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -42,6 +45,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -50,10 +54,13 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +81,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -108,19 +116,25 @@ import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClaySecondary
 import kotlinx.coroutines.launch
 
-
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavApp(viewModel: MyViewModel) {
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
 
+    // ── YouTube-style shared scroll behavior ──
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
+    // Smoothly hide BottomBar when TopAppBar is > 35% collapsed
+    val isBottomBarHidden by remember {
+        derivedStateOf { scrollBehavior.state.collapsedFraction > 0.35f }
+    }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)    // Observe backstack changes — drives isAuthRoute, topBar, bottomBar
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val isHomeScreen = currentRoute?.contains("HomeRoutes", ignoreCase = true) == true
     Log.d("TAG", "Current drawerValue: ${drawerState.currentValue}, isAnimationRunning: ${drawerState.isAnimationRunning}, currentRoute: $currentRoute")
-
-
     val bottomNavItems = remember {
         listOf(
             BottomNavigationItem("Dashboard", Icons.Filled.Home),
@@ -129,17 +143,11 @@ fun NavApp(viewModel: MyViewModel) {
             BottomNavigationItem("History", Icons.Filled.Menu)
         )
     }
-
     // Login state + admin profile data
     val isLoggedIn by viewModel.isAdminLoggedIn.collectAsState()
     val adminState by viewModel.getAllAdminState.collectAsState()
     val loggedInAdminId by viewModel.loggedInAdminId.collectAsState()
     val admin: Admin? = adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
-
-
-
-
-
     // ─────────────────────────────────────────────────────────────────────────
     // isAuthRoute: true when on auth screens OR backstack not yet settled (null)
     // ?: true fallback is INTENTIONAL — keeps the drawer gesture detector from
@@ -175,10 +183,10 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-
-    // Sync bottom-nav highlight with actual current route (handles back-nav desync)
     LaunchedEffect(currentRoute) {
         Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(currentRoute) triggered: Route changed to $currentRoute")
+        scrollBehavior.state.heightOffset = 0f
+        scrollBehavior.state.contentOffset = 0f
         selected = when {
             currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
             currentRoute?.contains("productRoutes", ignoreCase = true) == true -> 1
@@ -192,8 +200,6 @@ fun NavApp(viewModel: MyViewModel) {
         }
 
     }
-
-
     // ── 2. LAUNCHED EFFECTS TRACKER ──
     LaunchedEffect(isLoggedIn) {
         Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(isLoggedIn) triggered: isLoggedIn=$isLoggedIn, isOpen=${drawerState.isOpen}")
@@ -204,7 +210,6 @@ fun NavApp(viewModel: MyViewModel) {
             }
         }
     }
-
     // ── Login → Home ──────────────────────────────────────────────────────────
     // If the app finds an active session while sitting on an auth screen (e.g.
     // cold start with persisted tokens), skip to the Home graph.
@@ -227,6 +232,8 @@ fun NavApp(viewModel: MyViewModel) {
             }
         }
     }
+
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -265,13 +272,17 @@ fun NavApp(viewModel: MyViewModel) {
 
         Scaffold(
             containerColor = Color.Transparent,
-            modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClaySecondary))),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .background(Color.Transparent),
             bottomBar = {
                 AnimatedVisibility(
-                    visible = isBottomBarVisible,
+                    visible = isBottomBarVisible && !isBottomBarHidden,
                     enter = slideInVertically { it } + fadeIn(),
                     exit = slideOutVertically { it } + fadeOut(),
-                    modifier = Modifier.background(Color.Transparent)
+//                    modifier = Modifier .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClaySecondary)))
                 ) {
                     AppBottomBar(
                         items = bottomNavItems,
@@ -294,13 +305,14 @@ fun NavApp(viewModel: MyViewModel) {
                     )
                 }
             }
-        ) { innerPadding ->
-            // SINGLE NAVHOST FOR ENTIRE APP
+        ) { _ ->
+            // Do NOT pass innerPadding here — this keeps the status bar edge-to-edge and prevents
+            // the LazyColumn from resizing/bouncing when the bottomBar animates out.
             NavHost(
                 navController = navController,
                 startDestination = Routes.SplashRoutes.route,
-                modifier = Modifier.padding(if (isAuthRoute) PaddingValues(0.dp) else innerPadding)
-            ) {
+                modifier = Modifier.fillMaxSize()
+            ){
                 composable(Routes.SplashRoutes.route) {
                     SplashScreen(navController, viewModel)
                 }
@@ -316,11 +328,11 @@ fun NavApp(viewModel: MyViewModel) {
                 }
 
                 composable(Routes.HomeRoutes.route) {
-                    HomeScreen(viewModel, navController, onMenuClick = openDrawer)
+                    HomeScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior)
                 }
 
                 navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
-                    composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController, onMenuClick = openDrawer) }
+                    composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior) }
                     composable(
                         Routes.SpecificProductRoutes.route,
                         arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -333,14 +345,13 @@ fun NavApp(viewModel: MyViewModel) {
                 }
 
                 navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
-                    composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController, onMenuClick = openDrawer) }
+                    composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior) }
                     composable(
                         Routes.SpecificOrderRoutes.route,
                         arguments = listOf(navArgument("orderId") { type = NavType.StringType })
                     ) { b -> SpecificOrderScreen(b.arguments?.getString("orderId")!!, viewModel, navController) }
                 }
-
-                composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController, onMenuClick = openDrawer) }
+                composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior) }
                 composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
                 composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
                 composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
@@ -374,10 +385,7 @@ private fun AppBottomBar(
             .fillMaxWidth()
             .background(
                 brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        ClayPrimary.copy(alpha = 0.08f),
-                        ClaySecondary.copy(alpha = 0.08f)
-                    )
+                    colors = listOf(ClayPrimary, ClaySecondary)
                 )
             )
             .background(
@@ -415,10 +423,6 @@ private fun AppBottomBar(
         ) {
             items.forEachIndexed { index, item ->
                 val isSelected = selected == index
-
-                // FIX A ─ Uniform corners, 22dp = height÷2 = true capsule/oval
-                // Before: asymmetric 18dp top / 12dp bottom → flat bottom edges leaked white
-                // After:  uniform 22dp all sides → perfect stadium pill, no corner gaps
                 val animatedCorner by animateDpAsState(
                     targetValue = if (isSelected) 22.dp else 18.dp,
                     animationSpec = spring(
@@ -446,19 +450,6 @@ private fun AppBottomBar(
                 Box(
                     modifier = Modifier
                         .height(44.dp)
-
-                        // FIX B ─ Replace graphicsLayer { shadowElevation } with
-                        //         drawBehind + BlurMaskFilter via nativeCanvas
-                        //
-                        // Why graphicsLayer caused white corners:
-                        //   When shadowElevation > 0, Android allocates a RenderNode for the
-                        //   compositing layer. That node's RECTANGULAR bounds get a white
-                        //   default background during shadow pass. Your rounded content only
-                        //   fills the pill area, so the four rectangular corners stay white.
-                        //
-                        // Why drawBehind + BlurMaskFilter doesn't:
-                        //   It draws directly on the same hardware canvas as everything else.
-                        //   No separate compositing layer → no white rectangle → no artifacts.
                         .drawBehind {
                             if (animatedShadowAlpha > 0f) {
                                 val cr = animatedCorner.toPx()
@@ -485,7 +476,6 @@ private fun AppBottomBar(
                                 }
                             }
                         }
-
                         // Pill base color
                         .then(
                             if (isSelected) {

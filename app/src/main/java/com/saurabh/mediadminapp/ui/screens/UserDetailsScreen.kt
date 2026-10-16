@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -79,6 +80,7 @@ import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.ui.draw.clipToBounds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,7 +120,8 @@ fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: Na
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary))).statusBarsPadding() // Keeps status bar always colored ClayPrimary while TopAppBar collapses beneath it
+                .clipToBounds()) {
                 TopAppBar(
                     title = {
                         Text(

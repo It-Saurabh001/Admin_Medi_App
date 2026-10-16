@@ -208,11 +208,6 @@ fun ClaySearchField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
 ) {
     val shape = RoundedCornerShape(7.dp)
-//    val searchFieldHeight = when (windowSizeClass.heightSizeClass) {
-//        WindowHeightSizeClass.Compact -> 40.dp  // Chote phones ya landscape mode
-//        WindowHeightSizeClass.Medium -> 48.dp   // Standard/Bade phones
-//        else -> 56.dp                           // Tablets
-//    }
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
@@ -240,7 +235,6 @@ fun ClaySearchField(
             focusedPlaceholderColor   = ClayTextMuted,
             unfocusedPlaceholderColor = ClayTextMuted
         ),
-//        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
 
     )
 }

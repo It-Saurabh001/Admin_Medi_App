@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -79,10 +80,12 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.TopAppBarScrollBehavior
+import androidx.compose.ui.draw.clipToBounds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController, onMenuClick: () -> Unit) {
+fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController, onMenuClick: () -> Unit,scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()) {
     val response = viewModel.getAllOrderState.collectAsState()
     val isApproveOrder = viewModel.isApproveOrdder.collectAsState()
 
@@ -105,7 +108,13 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController, onM
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary)))
+                    .statusBarsPadding() // Keeps status bar always colored ClayPrimary while TopAppBar collapses beneath it
+                    .clipToBounds()
+            ) {
                 TopAppBar(
                     title = {
                         Text(
@@ -116,12 +125,7 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController, onM
                         )
                     },
                     windowInsets = WindowInsets(0, 0, 0, 0),
-
-//                    navigationIcon = {
-//                        IconButton(onClick = onMenuClick) {
-//                            Icon(imageVector = Icons.Default.Menu, contentDescription = "Open Drawer")
-//                        }
-//                    },
+                    scrollBehavior = scrollBehavior,
                     colors = transparentTopBarColors
                 )
             }
