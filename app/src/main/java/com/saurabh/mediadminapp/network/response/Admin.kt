@@ -8,5 +8,6 @@ data class Admin(
     val name: String,
     val password: String? = null,
     val phone_number: String? = null,
-    val role: String
+    val role: String,
+    val image_url: String? = null
 )

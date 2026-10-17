@@ -58,9 +58,14 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         name: String,
         password: String,
         email: String,
-        phoneNumber: String
+        phoneNumber: String,
+        image: MultipartBody.Part? = null
     ): Flow<ResultState<CreateAdminResponse>> = safeApiCall {
-        apiServices.createAdmin(name, password, email, phoneNumber)
+        val nameBody = name.toTextRequestBody()
+        val passwordBody = password.toTextRequestBody()
+        val emailBody = email.toTextRequestBody()
+        val phoneNumberBody = phoneNumber.toTextRequestBody()
+        apiServices.createAdmin(nameBody, passwordBody, emailBody, phoneNumberBody, image)
     }
 
     // ----------------------------
@@ -110,9 +115,19 @@ class Repository @Inject constructor(@param:MainApiService private val apiServic
         name: String? = null,
         password: String? = null,
         email: String? = null,
-        phoneNumber: String? = null
+        phoneNumber: String? = null,
+        image: MultipartBody.Part? = null
     ): Flow<ResultState<UpdateAdminResponse>> = safeApiCall {
-        apiServices.updateAdmin(adminId, name, password, email, phoneNumber)
+        val adminIdBody = adminId.toTextRequestBody()
+        val nameBody = name?.toTextRequestBody()
+        val passwordBody = password?.toTextRequestBody()
+        val emailBody = email?.toTextRequestBody()
+        val phoneNumberBody = phoneNumber?.toTextRequestBody()
+        val response = apiServices.updateAdmin(adminIdBody, nameBody, passwordBody, emailBody, phoneNumberBody, image)
+        if (response.isSuccessful) {
+            apiServices.getAllAdmins()
+        }
+        response
     }
 
     suspend fun deleteAdmin(adminId: String): Flow<ResultState<DeleteAdminResponse>> = safeApiCall {

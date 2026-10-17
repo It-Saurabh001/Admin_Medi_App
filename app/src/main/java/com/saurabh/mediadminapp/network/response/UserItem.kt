@@ -16,7 +16,8 @@ data class UserItem(
     val phone_number: String? = null,
     val pin_code: String? = null,
     val role: String,
-    val user_id: String
+    val user_id: String,
+    val image_url: String? = null
 ){
     val isApproved: Boolean         // This is a custom getter to handle both Boolean and Number types of approval
         get() = when(_isApproved){

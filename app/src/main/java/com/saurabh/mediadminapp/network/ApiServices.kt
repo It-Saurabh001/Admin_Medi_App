@@ -58,13 +58,14 @@ interface ApiServices {
 
 
 
-    @FormUrlEncoded
+    @Multipart
     @POST("admin/create")
     suspend fun createAdmin(
-        @Field("name") name: String,
-        @Field("password") password: String,
-        @Field("email") email: String,
-        @Field("phoneNumber") phoneNumber: String
+        @Part("name") name: RequestBody,
+        @Part("password") password: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("phoneNumber") phoneNumber: RequestBody,
+        @Part image: MultipartBody.Part? = null
     ): Response<CreateAdminResponse>
 
     @FormUrlEncoded
@@ -90,14 +91,15 @@ interface ApiServices {
         @Field("admin_id") adminId: String
     ): Response<DeleteAdminResponse>
 
-    @FormUrlEncoded
+    @Multipart
     @PATCH("admin/update")
     suspend fun updateAdmin(
-        @Field("admin_id") adminId: String,
-        @Field("name") name: String? = null,
-        @Field("password") password: String? = null,
-        @Field("email") email: String? = null,
-        @Field("phone_number") phoneNumber: String? = null
+        @Part("admin_id") adminId: RequestBody,
+        @Part("name") name: RequestBody? = null,
+        @Part("password") password: RequestBody? = null,
+        @Part("email") email: RequestBody? = null,
+        @Part("phone_number") phoneNumber: RequestBody? = null,
+        @Part image: MultipartBody.Part? = null
     ): Response<UpdateAdminResponse>
 
 

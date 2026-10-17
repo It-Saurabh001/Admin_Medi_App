@@ -18,7 +18,8 @@ data class Order(
     val _sold: Any? = null,
     val total_amount: Double,
     val user_id: String,
-    val user_name: String
+    val user_name: String,
+    val image_url: String? = null
 ){
     val isApproved: Boolean         // This is a custom getter to handle both Boolean and Number types of approval
         get() = when(_isApproved){

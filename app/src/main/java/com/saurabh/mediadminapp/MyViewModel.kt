@@ -212,12 +212,18 @@ class MyViewModel @Inject constructor(
         }
     }
 
-    fun createAdmin(name: String, email: String, password: String, phoneNumber: String) {
+    fun createAdmin(
+        name: String,
+        email: String,
+        password: String,
+        phoneNumber: String,
+        image: MultipartBody.Part? = null
+    ) {
         if (_createAdminState.value.success != null && !_createAdminState.value.isLoading && _createAdminState.value.error == null) return
 
         viewModelScope.launch(Dispatchers.IO) {
             _createAdminState.value = CreateAdminState(isLoading = true)
-            repository.createAdmin(name, password, email,phoneNumber).collect { result ->
+            repository.createAdmin(name, password, email, phoneNumber, image).collect { result ->
                 when (result) {
                     is ResultState.Loading -> {
                         _createAdminState.value = CreateAdminState(isLoading = true)
@@ -336,6 +342,30 @@ class MyViewModel @Inject constructor(
                     }
                     is ResultState.Success -> {
                         _getAllAdminState.value = GetAllAdminState(success = result.data, isLoading = false)
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateAdmin(
+        adminId: String,
+        name: String? = null,
+        password: String? = null,
+        email: String? = null,
+        phoneNumber: String? = null,
+        image: MultipartBody.Part? = null
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateAdmin(adminId, name, password, email, phoneNumber, image).collect { result ->
+                when (result) {
+                    is ResultState.Loading -> { }
+                    is ResultState.Error -> {
+                        _uiEvent.trySend(UiEvent.ShowSnackbar(result.exception.message ?: "Update failed"))
+                    }
+                    is ResultState.Success -> {
+                        getAllAdmin()
+                        _uiEvent.trySend(UiEvent.ShowSnackbar("Admin updated successfully"))
                     }
                 }
             }
@@ -872,6 +902,5 @@ class MyViewModel @Inject constructor(
     fun clearVerifyOtpState(){
         _verifyOtpState.value = VerifyOtpState()
     }
-
 
 }

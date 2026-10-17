@@ -13,5 +13,6 @@ data class SellHistory(
     val remaining_stock: Int,
     val total_amount: Double,
     val user_id: String,
-    val user_name: String
+    val user_name: String,
+    val image_url: String? = null
 )

@@ -7,3 +7,4 @@ data class AdminState(
     val success: Admin? = null,
     val error: String? = null
 )
+
