@@ -177,7 +177,6 @@ class TokenAuthenticatorTest {
     @Test fun v1ExcludedPaths() {
         assertTrue(AuthInterceptor.isV1Excluded("POST", "/api/v1/auth/login"))
         assertTrue(AuthInterceptor.isV1Excluded("POST", "/api/v1/auth/password-reset/confirm"))
-        assertTrue(AuthInterceptor.isV1Excluded("POST", "/api/v1/users"))
         assertFalse(AuthInterceptor.isV1Excluded("GET", "/api/v1/users"))
         assertFalse(AuthInterceptor.isV1Excluded("POST", "/api/v1/auth/logout"))
         assertTrue(AuthInterceptor.isV1Path("/api/v1/products"))

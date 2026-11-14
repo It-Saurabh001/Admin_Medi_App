@@ -1,9 +1,13 @@
 package com.saurabh.mediadminapp.utils.ScreensState
 
-import com.saurabh.mediadminapp.network.response.PasswordResetOtpResponse
+import com.saurabh.mediadminapp.data.v1.core.Pagination
+import com.saurabh.mediadminapp.data.v1.dto.*
+import com.saurabh.mediadminapp.data.v1.error.AppError
+import com.saurabh.mediadminapp.repository.PagedData
 
 data class PasswordResetOtpState(
     val isLoading: Boolean = false,
-    val success: PasswordResetOtpResponse? = null,
-    val error: String? = null
+    val success: Unit? = null,
+    val error: String? = null,
+    val appError: AppError? = null
 )

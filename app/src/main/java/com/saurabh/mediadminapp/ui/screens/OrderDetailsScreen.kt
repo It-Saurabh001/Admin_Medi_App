@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.data.v1.core.OrderStatus
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -52,7 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.Order
+import com.saurabh.mediadminapp.data.v1.dto.Order
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayCardOrderScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
@@ -144,7 +146,7 @@ fun OrderDetailsScreen(viewModel: MyViewModel, navController: NavController, onM
                         }
                         response.value.success != null -> {
                             OrdersListScreen(
-                                orders = response.value.success!!.orders,
+                                orders = response.value.success!!.items,
                                 navController = navController,
                                 modifier = Modifier,
                                 isApproveOrder = isApproveOrder,
@@ -173,14 +175,14 @@ fun OrdersListScreen(
 
     val filteredOrders = remember(orders, searchTerm, filterStatus) {
         orders.filter { order ->
-            val matchesSearch = order.product_name.contains(searchTerm, ignoreCase = true) ||
-                    order.user_name.contains(searchTerm, ignoreCase = true) ||
-                    order.order_id.contains(searchTerm, ignoreCase = true)
+            val matchesSearch = order.productName.contains(searchTerm, ignoreCase = true) ||
+                    order.userName.contains(searchTerm, ignoreCase = true) ||
+                    order.orderId.contains(searchTerm, ignoreCase = true)
 
             val matchesFilter = when (filterStatus) {
                 FilterStatus.ALL -> true
-                FilterStatus.PENDING -> !order.isApproved
-                FilterStatus.APPROVED -> order.isApproved
+                FilterStatus.PENDING -> !(order.status == OrderStatus.APPROVED || order.status == OrderStatus.SOLD)
+                FilterStatus.APPROVED -> (order.status == OrderStatus.APPROVED || order.status == OrderStatus.SOLD)
                 else -> true
             }
 
@@ -191,9 +193,9 @@ fun OrdersListScreen(
     val stats = remember(orders) {
         mapOf(
             "total" to orders.size,
-            "pending" to orders.count { !it.isApproved },
-            "approved" to orders.count { it.isApproved },
-            "totalValue" to orders.sumOf { it.total_amount }
+            "pending" to orders.count { !(it.status == OrderStatus.APPROVED || it.status == OrderStatus.SOLD) },
+            "approved" to orders.count { (it.status == OrderStatus.APPROVED || it.status == OrderStatus.SOLD) },
+            "totalValue" to orders.sumOf { it.totalAmount }
         )
     }
 
@@ -364,7 +366,7 @@ fun OrdersListScreen(
             itemsIndexed(
                 items = filteredOrders.chunked(2),
                 key = { _, rowOrders ->
-                    rowOrders.joinToString(separator = "_") { it.order_id }
+                    rowOrders.joinToString(separator = "_") { it.orderId }
                 }
             ) { rowIndex, rowOrders ->
                 Row(

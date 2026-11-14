@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens.components
 
+import com.saurabh.mediadminapp.data.v1.core.OrderStatus
+
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.saurabh.mediadminapp.network.response.Order
+import com.saurabh.mediadminapp.data.v1.dto.Order
 import com.saurabh.mediadminapp.ui.screens.ClayNetworkImage
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeApproved
@@ -54,8 +56,8 @@ fun EachOrderCard(
     isApproveOrder: State<Map<String, ApproveOrderState>>,
     onApprovalToggle: (String, Boolean) -> Unit
 ) {
-    val isApproved = order.isApproved
-    val currentOrder = isApproveOrder.value[order.order_id]
+    val isApproved = (order.status == OrderStatus.APPROVED || order.status == OrderStatus.SOLD)
+    val currentOrder = isApproveOrder.value[order.orderId]
     val isLoading = currentOrder?.isLoading == true
     val statusColor = if (isApproved) ClayBadgeApproved else ClayBadgePending
     val statusText = if (isApproved) "Approved" else "Pending"
@@ -81,7 +83,7 @@ fun EachOrderCard(
                 // ── Header: Product Name  ───────────────────────────────────────
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
                     Text(
-                        text = order.product_name.capitalizeEachWord(),
+                        text = order.productName.capitalizeEachWord(),
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
@@ -98,8 +100,8 @@ fun EachOrderCard(
                 )
                 {
                     ClayNetworkImage(
-                        initial = order.product_name.firstOrNull()?.uppercase() ?: "P",
-                        imageUrl = order.image_url,
+                        initial = order.productName.firstOrNull()?.uppercase() ?: "P",
+                        imageUrl = order.imageUrl,
                         avatarSize = 32.dp
                     )
                     Spacer(modifier = Modifier.width(1.dp))
@@ -108,7 +110,7 @@ fun EachOrderCard(
                         contentAlignment = Alignment.CenterStart
                     ) {
                         Text(
-                            text = "${order.order_id} ",
+                            text = "${order.orderId} ",
                             fontWeight = FontWeight.ExtraBold,
                             color = ClayTextPrimary,
                             maxLines = 1,
@@ -144,7 +146,7 @@ fun EachOrderCard(
                 } else {
                     Switch(
                         checked = isApproved,
-                        onCheckedChange = { onApprovalToggle(order.order_id, it) },
+                        onCheckedChange = { onApprovalToggle(order.orderId, it) },
                         modifier = Modifier.scale(0.78f),
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
@@ -160,7 +162,7 @@ fun EachOrderCard(
             ClayDetailButtonOrderScreen(
                 text = "Details",
                 onClick = {
-                    navController.navigate(Routes.SpecificOrderRoutes.invoke(order.order_id))
+                    navController.navigate(Routes.SpecificOrderRoutes.invoke(order.orderId))
                 }
             )
             Spacer(modifier = Modifier.height(4.dp))

@@ -91,7 +91,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.navigation.toRoute
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.Admin
+import com.saurabh.mediadminapp.data.v1.dto.Admin
 import com.saurabh.mediadminapp.ui.screens.AboutScreen
 import com.saurabh.mediadminapp.ui.screens.AddProductScreen
 import com.saurabh.mediadminapp.ui.screens.HistoryScreen
@@ -147,7 +147,7 @@ fun NavApp(viewModel: MyViewModel) {
 
     // 4. Memoized Admin Lookup (Har recomposition par loop nahi chalega)
     val admin: Admin? = remember(adminState.success, loggedInAdminId) {
-        adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
+        adminState.success?.items?.find { it.adminId == loggedInAdminId }
     }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())

@@ -169,6 +169,13 @@ class TokenManager internal constructor(private val prefs: SharedPreferences) {
     /** Access token expiry as epoch millis, or 0 if unknown. */
     fun getExpiresAt(): Long = prefs.getLong(KEY_EXPIRES_AT, 0L)
 
+    /** v1 push-device id from POST devices (cleared with the session). */
+    fun saveDeviceId(deviceId: String) {
+        prefs.edit().putString("device_id", deviceId).commit()
+    }
+
+    fun getDeviceId(): String? = prefs.getString("device_id", null)
+
     fun isLoggedIn():Boolean {
         val loggedIn = !getAccessToken().isNullOrEmpty()
         AppLogger.d(AppLogger.TAG_AUTH,"Checking login status: $loggedIn")

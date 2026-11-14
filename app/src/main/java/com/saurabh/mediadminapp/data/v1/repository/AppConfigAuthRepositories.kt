@@ -21,20 +21,20 @@ interface AppConfigRepository {
 }
 
 interface AuthRepository {
-    /** POST auth/login: emails an OTP. accountType = "admin" | "user". Both. */
-    suspend fun login(email: String, password: String, accountType: String): ApiResult<LoginData>
+    /** POST auth/login (account_type=admin): emails an OTP. */
+    suspend fun login(email: String, password: String): ApiResult<LoginData>
 
-    /** POST auth/verify-otp: returns tokens (the implementation persists the session). Both. */
-    suspend fun verifyOtp(accountId: String, otp: String, accountType: String): ApiResult<TokenData>
+    /** POST auth/verify-otp (account_type=admin): returns tokens (the implementation persists the session). */
+    suspend fun verifyOtp(accountId: String, otp: String): ApiResult<TokenData>
 
     /** POST auth/logout: revokes access + refresh tokens, then clears the local session. Both. */
     suspend fun logout(): ApiResult<LogoutData>
 
     /** POST auth/password-reset/request: always 200 (no account enumeration). Both. */
-    suspend fun requestPasswordReset(email: String, accountType: String): ApiResult<PasswordResetRequestData>
+    suspend fun requestPasswordReset(email: String): ApiResult<PasswordResetRequestData>
 
-    /** POST auth/password-reset/confirm: OTP + new password (min 8 chars). Both. */
-    suspend fun confirmPasswordReset(email: String, otp: String, newPassword: String, accountType: String): ApiResult<Unit?>
+    /** POST auth/password-reset/confirm: OTP + new password (min 8 chars). */
+    suspend fun confirmPasswordReset(email: String, otp: String, newPassword: String): ApiResult<Unit?>
 
     // ── session helpers (local, no network) ──
     fun isLoggedIn(): Boolean

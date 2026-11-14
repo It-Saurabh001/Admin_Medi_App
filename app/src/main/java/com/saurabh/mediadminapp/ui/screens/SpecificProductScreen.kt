@@ -51,7 +51,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.ProductItem
+import com.saurabh.mediadminapp.data.v1.dto.Product as ProductItem
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayDangerButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
@@ -155,7 +155,7 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
                         )
                     }
                     productstate.value.success != null -> {
-                        val productItem = productstate.value.success?.product
+                        val productItem = productstate.value.success
                         if (productItem != null) {
                             ClayGradientBackdrop {
                                 EachProduct(
@@ -170,7 +170,7 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
                             }
                         } else {
                             ClayErrorScreen(
-                                errorMessage = productstate.value.success?.message?.takeIf { it.isNotBlank() } ?: "Product not found or has been deleted",
+                                errorMessage = "Product not found or has been deleted",
                                 modifier = Modifier,
                                 onRetry = { viewModel.getSpecificProduct(productId) }
                             )
@@ -238,12 +238,12 @@ fun EachProduct(
                 .clip(RoundedCornerShape(28.dp))
                 .background(Color.White.copy(alpha = 0.18f))
                 .border(2.dp, Color.White.copy(alpha = 0.6f), RoundedCornerShape(28.dp))
-                .clickable(enabled = !productItem.image_url.isNullOrEmpty()) {
+                .clickable(enabled = !productItem.imageUrl.isNullOrEmpty()) {
                     showZoomDialog = true // 👈 Click par dialog open hoga
                 },
             contentAlignment = Alignment.Center
         ) {
-            val imageUrl = productItem.image_url
+            val imageUrl = productItem.imageUrl
             if (!imageUrl.isNullOrEmpty()) {
                 Image(
                     painter = rememberAsyncImagePainter(imageUrl),
@@ -262,9 +262,9 @@ fun EachProduct(
         }
 
         // ── Show Fullscreen Dialog if triggered ────────────────────────────
-        if (showZoomDialog && !productItem.image_url.isNullOrEmpty()) {
+        if (showZoomDialog && !productItem.imageUrl.isNullOrEmpty()) {
             FullscreenImagePreviewDialog(
-                imageUrl = productItem.image_url!!,
+                imageUrl = productItem.imageUrl!!,
                 onDismiss = { showZoomDialog = false }
             )
         }
@@ -296,7 +296,7 @@ fun EachProduct(
                 color = ClayTextPrimary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
-            ClayInfoRow(label = "Product ID", value = productItem.Product_id)
+            ClayInfoRow(label = "Product ID", value = productItem.productId)
             HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = ClayBorder.copy(0.4f))
             ClayInfoRow(label = "Name", value = productItem.name.capitalizeEachWord())
             HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp), color = ClayBorder.copy(0.4f))
@@ -325,7 +325,7 @@ fun EachProduct(
         ) {
             ClayPrimaryButton(
                 text = "Update Product Details",
-                onClick = { navController.navigate(Routes.UpdateProductRoutes.invoke(productItem.Product_id)) },
+                onClick = { navController.navigate(Routes.UpdateProductRoutes.invoke(productItem.productId)) },
                 modifier = Modifier.fillMaxWidth()
             )
             ClayDangerButton(

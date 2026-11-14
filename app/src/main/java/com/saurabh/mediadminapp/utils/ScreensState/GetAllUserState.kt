@@ -1,9 +1,15 @@
 package com.saurabh.mediadminapp.utils.ScreensState
 
-import com.saurabh.mediadminapp.network.response.GetAllUserResponse
+import com.saurabh.mediadminapp.data.v1.core.Pagination
+import com.saurabh.mediadminapp.data.v1.dto.*
+import com.saurabh.mediadminapp.data.v1.error.AppError
+import com.saurabh.mediadminapp.repository.PagedData
 
 data class GetAllUserState(
     val isLoading: Boolean = false,
-    val success: GetAllUserResponse? = null,
-    val error: String? = null
+    val success: PagedData<User>? = null,
+    val error: String? = null,
+    val pagination: Pagination? = null,
+    val isLoadingMore: Boolean = false,
+    val endReached: Boolean = false
 )

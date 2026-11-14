@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.UserItem
+import com.saurabh.mediadminapp.data.v1.dto.User as UserItem
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayDangerButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
@@ -95,7 +95,7 @@ fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: Na
 
     LaunchedEffect(key1 = deleteState.success) {
         if (deleteState.success != null && !deleteState.isLoading && deleteState.error == null) {
-            Toast.makeText(context, deleteState.success.message, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "User deleted", Toast.LENGTH_LONG).show()
             viewModel.resetDeleteUserState()
             navController.navigate(Routes.HomeRoutes()) {
                 popUpTo(Routes.HomeRoutes()) { inclusive = true }
@@ -158,15 +158,15 @@ fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: Na
                             )
                         }
                         usersState.value.success != null -> {
-                            val users = usersState.value.success?.users
-                            val user = users?.find { it.user_id == user_id }
+                            val users = usersState.value.success?.items
+                            val user = users?.find { it.userId == user_id }
 
                             if (user != null) {
                                 UserDetailsHub(
                                     user = user,
                                     isDeleting = deleteState.isLoading,
-                                    onDeleteClick = { viewModel.deleteUser(user.user_id) },
-                                    onUpdateClick = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.user_id)) },
+                                    onDeleteClick = { viewModel.deleteUser(user.userId) },
+                                    onUpdateClick = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.userId)) },
                                     navController = navController,
                                     modifier = Modifier
                                 )
@@ -202,7 +202,7 @@ fun UserDetailsHub(
 ) {
     val initial = user.name.firstOrNull()?.toString()?.uppercase() ?: "U"
     val isApproved = user.isApproved
-    val isBlocked = user.block
+    val isBlocked = user.isBlocked
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -218,7 +218,7 @@ fun UserDetailsHub(
                 // Hardware BlurMaskFilter Shadow Avatar (Anti-aliased)
                 ClayNetworkImage(
                     initial = initial,
-                    imageUrl = user.image_url,
+                    imageUrl = user.imageUrl,
                     avatarSize = 116.dp
                 )
 
@@ -315,14 +315,14 @@ fun UserDetailsHub(
                         ClearanceTile(
                             modifier = Modifier.weight(1f),
                             label = "CLIENT ID",
-                            value = user.user_id,
+                            value = user.userId,
                             tint = ClayPrimary,
                             icon = Icons.Default.Badge
                         )
                         ClearanceTile(
                             modifier = Modifier.weight(1f),
                             label = "REGISTERED",
-                            value = user.date_of_account_creation ?: "Active",
+                            value = user.createdAt.toString() ?: "Active",
                             tint = ClaySecondary,
                             icon = Icons.Default.CalendarMonth
                         )
@@ -351,7 +351,7 @@ fun UserDetailsHub(
                     RecessedSpecRow(
                         icon = Icons.Default.Phone,
                         label = "Telephone Number",
-                        value = (user.phone_number ?: "").ifEmpty { "Not Provided" }
+                        value = (user.phoneNumber ?: "").ifEmpty { "Not Provided" }
                     )
                     RecessedSpecRow(
                         icon = Icons.Default.Email,
@@ -366,7 +366,7 @@ fun UserDetailsHub(
                     RecessedSpecRow(
                         icon = Icons.Default.LocationOn,
                         label = "Postal Pincode",
-                        value = (user.pin_code ?: "").ifEmpty { "Not Provided" }
+                        value = (user.pinCode ?: "").ifEmpty { "Not Provided" }
                     )
                 }
             }

@@ -10,9 +10,6 @@ data class DateRange(val from: LocalDate? = null, val to: LocalDate? = null)
 /** Image upload without OkHttp types (jpeg/png/webp). */
 class ImagePart(val fileName: String, val mimeType: String, val bytes: ByteArray)
 
-/** Generic file upload without OkHttp types (prescription: jpeg/png/webp/pdf). */
-class FilePart(val fileName: String, val mimeType: String, val bytes: ByteArray)
-
 /** GET products query params. */
 data class ProductFilter(
     val q: String? = null,

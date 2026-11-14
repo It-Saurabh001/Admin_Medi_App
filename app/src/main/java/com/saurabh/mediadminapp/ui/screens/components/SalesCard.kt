@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens.components
 
+import com.saurabh.mediadminapp.data.v1.core.OrderStatus
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.saurabh.mediadminapp.network.response.SellHistory
+import com.saurabh.mediadminapp.data.v1.dto.Sale as SellHistory
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeApproved
 import com.saurabh.mediadminapp.ui.theme.ClayBadgePending
 import com.saurabh.mediadminapp.ui.theme.ClayError
@@ -53,7 +55,7 @@ fun SalesCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = sale.Sell_id,
+                    text = sale.saleId,
                     fontWeight = FontWeight.Bold,
                     color = ClayTextPrimary,
                     fontSize = 16.sp
@@ -61,20 +63,20 @@ fun SalesCard(
 
                 // Status Badge
                 ClayStatusBadge(
-                    text = if (sale.isApproved) "Completed" else "Pending",
-                    color = if (sale.isApproved) ClayBadgeApproved else ClayBadgePending
+                    text = if ((sale.orderStatus == OrderStatus.SOLD)) "Completed" else "Pending",
+                    color = if ((sale.orderStatus == OrderStatus.SOLD)) ClayBadgeApproved else ClayBadgePending
                 )
             }
 
             // Product Info
             Text(
-                text = sale.product_name,
+                text = sale.productName,
                 fontSize = 15.sp,
                 color = ClayTextPrimary,
                 fontWeight = FontWeight.SemiBold
             )
 
-            ClayInfoRow(label = "Sold to:", value = sale.user_name)
+            ClayInfoRow(label = "Sold to:", value = sale.userName)
 
             // Order and Quantity Row
             Row(
@@ -82,7 +84,7 @@ fun SalesCard(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Order: ${sale.Order_id}",
+                    text = "Order: ${sale.orderId}",
                     fontSize = 13.sp,
                     color = ClayTextSecondary
                 )
@@ -100,7 +102,7 @@ fun SalesCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(sale.total_amount)}",
+                    text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(sale.totalAmount)}",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = ClayPrimary
@@ -108,16 +110,16 @@ fun SalesCard(
 
                 // Stock Status
                 Text(
-                    text = if (sale.remaining_stock == 0) "Out of Stock" else "Stock: ${sale.remaining_stock}",
+                    text = if (sale.remainingStock == 0) "Out of Stock" else "Stock: ${sale.remainingStock}",
                     fontSize = 13.sp,
-                    color = if (sale.remaining_stock == 0) ClayError else ClayTextSecondary,
+                    color = if (sale.remainingStock == 0) ClayError else ClayTextSecondary,
                     fontWeight = FontWeight.SemiBold
                 )
             }
 
             // Date
             Text(
-                text = "Sold on: ${sale.date_of_sell}",
+                text = "Sold on: ${sale.soldAt.toString()}",
                 fontSize = 12.sp,
                 color = ClayTextSecondary
             )

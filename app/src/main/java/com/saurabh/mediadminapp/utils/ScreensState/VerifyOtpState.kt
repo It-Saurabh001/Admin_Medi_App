@@ -1,9 +1,13 @@
 package com.saurabh.mediadminapp.utils.ScreensState
 
-import com.saurabh.mediadminapp.network.response.VerifyOtpResponse
+import com.saurabh.mediadminapp.data.v1.core.Pagination
+import com.saurabh.mediadminapp.data.v1.dto.*
+import com.saurabh.mediadminapp.data.v1.error.AppError
+import com.saurabh.mediadminapp.repository.PagedData
 
 data class VerifyOtpState(
     val isLoading: Boolean = false,
-    val success: VerifyOtpResponse? = null,
-    val error: String? = null
+    val success: TokenData? = null,
+    val error: String? = null,
+    val appError: AppError? = null
 )

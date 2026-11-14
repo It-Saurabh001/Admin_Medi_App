@@ -86,7 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.UserItem
+import com.saurabh.mediadminapp.data.v1.dto.User as UserItem
 import com.saurabh.mediadminapp.ui.screens.components.ClayDetailButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
 import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
@@ -323,7 +323,7 @@ fun HomeScreen(viewModel: MyViewModel, navController: NavController, onMenuClick
                         state.success != null -> {
                             Log.d("DRAWER_DEBUG", "\uD83C\uDFE0 HomeScreen UI: Showing UserListScreen1")
                             UserListScreen1(
-                                users = state.success!!.users,
+                                users = state.success!!.items,
                                 userApprovalState = isApproved,
                                 onApprovalToggle = viewModel::isApprovedUser,
                                 modifier = Modifier.fillMaxSize(),
@@ -358,12 +358,12 @@ fun UserListScreen1(
         users.filter { user ->
             val matchesSearch = user.name.lowercase().contains(searchTerm.lowercase()) ||
                     (user.email ?: "").lowercase().contains(searchTerm.lowercase()) ||
-                    user.user_id.lowercase().contains(searchTerm.lowercase())
+                    user.userId.lowercase().contains(searchTerm.lowercase())
             val matchesFilter = when (filterStatus) {
                 FilterStatus.ALL -> true
-                FilterStatus.APPROVED -> user.isApproved && !user.block
+                FilterStatus.APPROVED -> user.isApproved && !user.isBlocked
                 FilterStatus.PENDING -> !user.isApproved
-                FilterStatus.BLOCKED -> user.block
+                FilterStatus.BLOCKED -> user.isBlocked
             }
             matchesSearch && matchesFilter
         }
@@ -371,9 +371,9 @@ fun UserListScreen1(
 
     val stats = remember(users) {
         val total = users.size
-        val approved = users.count { it.isApproved && !it.block }
+        val approved = users.count { it.isApproved && !it.isBlocked }
         val pending = users.count { !it.isApproved }
-        val blocked = users.count { it.block }
+        val blocked = users.count { it.isBlocked }
         val approvalRatio = if (total > 0) approved.toFloat() / total.toFloat() else 0f
         TotalUserStats(total, approved, pending, blocked, approvalRatio)
     }
@@ -415,7 +415,7 @@ fun UserListScreen1(
         if (filteredUsers.isEmpty()) {
             item { ClayEmptyState(message = "No users found", emoji = "\uD83D\uDD0D") }
         } else {
-            items(filteredUsers, key = { it.user_id }) { user ->
+            items(filteredUsers, key = { it.userId }) { user ->
                 EachUserCard(userItem = user, userApprovalState = userApprovalState, onApprovalToggle = onApprovalToggle, navController = navController)
             }
         }
@@ -603,7 +603,7 @@ fun EachUserCard(
     onApprovalToggle: (String, Boolean) -> Unit,
     navController: NavController
 ) {
-    val currentUserState = userApprovalState.value[userItem.user_id]
+    val currentUserState = userApprovalState.value[userItem.userId]
     val isApproved = userItem.isApproved
     val isLoading = currentUserState?.isLoading == true
 
@@ -632,16 +632,16 @@ fun EachUserCard(
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             ClayNetworkImage(
                 initial = userItem.name.firstOrNull()?.uppercase() ?: "U",
-                imageUrl = userItem.image_url
+                imageUrl = userItem.imageUrl
             )
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(userItem.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ClayTextPrimary, maxLines = 1)
-                Text("ID: ${userItem.user_id.take(10)}...", fontSize = 11.sp, color = ClayTextSecondary)
+                Text("ID: ${userItem.userId.take(10)}...", fontSize = 11.sp, color = ClayTextSecondary)
             }
             Spacer(Modifier.width(8.dp))
             val (badgeText, badgeColor) = when {
-                userItem.block -> "Blocked" to ClayAccent
+                userItem.isBlocked -> "Blocked" to ClayAccent
                 isApproved -> "Approved" to ClaySuccess
                 else -> "Pending" to ClayWarning
             }
@@ -668,7 +668,7 @@ fun EachUserCard(
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("\uD83D\uDCE7 ${userItem.email ?: "No email"}", fontSize = 12.sp, color = ClayTextPrimary, fontWeight = FontWeight.Medium)
-                Text("\uD83D\uDCDE ${userItem.phone_number ?: "N/A"}", fontSize = 12.sp, color = ClayTextSecondary)
+                Text("\uD83D\uDCDE ${userItem.phoneNumber ?: "N/A"}", fontSize = 12.sp, color = ClayTextSecondary)
             }
             userItem.address?.takeIf { it.isNotBlank() }?.let { addr ->
                 Text("\uD83D\uDCCD $addr", fontSize = 12.sp, color = ClayTextSecondary, maxLines = 1)
@@ -681,7 +681,7 @@ fun EachUserCard(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             ClayDetailButton(
                 text = "View Details \u2192",
-                onClick = { navController.navigate(Routes.UserDetailsRoutes.invoke(userItem.user_id)) },
+                onClick = { navController.navigate(Routes.UserDetailsRoutes.invoke(userItem.userId)) },
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(16.dp))
@@ -691,7 +691,7 @@ fun EachUserCard(
             AnimatedVisibility(visible = !isLoading, enter = fadeIn(), exit = fadeOut()) {
                 Switch(
                     checked = isApproved,
-                    onCheckedChange = { onApprovalToggle(userItem.user_id, it) },
+                    onCheckedChange = { onApprovalToggle(userItem.userId, it) },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White, checkedTrackColor = ClaySuccess,
                         uncheckedThumbColor = Color.White, uncheckedTrackColor = Color(0xFFCBD5E1)

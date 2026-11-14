@@ -40,16 +40,6 @@ data class RestockedLine(
     val qty: Int
 )
 
-/** POST orders (customer). Prescription file goes as multipart `prescription`. */
-data class OrderCreateRequest(
-    @SerializedName("product_id") val productId: String,
-    val quantity: Int,
-    val message: String? = null,
-    @SerializedName("doctor_name") val doctorName: String? = null,
-    @SerializedName("patient_name") val patientName: String? = null,
-    @SerializedName("prescription_url") val prescriptionUrl: String? = null
-)
-
 /** PATCH orders/{order_id} (pending only). */
 data class OrderEditRequest(
     @SerializedName("patient_name") val patientName: String? = null,

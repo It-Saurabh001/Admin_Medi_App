@@ -143,7 +143,7 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
     // Handle verification response success/failure
     LaunchedEffect(state.success) {
         state.success?.let { response ->
-            if (response.status == 200 && response.access_token != null) {
+            if (response.accessToken.isNotBlank()) {
                 Log.d("NAV", "OTP verified — waiting for NavApp isLoggedIn redirect to Home")
                 Toast.makeText(context, "✓ Verified successfully!", Toast.LENGTH_SHORT).show()
                 // Success स्क्रीन/एनीमेशन दिखाने के लिए 800ms का पॉज
@@ -156,7 +156,7 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
                 }
                 viewModel.clearVerifyOtpState()
             } else {
-                val msg = response.message ?: "Invalid OTP, please try again"
+                val msg = "Invalid OTP, please try again"
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 triggerErrorShake()
                 viewModel.clearVerifyOtpState()

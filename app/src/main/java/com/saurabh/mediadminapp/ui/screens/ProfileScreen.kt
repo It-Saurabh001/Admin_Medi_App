@@ -70,7 +70,7 @@ fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
 
     val adminState by viewModel.getAllAdminState.collectAsState()
     val loggedInAdminId by viewModel.loggedInAdminId.collectAsState()
-    val admin = adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
+    val admin = adminState.success?.items?.find { it.adminId == loggedInAdminId }
     val initial = admin?.name?.firstOrNull()?.toString()?.uppercase() ?: "A"
 
     Scaffold(containerColor = Color.Transparent) { innerPadding ->
@@ -116,7 +116,7 @@ fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
                         // Hardware Canvas Blurred Shadow Avatar
                         ClayNetworkImage(
                             initial = initial,
-                            imageUrl = admin?.image_url,
+                            imageUrl = admin?.imageUrl,
                             avatarSize = 116.dp
                         )
 
@@ -234,17 +234,17 @@ fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
                             ProfileSpecItem(
                                 icon = Icons.Default.Phone,
                                 label = "Direct Telephone",
-                                value = admin?.phone_number ?: "Active Line"
+                                value = admin?.phoneNumber ?: "Active Line"
                             )
                             ProfileSpecItem(
                                 icon = Icons.Default.Fingerprint,
                                 label = "Admin Master ID",
-                                value = admin?.admin_id ?: (loggedInAdminId ?: "ADM-001")
+                                value = admin?.adminId ?: (loggedInAdminId ?: "ADM-001")
                             )
                             ProfileSpecItem(
                                 icon = Icons.Default.CalendarMonth,
                                 label = "Commission Date",
-                                value = admin?.date_of_account_creation ?: "System Inception"
+                                value = admin?.createdAt?.toString() ?: "System Inception"
                             )
                         }
                     }

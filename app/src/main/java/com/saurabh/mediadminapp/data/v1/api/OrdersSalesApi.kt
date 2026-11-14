@@ -7,7 +7,6 @@ import com.saurabh.mediadminapp.data.v1.dto.CancelOrderRequest
 import com.saurabh.mediadminapp.data.v1.dto.DashboardSummary
 import com.saurabh.mediadminapp.data.v1.dto.Invoice
 import com.saurabh.mediadminapp.data.v1.dto.Order
-import com.saurabh.mediadminapp.data.v1.dto.OrderCreateRequest
 import com.saurabh.mediadminapp.data.v1.dto.OrderEditRequest
 import com.saurabh.mediadminapp.data.v1.dto.RejectOrderRequest
 import com.saurabh.mediadminapp.data.v1.dto.ReturnOrderRequest
@@ -18,17 +17,12 @@ import com.saurabh.mediadminapp.data.v1.dto.SupplierCreateRequest
 import com.saurabh.mediadminapp.data.v1.dto.SupplierUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.TopProduct
 import com.saurabh.mediadminapp.data.v1.dto.VerifyPrescriptionRequest
-import okhttp3.MultipartBody
-import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
-import retrofit2.http.Multipart
 import retrofit2.http.PATCH
 import retrofit2.http.POST
-import retrofit2.http.Part
-import retrofit2.http.PartMap
 import retrofit2.http.Path
 import retrofit2.http.Query
 import retrofit2.http.QueryMap
@@ -45,22 +39,6 @@ interface OrdersApi {
         @Query("updated_since") updatedSince: String? = null,
         @QueryMap page: Map<String, String> = emptyMap()
     ): Response<PagedEnvelope<Order>>
-
-    /** Customer only. */
-    @POST("orders")
-    suspend fun createOrder(
-        @Body body: OrderCreateRequest,
-        @Header("Idempotency-Key") idempotencyKey: String? = null
-    ): Response<ApiEnvelope<Order>>
-
-    /** Customer only; with `prescription` file. */
-    @Multipart
-    @POST("orders")
-    suspend fun createOrderMultipart(
-        @PartMap fields: Map<String, @JvmSuppressWildcards RequestBody>,
-        @Part prescription: MultipartBody.Part? = null,
-        @Header("Idempotency-Key") idempotencyKey: String? = null
-    ): Response<ApiEnvelope<Order>>
 
     @GET("orders/{order_id}")
     suspend fun getOrder(@Path("order_id") orderId: String): Response<ApiEnvelope<Order>>
@@ -106,15 +84,6 @@ interface OrdersApi {
 
     @GET("orders/{order_id}/invoice")
     suspend fun getInvoice(@Path("order_id") orderId: String): Response<ApiEnvelope<Invoice>>
-
-    /** Multipart `prescription` (jpeg/png/webp/pdf) is required; text parts: doctor_name, patient_name. */
-    @Multipart
-    @POST("orders/{order_id}/prescription")
-    suspend fun uploadPrescription(
-        @Path("order_id") orderId: String,
-        @Part prescription: MultipartBody.Part,
-        @PartMap fields: Map<String, @JvmSuppressWildcards RequestBody> = emptyMap()
-    ): Response<ApiEnvelope<Order>>
 }
 
 interface SalesApi {

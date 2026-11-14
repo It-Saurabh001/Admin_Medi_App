@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.saurabh.mediadminapp.data.v1.repository.ImagePart
 import com.yalantis.ucrop.UCrop
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -16,19 +17,26 @@ import java.io.File
  * for Retrofit file uploads.
  */
 fun Uri.toMultipartBodyPart(context: Context, partName: String): MultipartBody.Part? {
-    return try {
-        val contentResolver = context.contentResolver
-        val inputStream = contentResolver.openInputStream(this) ?: return null
-        val mimeType = contentResolver.getType(this) ?: "image/*"
-        val bytes = inputStream.readBytes()
-        inputStream.close()
+    val (bytes, mimeType) = readBytesAndType(context, "image/*") ?: return null
+    val requestFile = bytes.toRequestBody(mimeType.toMediaTypeOrNull(), 0, bytes.size)
+    return MultipartBody.Part.createFormData(partName, "image.jpg", requestFile)
+}
 
-        val requestFile = bytes.toRequestBody(mimeType.toMediaTypeOrNull(), 0, bytes.size)
-        MultipartBody.Part.createFormData(partName, "image.jpg", requestFile)
-    } catch (e: Exception) {
-        e.printStackTrace()
-        null
+/** Content Uri -> v1 [ImagePart] (jpeg/png/webp; the server checks magic bytes). */
+fun Uri.toImagePart(context: Context): ImagePart? {
+    val (bytes, mimeType) = readBytesAndType(context, "image/jpeg") ?: return null
+    val ext = mimeType.substringAfter('/', "jpg").ifBlank { "jpg" }
+    return ImagePart(fileName = "image.$ext", mimeType = mimeType, bytes = bytes)
+}
+
+private fun Uri.readBytesAndType(context: Context, fallbackMime: String): Pair<ByteArray, String>? = try {
+    val contentResolver = context.contentResolver
+    contentResolver.openInputStream(this)?.use { input ->
+        input.readBytes() to (contentResolver.getType(this) ?: fallbackMime)
     }
+} catch (e: Exception) {
+    e.printStackTrace()
+    null
 }
 
 /**

@@ -69,8 +69,8 @@ fun AboutScreen(viewModel: MyViewModel, navController: NavController) {
         if (productState.success == null) viewModel.getAllProduct()
     }
 
-    val totalUsers = usersState.success?.users?.size ?: 0
-    val totalProducts = productState.success?.products?.size ?: 0
+    val totalUsers = usersState.success?.items?.size ?: 0
+    val totalProducts = productState.success?.items?.size ?: 0
 
     Scaffold(containerColor = Color.Transparent) { innerPadding ->
         ClayGradientBackdrop {

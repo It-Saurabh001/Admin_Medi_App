@@ -45,7 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.UserItem
+import com.saurabh.mediadminapp.data.v1.dto.User as UserItem
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
 import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
@@ -62,7 +62,7 @@ fun UpdateUserDetailsScreen(user_id: String, viewModel: MyViewModel, navControll
     val context = LocalContext.current
     val usersState = viewModel.getAllUserState.collectAsState().value
     val user = remember(usersState, user_id) {
-        usersState.success?.users?.find { it.user_id == user_id }
+        usersState.success?.items?.find { it.userId == user_id }
     }
 
     LaunchedEffect(Unit) {
@@ -101,11 +101,11 @@ private fun UpdateUserForm(
     val context = LocalContext.current
     var name by remember(user) { mutableStateOf(user.name) }
     var email by remember(user) { mutableStateOf(user.email ?: "") }
-    var phone by remember(user) { mutableStateOf(user.phone_number ?: "") }
+    var phone by remember(user) { mutableStateOf(user.phoneNumber ?: "") }
     var address by remember(user) { mutableStateOf(user.address ?: "") }
-    var pinCode by remember(user) { mutableStateOf(user.pin_code ?: "") }
+    var pinCode by remember(user) { mutableStateOf(user.pinCode ?: "") }
     var isApproved by remember(user) { mutableStateOf(user.isApproved) }
-    var isBlocked by remember(user) { mutableStateOf(user.block) }
+    var isBlocked by remember(user) { mutableStateOf(user.isBlocked) }
     var isSaving by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -330,16 +330,16 @@ private fun UpdateUserForm(
                 isLoading = isSaving,
                 onClick = {
                     isSaving = true
-                    viewModel.isApprovedUser(user.user_id, isApproved)
+                    viewModel.isApprovedUser(user.userId, isApproved)
                     viewModel.updateUser(
-                        userId = user.user_id,
+                        userId = user.userId,
                         name = name,
                         email = email,
                         phonenumber = phone,
                         address = address,
-                        pincode = pinCode,
-                        isApproved = isApproved,
-                        block = isBlocked
+                        pincode = pinCode
+                        
+                        
                     )
                     Toast.makeText(context, "User profile updated successfully!", Toast.LENGTH_SHORT).show()
                     navController.popBackStack()

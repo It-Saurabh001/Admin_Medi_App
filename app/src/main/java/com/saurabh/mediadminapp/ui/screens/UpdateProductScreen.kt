@@ -75,7 +75,7 @@ import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
 import com.saurabh.mediadminapp.utils.utilityFunctions.createImageUri
 import com.saurabh.mediadminapp.utils.utilityFunctions.getUCropIntent
-import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
+import com.saurabh.mediadminapp.utils.utilityFunctions.toImagePart
 import com.yalantis.ucrop.UCrop
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -144,7 +144,7 @@ fun UpdateProductScreen(
     }
 
     LaunchedEffect(productState.success) {
-        productState.success?.product?.let { product ->
+        productState.success?.let { product ->
             if (!isInitialized) {
                 name = product.name
                 price = product.price.toString()
@@ -157,7 +157,7 @@ fun UpdateProductScreen(
 
     LaunchedEffect(response.value.success != null) {
         response.value.success?.let {
-            Toast.makeText(context, it.message, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Product updated", Toast.LENGTH_LONG).show()
             viewModel.clearUpdateProductState()
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_screen", true)
             navController.popBackStack()
@@ -241,7 +241,7 @@ fun UpdateProductScreen(
                                     modifier = Modifier.padding(32.dp)
                                 )
                             } else {
-                                val currentImageUrl = productState.success?.product?.image_url
+                                val currentImageUrl = productState.success?.imageUrl
 
                                 // ── Image preview / picker — hardware canvas shadow ──
                                 Box(
@@ -387,16 +387,16 @@ fun UpdateProductScreen(
                                             val priceDouble = price.toDoubleOrNull()
                                             val stockInt = stock.toIntOrNull()
                                             if (name.isNotBlank() && priceDouble != null && category.isNotBlank() && stockInt != null) {
-                                                val imagePart = newImageUri?.toMultipartBodyPart(
-                                                    context,
-                                                    "image"
+                                                val imagePart = newImageUri?.toImagePart(
+                                                    context
+                                                    
                                                 )
                                                 viewModel.updateProduct(
                                                     productId = productId,
                                                     name = name,
                                                     price = priceDouble,
                                                     category = category,
-                                                    stock = stockInt,
+                                                    
                                                     image = imagePart
                                                 )
                                             }

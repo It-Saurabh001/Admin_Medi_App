@@ -74,7 +74,7 @@ import com.saurabh.mediadminapp.ui.screens.components.ClayTextField
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
-import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
+import com.saurabh.mediadminapp.utils.utilityFunctions.toImagePart
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,8 +93,8 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
 
     LaunchedEffect(response.value.success) {
         response.value.success?.let {
-            Toast.makeText(context, it.message, Toast.LENGTH_LONG).show()
-            Log.d("TAG", "AddProductScreen: ${it.message}")
+            Toast.makeText(context, "Product added: ${it.name}", Toast.LENGTH_LONG).show()
+            Log.d("TAG", "AddProductScreen: ${it.productId}")
             viewModel.clearAddProductState()
             navController.previousBackStackEntry?.savedStateHandle?.set("refresh_screen", true)
             navController.popBackStack()
@@ -328,15 +328,15 @@ fun AddProductScreen(viewModel: MyViewModel, navController: NavController, modif
                                                         stock.value
                                                     )
                                                 ) {
-                                                    val imagePart = imageUri?.toMultipartBodyPart(
-                                                        context,
-                                                        "image"
+                                                    val imagePart = imageUri?.toImagePart(
+                                                        context
+                                                        
                                                     )
                                                     viewModel.addProduct(
                                                         name.value,
                                                         price.value.toDouble(),
                                                         category.value,
-                                                        stock.value.toInt(),
+                                                        
                                                         imagePart
                                                     )
                                                 } else {

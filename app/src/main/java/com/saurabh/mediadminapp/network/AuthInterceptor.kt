@@ -35,8 +35,7 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
                 rel.startsWith("auth/refresh") ||
                 rel.startsWith("app-config") ||
                 rel.startsWith("openapi.json") ||
-                rel.startsWith("health") ||
-                (method.equals("POST", ignoreCase = true) && rel == "users")
+                rel.startsWith("health")
         }
     }
 

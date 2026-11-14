@@ -56,7 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.ProductItem
+import com.saurabh.mediadminapp.data.v1.dto.Product as ProductItem
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayDetailButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
@@ -143,7 +143,7 @@ fun ProductScreen(viewModel: MyViewModel, navController: NavController, onMenuCl
                         }
                         productState.success != null -> {
                             ProductCatalogShowcase(
-                                products = productState.success.products,
+                                products = productState.success.items,
                                 navController = navController,
                                 modifier = Modifier
                             )
@@ -238,13 +238,13 @@ fun ProductCatalogShowcase(
                 )
             }
         } else {
-            itemsIndexed(filteredProducts, key = { _, item -> item.Product_id }) { index, product ->
+            itemsIndexed(filteredProducts, key = { _, item -> item.productId }) { index, product ->
                 val bgTint = cardColors[index % cardColors.size]
                 AsymmetricProductCard(
                     product = product,
                     bgColor = bgTint,
                     onDetailsClick = {
-                        navController.navigate(Routes.SpecificProductRoutes.invoke(product.Product_id))
+                        navController.navigate(Routes.SpecificProductRoutes.invoke(product.productId))
                     }
                 )
             }
@@ -302,7 +302,7 @@ fun AsymmetricProductCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Asymmetric Image Tile with Recessed Clay Inset
-            val imageUrl = product.image_url
+            val imageUrl = product.imageUrl
             Box(
                 modifier = Modifier
                     .size(86.dp)

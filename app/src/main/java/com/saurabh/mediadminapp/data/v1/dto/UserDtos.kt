@@ -18,16 +18,6 @@ data class User(
     @SerializedName("created_at") val createdAt: Instant?
 )
 
-/** POST users (public signup). Role/approval/image_url cannot be sent. */
-data class UserCreateRequest(
-    val name: String,
-    val email: String,
-    val password: String,
-    @SerializedName("phone_number") val phoneNumber: String? = null,
-    val address: String? = null,
-    @SerializedName("pin_code") val pinCode: String? = null
-)
-
 /** PATCH users/{user_id} (admin). Password/status fields are rejected by the server. */
 data class UserUpdateRequest(
     val name: String? = null,
@@ -35,15 +25,4 @@ data class UserUpdateRequest(
     @SerializedName("phone_number") val phoneNumber: String? = null,
     val address: String? = null,
     @SerializedName("pin_code") val pinCode: String? = null
-)
-
-/** PATCH users/me. `currentPassword` required when email or password changes. */
-data class ProfileUpdateRequest(
-    val name: String? = null,
-    val email: String? = null,
-    @SerializedName("phone_number") val phoneNumber: String? = null,
-    val address: String? = null,
-    @SerializedName("pin_code") val pinCode: String? = null,
-    val password: String? = null,
-    @SerializedName("current_password") val currentPassword: String? = null
 )

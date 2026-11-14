@@ -1,10 +1,27 @@
 package com.saurabh.mediadminapp
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.saurabh.mediadminapp.common.ResultState
-import com.saurabh.mediadminapp.network.TokenManager
+import com.saurabh.mediadminapp.data.v1.core.AppEvent
+import com.saurabh.mediadminapp.data.v1.core.AppEvents
+import com.saurabh.mediadminapp.data.v1.core.IdempotencyKeyProvider
+import com.saurabh.mediadminapp.data.v1.core.PageRequest
+import com.saurabh.mediadminapp.data.v1.core.Pagination
+import com.saurabh.mediadminapp.data.v1.core.UiState
+import com.saurabh.mediadminapp.data.v1.core.loadMore
+import com.saurabh.mediadminapp.data.v1.dto.AdminCreateRequest
+import com.saurabh.mediadminapp.data.v1.dto.AdminUpdateRequest
+import com.saurabh.mediadminapp.data.v1.dto.DashboardSummary
+import com.saurabh.mediadminapp.data.v1.dto.Invoice
+import com.saurabh.mediadminapp.data.v1.dto.Order
+import com.saurabh.mediadminapp.data.v1.dto.ProductCreateRequest
+import com.saurabh.mediadminapp.data.v1.dto.ProductUpdateRequest
+import com.saurabh.mediadminapp.data.v1.dto.UserUpdateRequest
+import com.saurabh.mediadminapp.data.v1.error.AppError
+import com.saurabh.mediadminapp.data.v1.repository.ImagePart
+import com.saurabh.mediadminapp.repository.AppException
+import com.saurabh.mediadminapp.repository.PagedData
 import com.saurabh.mediadminapp.repository.Repository
 import com.saurabh.mediadminapp.utils.ScreensState.AddProductState
 import com.saurabh.mediadminapp.utils.ScreensState.AdminState
@@ -17,7 +34,6 @@ import com.saurabh.mediadminapp.utils.ScreensState.GetAllAdminState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllOrdersState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllProductState
 import com.saurabh.mediadminapp.utils.ScreensState.GetAllUserState
-import com.saurabh.mediadminapp.utils.ScreensState.GetDeleteSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.GetOrderByIdState
 import com.saurabh.mediadminapp.utils.ScreensState.GetProductSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.GetSellHistoryState
@@ -40,30 +56,35 @@ import com.saurabh.mediadminapp.utils.updateItem
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okhttp3.MultipartBody
 import javax.inject.Inject
 
 @HiltViewModel
 class MyViewModel @Inject constructor(
     private val repository: Repository,
-    private val tokenManager: TokenManager
+    private val appEvents: AppEvents,
+    private val idempotencyKeyProvider: IdempotencyKeyProvider
 ) : ViewModel() {
 
     // FIX 1: Tri-State (null = checking, true = logged in, false = logged out)
-    // Isse app start par Auth screen flash bilkul band ho jayega!
     private val _isAdminLoggedIn = MutableStateFlow<Boolean?>(null)
     val isAdminLoggedIn = _isAdminLoggedIn.asStateFlow()
 
     private val _loggedInAdminId = MutableStateFlow<String?>(null)
     val loggedInAdminId = _loggedInAdminId.asStateFlow()
 
+    /** Non-null = server requires an app update (minimum version, or "latest" when unknown). */
+    private val _upgradeRequiredVersion = MutableStateFlow<String?>(null)
+    val upgradeRequiredVersion: StateFlow<String?> = _upgradeRequiredVersion.asStateFlow()
+
     // ===========================
-    // 1. AUTHENTICATION STATES (All 'val', never 'var')
+    // 1. AUTHENTICATION STATES
     // ===========================
     private val _createAdminState = MutableStateFlow(CreateAdminState())
     val createAdminState = _createAdminState.asStateFlow()
@@ -107,9 +128,11 @@ class MyViewModel @Inject constructor(
     private val _getSpecificProductState = MutableStateFlow(GetSpecificProductState())
     val getSpecificProductState = _getSpecificProductState.asStateFlow()
 
+    /** key = userId */
     private val _isApproved = MutableStateFlow(emptyMap<String, IsApprovedUserState>())
     val isApprovedUser = _isApproved.asStateFlow()
 
+    /** key = orderId */
     private val _updateOrderState = MutableStateFlow(emptyMap<String, UpdateOrderState>())
     val updateOrderState = _updateOrderState.asStateFlow()
 
@@ -128,14 +151,24 @@ class MyViewModel @Inject constructor(
     private val _deleteOrderState = MutableStateFlow(DeleteOrderState())
     val deleteOrderState = _deleteOrderState.asStateFlow()
 
+    /** key = orderId */
     private val _isApproveState = MutableStateFlow(emptyMap<String, ApproveOrderState>())
     val isApproveOrdder = _isApproveState.asStateFlow()
 
     private val _getSellHistory = MutableStateFlow(GetSellHistoryState())
     val getSellHistory = _getSellHistory.asStateFlow()
 
-    private val _getRecordSellHistory = MutableStateFlow(RecordSellHistoryState())
+    /** key = orderId (sell). */
+    private val _getRecordSellHistory = MutableStateFlow(emptyMap<String, RecordSellHistoryState>())
     val getRecordSellHistory = _getRecordSellHistory.asStateFlow()
+
+    /** key = orderId (return). */
+    private val _returnOrderState = MutableStateFlow(emptyMap<String, UpdateOrderState>())
+    val returnOrderState = _returnOrderState.asStateFlow()
+
+    /** key = orderId (verify prescription). */
+    private val _verifyPrescriptionState = MutableStateFlow(emptyMap<String, UpdateOrderState>())
+    val verifyPrescriptionState = _verifyPrescriptionState.asStateFlow()
 
     private val _getProductSellHistory = MutableStateFlow(GetProductSellHistoryState())
     val getProductSellHistory = _getProductSellHistory.asStateFlow()
@@ -143,53 +176,144 @@ class MyViewModel @Inject constructor(
     private val _getUserSellHistory = MutableStateFlow(GetUserSellHistoryState())
     val getUserSellHistory = _getUserSellHistory.asStateFlow()
 
-    private val _deleteSellHistory = MutableStateFlow(GetDeleteSellHistoryState())
-    val deleteSellHistory = _deleteSellHistory.asStateFlow()
-
     private val _getOrderByIdState = MutableStateFlow(GetOrderByIdState())
     val getOrderByIdState = _getOrderByIdState.asStateFlow()
+
+    private val _invoiceState = MutableStateFlow<UiState<Invoice>>(UiState.Empty)
+    val invoiceState: StateFlow<UiState<Invoice>> = _invoiceState.asStateFlow()
+
+    private val _dashboardSummaryState = MutableStateFlow<UiState<DashboardSummary>>(UiState.Empty)
+    val dashboardSummaryState: StateFlow<UiState<DashboardSummary>> = _dashboardSummaryState.asStateFlow()
 
     // FIX 2: Track last requested IDs for parameterized queries so clicking a different item works!
     private var lastProductId: String? = null
     private var lastUserOrdersId: String? = null
     private var lastOrderId: String? = null
 
+    // Paging cursors (first page = PageRequest()).
+    private var usersPage = PageRequest()
+    private var productsPage = PageRequest()
+    private var ordersPage = PageRequest()
+    private var salesPage = PageRequest()
+    private var adminsPage = PageRequest(limit = 100)
+
+    /** Email entered on the forgot-password step (confirm needs it). */
+    private var resetEmail: String? = null
+
+    /** One Idempotency-Key per order sell action, reused on retry, removed on success. */
+    private val sellKeys = mutableMapOf<String, String>()
+
     private val _uiEvent = Channel<UiEvent>(Channel.BUFFERED)
     val uiEvent = _uiEvent.receiveAsFlow()
 
     init {
         checkLoginStatus()
-        observeSessionExpiry()
+        observeAppEvents()
+        getAppConfig()
     }
 
-    private fun observeSessionExpiry() {
+    // ===========================
+    // HELPERS
+    // ===========================
+    private suspend fun <T> Flow<ResultState<T>>.collectInto(
+        onLoading: () -> Unit = {},
+        onError: suspend (String?, AppError?) -> Unit,
+        onSuccess: suspend (T) -> Unit
+    ) = collect { r ->
+        when (r) {
+            is ResultState.Loading -> onLoading()
+            is ResultState.Error -> onError(r.exception.message, (r.exception as? AppException)?.error)
+            is ResultState.Success -> onSuccess(r.data)
+        }
+    }
+
+    private fun snackbar(message: String) {
+        _uiEvent.trySend(UiEvent.ShowSnackbar(message))
+    }
+
+    private fun PageRequest.isLast(p: Pagination?): Boolean = p == null || loadMore(p) == null
+
+    private fun <T> PagedData<T>?.append(more: PagedData<T>): PagedData<T> =
+        PagedData((this?.items ?: emptyList()) + more.items, more.pagination)
+
+    /** Replace an order row everywhere it is shown (keeps `sales` of the detail if the new row has none). */
+    private fun replaceOrderRow(order: Order) {
+        _getAllOrderState.update { s ->
+            val d = s.success ?: return@update s
+            s.copy(success = d.copy(items = d.items.updateItem(order.orderId, { it.orderId }) { order }))
+        }
+        _getUsersOrdersState.update { s ->
+            val d = s.success ?: return@update s
+            s.copy(success = d.copy(items = d.items.updateItem(order.orderId, { it.orderId }) { order }))
+        }
+        _getOrderByIdState.update { s ->
+            val old = s.success
+            if (old?.orderId == order.orderId) s.copy(success = order.copy(sales = order.sales ?: old.sales)) else s
+        }
+    }
+
+    private fun observeAppEvents() {
         viewModelScope.launch {
-            tokenManager.sessionExpiredEvent.collect {
-                Log.w("MyViewModel", "Session expired event received — forcing logout")
-                resetAllStatesOnLogout()
+            appEvents.events.collect { event ->
+                when (event) {
+                    AppEvent.SessionInvalid -> resetAllStatesOnLogout()
+                    AppEvent.AccountBlocked -> {
+                        snackbar("Account blocked, contact the pharmacy")
+                        setAdminLoggedOut()
+                    }
+                    AppEvent.RateLimited -> snackbar("Too many attempts, please wait")
+                    is AppEvent.UpgradeRequired -> _upgradeRequiredVersion.value = event.minVersion ?: "latest"
+                }
             }
         }
     }
 
-    fun checkLoginStatus() {
-        // Synchronous fast check if SharedPreferences is already in memory, or IO fallback
+    /** Fetches app-config once at startup; flags a forced update when min_app_version > this build. */
+    fun getAppConfig() {
         viewModelScope.launch(Dispatchers.IO) {
-            _loggedInAdminId.value = tokenManager.getAdminId()
-            _isAdminLoggedIn.value = tokenManager.isLoggedIn()
+            repository.getAppConfig().collectInto(
+                onError = { _, _ -> },
+                onSuccess = { c ->
+                    val min = c.minAppVersion
+                    if (min != null && isVersionLower(BuildConfig.VERSION_NAME, min)) _upgradeRequiredVersion.value = min
+                }
+            )
+        }
+    }
+
+    /** Dotted-int compare: "1.4" < "1.10". Non-numeric parts count as 0. */
+    private fun isVersionLower(current: String, min: String): Boolean {
+        val a = current.split('.').map { it.toIntOrNull() ?: 0 }
+        val b = min.split('.').map { it.toIntOrNull() ?: 0 }
+        for (i in 0 until maxOf(a.size, b.size)) {
+            val x = a.getOrElse(i) { 0 }
+            val y = b.getOrElse(i) { 0 }
+            if (x != y) return x < y
+        }
+        return false
+    }
+
+    // ===========================
+    // SESSION
+    // ===========================
+    fun checkLoginStatus() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _loggedInAdminId.value = repository.currentAccountId()
+            _isAdminLoggedIn.value = repository.isLoggedIn()
         }
     }
 
     fun setAdminLoggedIn() {
-        _loggedInAdminId.value = tokenManager.getAdminId()
+        _loggedInAdminId.value = repository.currentAccountId()
         _isAdminLoggedIn.value = true
     }
 
+    /** Server logout (unregisters device, revokes tokens); local session is always cleared. */
     fun setAdminLoggedOut() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // optional network logout
+                repository.logout().collectInto(onError = { _, _ -> }, onSuccess = { })
             } finally {
-                tokenManager.clearTokens()
                 resetAllStatesOnLogout()
             }
         }
@@ -212,281 +336,364 @@ class MyViewModel @Inject constructor(
         _isApproved.value = emptyMap()
         _isApproveState.value = emptyMap()
         _updateOrderState.value = emptyMap()
+        _getRecordSellHistory.value = emptyMap()
+        _returnOrderState.value = emptyMap()
+        _verifyPrescriptionState.value = emptyMap()
+        _invoiceState.value = UiState.Empty
+        _dashboardSummaryState.value = UiState.Empty
+        sellKeys.clear()
+        resetEmail = null
         lastProductId = null
         lastUserOrdersId = null
         lastOrderId = null
     }
 
     // ===========================
-    // AUTH ACTIONS (Fixed Guard Conditions)
+    // AUTH ACTIONS
     // ===========================
     fun createAdmin(
         name: String,
         email: String,
         password: String,
         phoneNumber: String,
-        image: MultipartBody.Part? = null
+        image: ImagePart? = null
     ) {
         if (_createAdminState.value.isLoading) return
-
+        val request = AdminCreateRequest(name, email, password, phoneNumber.ifBlank { null })
         viewModelScope.launch(Dispatchers.IO) {
-            repository.createAdmin(name, password, email, phoneNumber, image).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _createAdminState.value =
-                        CreateAdminState(isLoading = true)
-
-                    is ResultState.Error -> _createAdminState.value =
-                        CreateAdminState(error = result.exception.message)
-
-                    is ResultState.Success -> _createAdminState.value =
-                        CreateAdminState(success = result.data)
-                }
-            }
+            repository.createAdmin(request, image).collectInto(
+                onLoading = { _createAdminState.value = CreateAdminState(isLoading = true) },
+                onError = { m, e -> _createAdminState.value = CreateAdminState(error = m, appError = e) },
+                onSuccess = { _createAdminState.value = CreateAdminState(success = it) }
+            )
         }
     }
 
     fun loginAdmin(email: String, password: String) {
         if (_loginAdminState.value.isLoading) return
-
         viewModelScope.launch(Dispatchers.IO) {
-            repository.loginAdmin(email, password).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _loginAdminState.value =
-                        LoginAdminState(isLoading = true)
-
-                    is ResultState.Error -> _loginAdminState.value =
-                        LoginAdminState(error = result.exception.message)
-
-                    is ResultState.Success -> _loginAdminState.value =
-                        LoginAdminState(success = result.data)
-                }
-            }
+            repository.loginAdmin(email, password).collectInto(
+                onLoading = { _loginAdminState.value = LoginAdminState(isLoading = true) },
+                onError = { m, e -> _loginAdminState.value = LoginAdminState(error = m, appError = e) },
+                onSuccess = { _loginAdminState.value = LoginAdminState(success = it) }
+            )
         }
     }
 
-    fun verifyAdminOtp(adminId: String, otp: String) {
+    /** [accountId] = LoginData.accountId. Repository saves the session; non-admin roles are logged out. */
+    fun verifyAdminOtp(accountId: String, otp: String) {
         if (_verifyOtpState.value.isLoading) return
-
         viewModelScope.launch(Dispatchers.IO) {
-            repository.verifyAdminOtp(adminId, otp).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _verifyOtpState.value =
-                        VerifyOtpState(isLoading = true)
-
-                    is ResultState.Error -> _verifyOtpState.value =
-                        VerifyOtpState(error = result.exception.message)
-
-                    is ResultState.Success -> {
-                        val data = result.data
-                        if (data.status == 200 && data.access_token != null) {
-                            tokenManager.saveTokens(
-                                accessToken = data.access_token,
-                                refreshToken = data.refresh_token ?: "",
-                                role = data.role ?: "",
-                                adminId = adminId
-                            )
-                            setAdminLoggedIn()
-                            _verifyOtpState.value = VerifyOtpState(success = data)
-                        } else {
-                            val errMsg = data.message ?: "OTP verification failed"
-                            _verifyOtpState.value = VerifyOtpState(error = errMsg)
-                        }
+            repository.verifyAdminOtp(accountId, otp).collectInto(
+                onLoading = { _verifyOtpState.value = VerifyOtpState(isLoading = true) },
+                onError = { m, e -> _verifyOtpState.value = VerifyOtpState(error = m, appError = e) },
+                onSuccess = { t ->
+                    if (t.role != "admin") {
+                        repository.logout().collectInto(onError = { _, _ -> }, onSuccess = { })
+                        _verifyOtpState.value = VerifyOtpState(error = "Admin account required")
+                    } else {
+                        setAdminLoggedIn()
+                        _verifyOtpState.value = VerifyOtpState(success = t)
                     }
                 }
-            }
+            )
         }
     }
 
     fun requestPasswordReset(email: String) {
         if (_passwordResetState.value.isLoading) return
+        resetEmail = email
         viewModelScope.launch(Dispatchers.IO) {
-            repository.requestAdminPasswordReset(email).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _passwordResetState.value =
-                        PasswordResetState(isLoading = true)
-
-                    is ResultState.Error -> _passwordResetState.value =
-                        PasswordResetState(error = result.exception.message)
-
-                    is ResultState.Success -> _passwordResetState.value =
-                        PasswordResetState(success = result.data)
-                }
-            }
+            repository.requestAdminPasswordReset(email).collectInto(
+                onLoading = { _passwordResetState.value = PasswordResetState(isLoading = true) },
+                onError = { m, e -> _passwordResetState.value = PasswordResetState(error = m, appError = e) },
+                onSuccess = { _passwordResetState.value = PasswordResetState(success = it) }
+            )
         }
     }
 
-    fun resetPasswordOtp(userId: String? = null, otp: String, newPassword: String) {
+    /** [email] defaults to the one given to [requestPasswordReset]. */
+    fun resetPasswordOtp(email: String? = null, otp: String, newPassword: String) {
         if (_passwordResetOtpState.value.isLoading) return
-        val targetAdminId = userId ?: _passwordResetState.value.success?.userId.orEmpty()
+        val target = email ?: resetEmail.orEmpty()
         viewModelScope.launch(Dispatchers.IO) {
-            repository.resetAdminPasswordWithOtp(targetAdminId, otp, newPassword)
-                .collect { result ->
-                    when (result) {
-                        is ResultState.Loading -> _passwordResetOtpState.value =
-                            PasswordResetOtpState(isLoading = true)
-
-                        is ResultState.Error -> _passwordResetOtpState.value =
-                            PasswordResetOtpState(error = result.exception.message)
-
-                        is ResultState.Success -> _passwordResetOtpState.value =
-                            PasswordResetOtpState(success = result.data)
-                    }
-                }
-        }
-    }
-
-    fun getAllAdmin(force: Boolean = false) {
-        val s = _getAllAdminState.value
-        if (!force && s.success != null && !s.isLoading && s.error == null) return
-
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.getAllAdmins().collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _getAllAdminState.value =
-                        GetAllAdminState(isLoading = true)
-
-                    is ResultState.Error -> _getAllAdminState.value =
-                        GetAllAdminState(error = result.exception.message)
-
-                    is ResultState.Success -> _getAllAdminState.value =
-                        GetAllAdminState(success = result.data)
-                }
-            }
-        }
-    }
-
-    fun updateAdmin(
-        adminId: String,
-        name: String? = null,
-        password: String? = null,
-        email: String? = null,
-        phoneNumber: String? = null,
-        image: MultipartBody.Part? = null
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateAdmin(adminId, name, password, email, phoneNumber, image)
-                .collect { result ->
-                    when (result) {
-                        is ResultState.Loading -> {}
-                        is ResultState.Error -> _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Update failed"
-                            )
-                        )
-
-                        is ResultState.Success -> {
-                            getAllAdmin(force = true) // Force refresh admin list!
-                            _uiEvent.trySend(UiEvent.ShowSnackbar("Admin updated successfully"))
-                        }
-                    }
-                }
+            repository.resetAdminPasswordWithOtp(target, otp, newPassword).collectInto(
+                onLoading = { _passwordResetOtpState.value = PasswordResetOtpState(isLoading = true) },
+                onError = { m, e -> _passwordResetOtpState.value = PasswordResetOtpState(error = m, appError = e) },
+                onSuccess = { _passwordResetOtpState.value = PasswordResetOtpState(success = Unit) }
+            )
         }
     }
 
     // ===========================
-    // HISTORY, USER, ORDER & PRODUCT FUNCTIONS
+    // ADMINS
+    // ===========================
+    fun getAllAdmin(force: Boolean = false) {
+        val s = _getAllAdminState.value
+        if (!force && s.success != null && !s.isLoading && s.error == null) return
+        adminsPage = PageRequest(limit = 100)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllAdmins(page = adminsPage).collectInto(
+                onLoading = { _getAllAdminState.value = GetAllAdminState(isLoading = true) },
+                onError = { m, _ -> _getAllAdminState.value = GetAllAdminState(error = m) },
+                onSuccess = { d ->
+                    _getAllAdminState.value = GetAllAdminState(
+                        success = d, pagination = d.pagination, endReached = adminsPage.isLast(d.pagination)
+                    )
+                }
+            )
+        }
+    }
+
+    fun loadMoreAdmins() {
+        val s = _getAllAdminState.value
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { adminsPage.loadMore(it) }
+        if (next == null) { _getAllAdminState.update { it.copy(endReached = true) }; return }
+        _getAllAdminState.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllAdmins(page = next).collectInto(
+                onError = { m, _ -> _getAllAdminState.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { d ->
+                    adminsPage = next
+                    _getAllAdminState.update {
+                        it.copy(success = it.success.append(d), pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
+                    }
+                }
+            )
+        }
+    }
+
+    /** Admin password/role edits are not supported here (owner-only with current_password in v1). */
+    fun updateAdmin(
+        adminId: String,
+        name: String? = null,
+        email: String? = null,
+        phoneNumber: String? = null,
+        image: ImagePart? = null
+    ) {
+        val request = AdminUpdateRequest(name = name, email = email, phoneNumber = phoneNumber)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateAdmin(adminId, request, image).collectInto(
+                onError = { m, _ -> snackbar(m ?: "Update failed") },
+                onSuccess = {
+                    getAllAdmin(force = true)
+                    snackbar("Admin updated successfully")
+                }
+            )
+        }
+    }
+
+    // ===========================
+    // SALES HISTORY
     // ===========================
     fun getAllSellHistory(force: Boolean = false) {
         val s = _getSellHistory.value
         if (!force && s.success != null && !s.isLoading && s.error == null) return
-
+        salesPage = PageRequest()
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getAllSellHistory().collect { sellHistory ->
-                when (sellHistory) {
-                    is ResultState.Loading -> _getSellHistory.value =
-                        GetSellHistoryState(isLoading = true)
-
-                    is ResultState.Error -> _getSellHistory.value =
-                        GetSellHistoryState(error = sellHistory.exception.message)
-
-                    is ResultState.Success -> _getSellHistory.value =
-                        GetSellHistoryState(success = sellHistory.data)
+            repository.getAllSellHistory(page = salesPage).collectInto(
+                onLoading = { _getSellHistory.value = GetSellHistoryState(isLoading = true) },
+                onError = { m, _ -> _getSellHistory.value = GetSellHistoryState(error = m) },
+                onSuccess = { d ->
+                    _getSellHistory.value = GetSellHistoryState(
+                        success = d, pagination = d.pagination, endReached = salesPage.isLast(d.pagination)
+                    )
                 }
-            }
+            )
         }
     }
 
+    fun loadMoreSellHistory() {
+        val s = _getSellHistory.value
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { salesPage.loadMore(it) }
+        if (next == null) { _getSellHistory.update { it.copy(endReached = true) }; return }
+        _getSellHistory.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllSellHistory(page = next).collectInto(
+                onError = { m, _ -> _getSellHistory.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { d ->
+                    salesPage = next
+                    _getSellHistory.update {
+                        it.copy(success = it.success.append(d), pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
+                    }
+                }
+            )
+        }
+    }
+
+    // ===========================
+    // USERS
+    // ===========================
     fun getAllUsers(force: Boolean = false) {
         val s = _getAllUserState.value
         if (!force && s.success != null && !s.isLoading && s.error == null) return
-
+        usersPage = PageRequest()
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getAllUsers().collect {
-                when (it) {
-                    is ResultState.Loading -> _getAllUserState.value =
-                        GetAllUserState(isLoading = true)
-
-                    is ResultState.Error -> _getAllUserState.value =
-                        GetAllUserState(error = it.exception.message)
-
-                    is ResultState.Success -> _getAllUserState.value =
-                        GetAllUserState(success = it.data)
+            repository.getAllUsers(page = usersPage).collectInto(
+                onLoading = { _getAllUserState.value = GetAllUserState(isLoading = true) },
+                onError = { m, _ -> _getAllUserState.value = GetAllUserState(error = m) },
+                onSuccess = { d ->
+                    _getAllUserState.value = GetAllUserState(
+                        success = d, pagination = d.pagination, endReached = usersPage.isLast(d.pagination)
+                    )
                 }
-            }
+            )
         }
     }
 
+    fun loadMoreUsers() {
+        val s = _getAllUserState.value
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { usersPage.loadMore(it) }
+        if (next == null) { _getAllUserState.update { it.copy(endReached = true) }; return }
+        _getAllUserState.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllUsers(page = next).collectInto(
+                onError = { m, _ -> _getAllUserState.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { d ->
+                    usersPage = next
+                    _getAllUserState.update {
+                        it.copy(success = it.success.append(d), pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
+                    }
+                }
+            )
+        }
+    }
+
+    /** Soft delete; optimistic removal with rollback. */
     fun deleteUser(userId: String) {
         val current = _getAllUserState.value.success
-        val userToDelete = current?.users?.find { it.user_id == userId }
-        val index = current?.users?.indexOfFirst { it.user_id == userId } ?: -1
+        val userToDelete = current?.items?.find { it.userId == userId }
+        val index = current?.items?.indexOfFirst { it.userId == userId } ?: -1
 
         if (current != null && userToDelete != null && index != -1) {
-            val updated = current.copy(users = current.users.removeItem(userId) { it.user_id })
-            _getAllUserState.value = GetAllUserState(success = updated)
+            _getAllUserState.update { it.copy(success = current.copy(items = current.items.removeItem(userId) { u -> u.userId })) }
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteUser(userId).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _deleteUserState.value =
-                        DeleteUserState(isLoading = true)
-
-                    is ResultState.Error -> {
-                        val currentRollback = _getAllUserState.value.success
-                        if (currentRollback != null && userToDelete != null && index != -1) {
-                            val reverted = currentRollback.copy(
-                                users = currentRollback.users.restoreItem(
-                                    userToDelete,
-                                    index
-                                )
-                            )
-                            _getAllUserState.value = GetAllUserState(success = reverted)
-                        }
-                        _deleteUserState.value = DeleteUserState(error = result.exception.message)
-                        _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Delete failed"
-                            )
-                        )
+            repository.deleteUser(userId).collectInto(
+                onLoading = { _deleteUserState.value = DeleteUserState(isLoading = true) },
+                onError = { m, _ ->
+                    val rollback = _getAllUserState.value.success
+                    if (rollback != null && userToDelete != null && index != -1) {
+                        _getAllUserState.update { it.copy(success = rollback.copy(items = rollback.items.restoreItem(userToDelete, index))) }
                     }
-
-                    is ResultState.Success -> {
-                        _deleteUserState.value = DeleteUserState(success = result.data)
-                        _uiEvent.trySend(UiEvent.ShowSnackbar("User deleted successfully"))
-                    }
+                    _deleteUserState.value = DeleteUserState(error = m)
+                    snackbar(m ?: "Delete failed")
+                },
+                onSuccess = {
+                    _deleteUserState.value = DeleteUserState(success = it)
+                    snackbar("User deleted successfully")
                 }
-            }
+            )
         }
     }
 
+    /** Admin edit of profile fields only (password/approval/block/role are not editable here). */
+    fun updateUser(
+        userId: String,
+        name: String? = null,
+        address: String? = null,
+        email: String? = null,
+        phonenumber: String? = null,
+        pincode: String? = null,
+        image: ImagePart? = null
+    ) {
+        val request = UserUpdateRequest(name = name, email = email, phoneNumber = phonenumber, address = address, pinCode = pincode)
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateUser(userId, request, image).collectInto(
+                onLoading = { _updateUserState.value = UpdateUserState(isLoading = true) },
+                onError = { m, e ->
+                    _updateUserState.value = UpdateUserState(error = m, appError = e)
+                    snackbar(m ?: "Update failed")
+                },
+                onSuccess = { user ->
+                    _getAllUserState.update { s ->
+                        val d = s.success ?: return@update s
+                        s.copy(success = d.copy(items = d.items.updateItem(userId, { it.userId }) { user }))
+                    }
+                    _updateUserState.value = UpdateUserState(success = user)
+                    snackbar("User updated")
+                }
+            )
+        }
+    }
+
+    /** true -> approve, false -> block. key = userId. */
+    fun isApprovedUser(userId: String, isApproveds: Boolean) {
+        _isApproved.update { it + (userId to IsApprovedUserState(isLoading = true)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.isApprovedUser(userId, isApproveds).collectInto(
+                onError = { m, _ ->
+                    snackbar(m ?: "Approval failed")
+                    _isApproved.update { it + (userId to IsApprovedUserState(error = m)) }
+                },
+                onSuccess = { user -> onUserStatusChanged(userId, user, if (isApproveds) "User approved" else "User blocked") }
+            )
+        }
+    }
+
+    /** NEW. POST users/{id}/unblock. key = userId in [isApprovedUser]. */
+    fun unblockUser(userId: String) {
+        _isApproved.update { it + (userId to IsApprovedUserState(isLoading = true)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.unblockUser(userId).collectInto(
+                onError = { m, _ ->
+                    snackbar(m ?: "Unblock failed")
+                    _isApproved.update { it + (userId to IsApprovedUserState(error = m)) }
+                },
+                onSuccess = { user -> onUserStatusChanged(userId, user, "User unblocked") }
+            )
+        }
+    }
+
+    private fun onUserStatusChanged(userId: String, user: com.saurabh.mediadminapp.data.v1.dto.User, message: String) {
+        _getAllUserState.update { s ->
+            val d = s.success ?: return@update s
+            s.copy(success = d.copy(items = d.items.updateItem(userId, { it.userId }) { user }))
+        }
+        snackbar(message)
+        _isApproved.update { it + (userId to IsApprovedUserState(success = user)) }
+    }
+
+    // ===========================
+    // ORDERS
+    // ===========================
     fun getAllOrders(force: Boolean = false) {
         val s = _getAllOrderState.value
         if (!force && s.success != null && !s.isLoading && s.error == null) return
-
+        ordersPage = PageRequest()
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getAllOrders().collect { order ->
-                when (order) {
-                    is ResultState.Loading -> _getAllOrderState.value =
-                        GetAllOrdersState(isLoading = true)
-
-                    is ResultState.Error -> _getAllOrderState.value =
-                        GetAllOrdersState(error = order.exception.message)
-
-                    is ResultState.Success -> _getAllOrderState.value =
-                        GetAllOrdersState(success = order.data)
+            repository.getAllOrders(page = ordersPage).collectInto(
+                onLoading = { _getAllOrderState.value = GetAllOrdersState(isLoading = true) },
+                onError = { m, _ -> _getAllOrderState.value = GetAllOrdersState(error = m) },
+                onSuccess = { d ->
+                    _getAllOrderState.value = GetAllOrdersState(
+                        success = d, pagination = d.pagination, endReached = ordersPage.isLast(d.pagination)
+                    )
                 }
-            }
+            )
+        }
+    }
+
+    fun loadMoreOrders() {
+        val s = _getAllOrderState.value
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { ordersPage.loadMore(it) }
+        if (next == null) { _getAllOrderState.update { it.copy(endReached = true) }; return }
+        _getAllOrderState.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllOrders(page = next).collectInto(
+                onError = { m, _ -> _getAllOrderState.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { d ->
+                    ordersPage = next
+                    _getAllOrderState.update {
+                        it.copy(success = it.success.append(d), pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
+                    }
+                }
+            )
         }
     }
 
@@ -494,20 +701,12 @@ class MyViewModel @Inject constructor(
         val s = _getUsersOrdersState.value
         if (!force && lastUserOrdersId == userId && s.success != null && !s.isLoading && s.error == null) return
         lastUserOrdersId = userId
-
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getUserOrders(userId).collect {
-                when (it) {
-                    is ResultState.Loading -> _getUsersOrdersState.value =
-                        GetUsersOrderState(isLoading = true)
-
-                    is ResultState.Error -> _getUsersOrdersState.value =
-                        GetUsersOrderState(error = it.exception.message)
-
-                    is ResultState.Success -> _getUsersOrdersState.value =
-                        GetUsersOrderState(success = it.data)
-                }
-            }
+            repository.getUserOrders(userId, page = PageRequest(limit = 100)).collectInto(
+                onLoading = { _getUsersOrdersState.value = GetUsersOrderState(isLoading = true) },
+                onError = { m, _ -> _getUsersOrdersState.value = GetUsersOrderState(error = m) },
+                onSuccess = { _getUsersOrdersState.value = GetUsersOrderState(success = it) }
+            )
         }
     }
 
@@ -515,188 +714,285 @@ class MyViewModel @Inject constructor(
         val s = _getOrderByIdState.value
         if (!force && lastOrderId == orderId && s.success != null && !s.isLoading && s.error == null) return
         lastOrderId = orderId
-
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getOrdersById(orderId).collect { order ->
-                when (order) {
-                    is ResultState.Loading -> _getOrderByIdState.value =
-                        GetOrderByIdState(isLoading = true)
-
-                    is ResultState.Error -> _getOrderByIdState.value =
-                        GetOrderByIdState(error = order.exception.message)
-
-                    is ResultState.Success -> _getOrderByIdState.value =
-                        GetOrderByIdState(success = order.data)
-                }
-            }
+            repository.getOrdersById(orderId).collectInto(
+                onLoading = { _getOrderByIdState.value = GetOrderByIdState(isLoading = true) },
+                onError = { m, _ -> _getOrderByIdState.value = GetOrderByIdState(error = m) },
+                onSuccess = { _getOrderByIdState.value = GetOrderByIdState(success = it) }
+            )
         }
     }
 
-    fun deleteOrder(orderId: String) {
-        val current = _getAllOrderState.value.success
-        val itemToDelete = current?.orders?.find { it.order_id == orderId }
-        val index = current?.orders?.indexOfFirst { it.order_id == orderId } ?: -1
-
-        if (current != null && itemToDelete != null && index != -1) {
-            val updated = current.copy(orders = current.orders.removeItem(orderId) { it.order_id })
-            _getAllOrderState.value = GetAllOrdersState(success = updated)
-        }
-
+    /** Cancel (no hard delete in v1): the row stays and shows status CANCELLED. */
+    fun deleteOrder(orderId: String, reason: String? = null) {
+        if (_deleteOrderState.value.isLoading) return
         viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteOrder(orderId).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _deleteOrderState.value =
-                        DeleteOrderState(isLoading = true)
-
-                    is ResultState.Error -> {
-                        val currentRollback = _getAllOrderState.value.success
-                        if (currentRollback != null && itemToDelete != null && index != -1) {
-                            val reverted = currentRollback.copy(
-                                orders = currentRollback.orders.restoreItem(
-                                    itemToDelete,
-                                    index
-                                )
-                            )
-                            _getAllOrderState.value = GetAllOrdersState(success = reverted)
-                        }
-                        _deleteOrderState.value = DeleteOrderState(error = result.exception.message)
-                        _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Delete failed"
-                            )
-                        )
-                    }
-
-                    is ResultState.Success -> {
-                        _deleteOrderState.value = DeleteOrderState(success = result.data)
-                        _uiEvent.trySend(UiEvent.ShowSnackbar("Order deleted"))
-                    }
+            repository.deleteOrder(orderId, reason).collectInto(
+                onLoading = { _deleteOrderState.value = DeleteOrderState(isLoading = true) },
+                onError = { m, e ->
+                    _deleteOrderState.value = DeleteOrderState(error = m, appError = e)
+                    snackbar(m ?: "Cancel failed")
+                },
+                onSuccess = { order ->
+                    replaceOrderRow(order)
+                    _getSellHistory.value = GetSellHistoryState()
+                    getAllProduct(force = true)
+                    _deleteOrderState.value = DeleteOrderState(success = order)
+                    snackbar("Order cancelled")
                 }
-            }
+            )
         }
     }
 
+    /** Edits patient/doctor name of a pending order. key = orderId. */
+    fun updateOrder(orderId: String, patientName: String? = null, doctorName: String? = null) {
+        _updateOrderState.update { it + (orderId to UpdateOrderState(isLoading = true)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateOrder(orderId, patientName, doctorName).collectInto(
+                onError = { m, e ->
+                    snackbar(m ?: "Update failed")
+                    _updateOrderState.update { it + (orderId to UpdateOrderState(error = m, appError = e)) }
+                },
+                onSuccess = { order ->
+                    replaceOrderRow(order)
+                    snackbar("Order updated")
+                    _updateOrderState.update { it + (orderId to UpdateOrderState(success = order)) }
+                }
+            )
+        }
+    }
+
+    /** true -> approve, false -> reject (with optional reason). key = orderId. */
+    fun isApproveOrder(orderId: String, isApproved: Boolean, reason: String? = null) {
+        _isApproveState.update { it + (orderId to ApproveOrderState(isLoading = true)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.approveOrder(orderId, isApproved, reason).collectInto(
+                onError = { m, e ->
+                    snackbar(m ?: "Approval failed")
+                    _isApproveState.update { it + (orderId to ApproveOrderState(error = m, appError = e)) }
+                },
+                onSuccess = { order ->
+                    replaceOrderRow(order)
+                    _getSellHistory.value = GetSellHistoryState()
+                    getAllProduct(force = true)
+                    snackbar(if (isApproved) "Order approved" else "Order rejected")
+                    _isApproveState.update { it + (orderId to ApproveOrderState(success = order)) }
+                }
+            )
+        }
+    }
+
+    /** NEW. Sell an approved order (idempotent: same key reused on retry). key = orderId. */
+    fun recordSell(orderId: String) {
+        if (_getRecordSellHistory.value[orderId]?.isLoading == true) return
+        val key = sellKeys.getOrPut(orderId) { idempotencyKeyProvider.newKey() }
+        _getRecordSellHistory.update { it + (orderId to RecordSellHistoryState(isLoading = true)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.recordSellHistory(orderId, key).collectInto(
+                onError = { m, e ->
+                    snackbar(m ?: "Sell failed")
+                    _getRecordSellHistory.update { it + (orderId to RecordSellHistoryState(error = m, appError = e)) }
+                },
+                onSuccess = { order ->
+                    sellKeys.remove(orderId)
+                    replaceOrderRow(order)
+                    _getSellHistory.value = GetSellHistoryState()
+                    getAllOrders(force = true)
+                    getAllProduct(force = true)
+                    snackbar("Order sold")
+                    _getRecordSellHistory.update { it + (orderId to RecordSellHistoryState(success = order)) }
+                }
+            )
+        }
+    }
+
+    /** NEW. Return a sold order (restocks batches). key = orderId. */
+    fun returnOrder(orderId: String, reason: String? = null) {
+        if (_returnOrderState.value[orderId]?.isLoading == true) return
+        _returnOrderState.update { it + (orderId to UpdateOrderState(isLoading = true)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.returnOrder(orderId, reason).collectInto(
+                onError = { m, e ->
+                    snackbar(m ?: "Return failed")
+                    _returnOrderState.update { it + (orderId to UpdateOrderState(error = m, appError = e)) }
+                },
+                onSuccess = { order ->
+                    replaceOrderRow(order)
+                    _getSellHistory.value = GetSellHistoryState()
+                    getAllProduct(force = true)
+                    snackbar("Order returned")
+                    _returnOrderState.update { it + (orderId to UpdateOrderState(success = order)) }
+                }
+            )
+        }
+    }
+
+    /** NEW. Mark the prescription verified (required before selling Rx orders). key = orderId. */
+    fun verifyPrescription(orderId: String, verified: Boolean = true) {
+        if (_verifyPrescriptionState.value[orderId]?.isLoading == true) return
+        _verifyPrescriptionState.update { it + (orderId to UpdateOrderState(isLoading = true)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.verifyPrescription(orderId, verified).collectInto(
+                onError = { m, e ->
+                    snackbar(m ?: "Verification failed")
+                    _verifyPrescriptionState.update { it + (orderId to UpdateOrderState(error = m, appError = e)) }
+                },
+                onSuccess = { order ->
+                    replaceOrderRow(order)
+                    snackbar(if (verified) "Prescription verified" else "Prescription marked unverified")
+                    _verifyPrescriptionState.update { it + (orderId to UpdateOrderState(success = order)) }
+                }
+            )
+        }
+    }
+
+    /** NEW. Invoice of a sold/returned order. */
+    fun getInvoice(orderId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getInvoice(orderId).collectInto(
+                onLoading = { _invoiceState.value = UiState.Loading },
+                onError = { m, e -> _invoiceState.value = UiState.Error(e ?: AppError.Unknown(Exception(m))) },
+                onSuccess = { _invoiceState.value = UiState.Success(it) }
+            )
+        }
+    }
+
+    /** NEW. Server-side dashboard counters. */
+    fun getDashboardSummary() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getDashboardSummary().collectInto(
+                onLoading = { _dashboardSummaryState.value = UiState.Loading },
+                onError = { m, e -> _dashboardSummaryState.value = UiState.Error(e ?: AppError.Unknown(Exception(m))) },
+                onSuccess = { _dashboardSummaryState.value = UiState.Success(it) }
+            )
+        }
+    }
+
+    // ===========================
+    // PRODUCTS
+    // ===========================
     fun getAllProduct(force: Boolean = false) {
         val s = _getAllProduct.value
         if (!force && s.success != null && !s.isLoading && s.error == null) return
-
+        productsPage = PageRequest()
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getAllProduct().collect {
-                when (it) {
-                    is ResultState.Loading -> _getAllProduct.value =
-                        GetAllProductState(isLoading = true)
-
-                    is ResultState.Error -> _getAllProduct.value =
-                        GetAllProductState(error = it.exception.message)
-
-                    is ResultState.Success -> _getAllProduct.value =
-                        GetAllProductState(success = it.data)
+            repository.getAllProduct(page = productsPage).collectInto(
+                onLoading = { _getAllProduct.value = GetAllProductState(isLoading = true) },
+                onError = { m, _ -> _getAllProduct.value = GetAllProductState(error = m) },
+                onSuccess = { d ->
+                    _getAllProduct.value = GetAllProductState(
+                        success = d, pagination = d.pagination, endReached = productsPage.isLast(d.pagination)
+                    )
                 }
-            }
+            )
         }
     }
 
+    fun loadMoreProducts() {
+        val s = _getAllProduct.value
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { productsPage.loadMore(it) }
+        if (next == null) { _getAllProduct.update { it.copy(endReached = true) }; return }
+        _getAllProduct.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllProduct(page = next).collectInto(
+                onError = { m, _ -> _getAllProduct.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { d ->
+                    productsPage = next
+                    _getAllProduct.update {
+                        it.copy(success = it.success.append(d), pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
+                    }
+                }
+            )
+        }
+    }
+
+    /** Stock is not set here (v1 products start at 0; stock comes from purchases/batches). */
     fun addProduct(
         name: String,
         price: Double,
         category: String,
-        stock: Int,
-        image: MultipartBody.Part? = null
+        image: ImagePart? = null
     ) {
         if (_addProductState.value.isLoading) return
-
+        val request = ProductCreateRequest(name = name, price = price, category = category.ifBlank { null })
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getAddProduct(name, price, category, stock, image).collect {
-                when (it) {
-                    is ResultState.Loading -> _addProductState.value =
-                        AddProductState(isLoading = true)
-
-                    is ResultState.Error -> _addProductState.value =
-                        AddProductState(error = it.exception.message)
-
-                    is ResultState.Success -> {
-                        _addProductState.value = AddProductState(success = it.data)
-                        // AUTO-SYNC: Product add hote hi list ko background mein refresh kar lo!
-                        getAllProduct(force = true)
-                    }
+            repository.getAddProduct(request, image).collectInto(
+                onLoading = { _addProductState.value = AddProductState(isLoading = true) },
+                onError = { m, e -> _addProductState.value = AddProductState(error = m, appError = e) },
+                onSuccess = {
+                    _addProductState.value = AddProductState(success = it)
+                    getAllProduct(force = true)
                 }
-            }
+            )
         }
     }
 
+    /** Stock is not editable here (v1: stock adjust endpoint). */
     fun updateProduct(
         productId: String,
         name: String? = null,
         price: Double? = null,
         category: String? = null,
-        stock: Int? = null,
-        image: MultipartBody.Part? = null
+        image: ImagePart? = null
     ) {
         if (_updateProductState.value.isLoading) return
-
+        val request = ProductUpdateRequest(name = name, price = price, category = category)
         viewModelScope.launch(Dispatchers.IO) {
-            repository.updateProduct(productId, name, price, category, stock, image).collect {
-                when (it) {
-                    is ResultState.Loading -> _updateProductState.value =
-                        UpdateProductState(isLoading = true)
-
-                    is ResultState.Error -> _updateProductState.value =
-                        UpdateProductState(error = it.exception.message)
-
-                    is ResultState.Success -> {
-                        _updateProductState.value = UpdateProductState(success = it.data)
-                        // AUTO-SYNC: Product update hote hi master list aur detail invalidate/refresh karo!
-                        getAllProduct(force = true)
-                        if (lastProductId == productId) lastProductId = null
-                    }
+            repository.updateProduct(productId, request, image).collectInto(
+                onLoading = { _updateProductState.value = UpdateProductState(isLoading = true) },
+                onError = { m, e -> _updateProductState.value = UpdateProductState(error = m, appError = e) },
+                onSuccess = {
+                    _updateProductState.value = UpdateProductState(success = it)
+                    getAllProduct(force = true)
+                    if (lastProductId == productId) lastProductId = null
                 }
-            }
+            )
         }
     }
 
+    /** Deactivate (soft delete); optimistic removal with rollback. */
     fun deleteProduct(productId: String) {
         val current = _getAllProduct.value.success
-        val itemToDelete = current?.products?.find { it.Product_id == productId }
-        val index = current?.products?.indexOfFirst { it.Product_id == productId } ?: -1
+        val itemToDelete = current?.items?.find { it.productId == productId }
+        val index = current?.items?.indexOfFirst { it.productId == productId } ?: -1
 
         if (current != null && itemToDelete != null && index != -1) {
-            val updated =
-                current.copy(products = current.products.removeItem(productId) { it.Product_id })
-            _getAllProduct.value = GetAllProductState(success = updated)
+            _getAllProduct.update { it.copy(success = current.copy(items = current.items.removeItem(productId) { p -> p.productId })) }
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteProduct(productId).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _deleteProductState.value =
-                        DeleteProductState(isLoading = true)
-
-                    is ResultState.Error -> {
-                        val currentRollback = _getAllProduct.value.success
-                        if (currentRollback != null && itemToDelete != null && index != -1) {
-                            val reverted = currentRollback.copy(
-                                products = currentRollback.products.restoreItem(
-                                    itemToDelete,
-                                    index
-                                )
-                            )
-                            _getAllProduct.value = GetAllProductState(success = reverted)
-                        }
-                        _deleteProductState.value =
-                            DeleteProductState(error = result.exception.message)
-                        _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Delete failed"
-                            )
-                        )
+            repository.deleteProduct(productId).collectInto(
+                onLoading = { _deleteProductState.value = DeleteProductState(isLoading = true) },
+                onError = { m, _ ->
+                    val rollback = _getAllProduct.value.success
+                    if (rollback != null && itemToDelete != null && index != -1) {
+                        _getAllProduct.update { it.copy(success = rollback.copy(items = rollback.items.restoreItem(itemToDelete, index))) }
                     }
-
-                    is ResultState.Success -> {
-                        _deleteProductState.value = DeleteProductState(success = result.data)
-                        _uiEvent.trySend(UiEvent.ShowSnackbar("Product deleted"))
-                    }
+                    _deleteProductState.value = DeleteProductState(error = m)
+                    snackbar(m ?: "Deactivate failed")
+                },
+                onSuccess = {
+                    _deleteProductState.value = DeleteProductState(success = it)
+                    snackbar("Product deactivated")
                 }
-            }
+            )
+        }
+    }
+
+    /** NEW. Reactivate a deactivated product. */
+    fun reactivateProduct(productId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.reactivateProduct(productId).collectInto(
+                onError = { m, _ -> snackbar(m ?: "Reactivate failed") },
+                onSuccess = { p ->
+                    if (_getSpecificProductState.value.success?.productId == productId) {
+                        _getSpecificProductState.value = GetSpecificProductState(success = p)
+                    }
+                    getAllProduct(force = true)
+                    snackbar("Product reactivated")
+                }
+            )
         }
     }
 
@@ -704,214 +1000,18 @@ class MyViewModel @Inject constructor(
         val s = _getSpecificProductState.value
         if (!force && lastProductId == productId && s.success != null && !s.isLoading && s.error == null) return
         lastProductId = productId
-
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getSpecificProduct(productId).collect {
-                when (it) {
-                    is ResultState.Loading -> _getSpecificProductState.value =
-                        GetSpecificProductState(isLoading = true)
-
-                    is ResultState.Error -> _getSpecificProductState.value =
-                        GetSpecificProductState(error = it.exception.message)
-
-                    is ResultState.Success -> _getSpecificProductState.value =
-                        GetSpecificProductState(success = it.data)
-                }
-            }
+            repository.getSpecificProduct(productId).collectInto(
+                onLoading = { _getSpecificProductState.value = GetSpecificProductState(isLoading = true) },
+                onError = { m, _ -> _getSpecificProductState.value = GetSpecificProductState(error = m) },
+                onSuccess = { _getSpecificProductState.value = GetSpecificProductState(success = it) }
+            )
         }
     }
 
-    fun updateUser(
-        userId: String,
-        name: String? = null,
-        password: String? = null,
-        isApproved: Boolean? = null,
-        block: Boolean? = null,
-        address: String? = null,
-        email: String? = null,
-        phonenumber: String? = null,
-        pincode: String? = null
-    ) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateUser(
-                userId,
-                name,
-                password,
-                isApproved,
-                block,
-                address,
-                email,
-                phonenumber,
-                pincode
-            ).collect { result ->
-                when (result) {
-                    is ResultState.Loading -> _updateUserState.value =
-                        UpdateUserState(isLoading = true)
-
-                    is ResultState.Error -> {
-                        _updateUserState.value = UpdateUserState(error = result.exception.message)
-                        _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Update failed"
-                            )
-                        )
-                    }
-
-                    is ResultState.Success -> {
-                        val current = _getAllUserState.value.success
-                        if (current != null) {
-                            val updated = current.copy(
-                                users = current.users.updateItem(userId, { it.user_id }) { user ->
-                                    user.copy(
-                                        name = name ?: user.name,
-                                        email = email ?: user.email,
-                                        phone_number = phonenumber ?: user.phone_number,
-                                        address = address ?: user.address,
-                                        pin_code = pincode ?: user.pin_code,
-                                        _isApproved = isApproved ?: user._isApproved,
-                                        _block = block ?: user._block
-                                    )
-                                }
-                            )
-                            _getAllUserState.value = GetAllUserState(success = updated)
-                        }
-                        _updateUserState.value = UpdateUserState(success = result.data)
-                        _uiEvent.trySend(UiEvent.ShowSnackbar("User updated"))
-                    }
-                }
-            }
-        }
-    }
-
-    fun updateOrder(
-        orderId: String,
-        isApproved: Boolean? = null,
-        quantity: Int? = null,
-        price: Float? = null
-    ) {
-        val isApprovedInt = isApproved?.let { if (it) 1 else 0 }
-        // Atomic thread-safe map update
-        _updateOrderState.update { it + (orderId to UpdateOrderState(isLoading = true)) }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateOrder(orderId, isApprovedInt, quantity, price).collect { result ->
-                val newState = when (result) {
-                    is ResultState.Loading -> UpdateOrderState(isLoading = true)
-                    is ResultState.Error -> {
-                        _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Update failed"
-                            )
-                        )
-                        UpdateOrderState(error = result.exception.message)
-                    }
-
-                    is ResultState.Success -> {
-                        val current = _getAllOrderState.value.success
-                        if (current != null) {
-                            val updated = current.copy(
-                                orders = current.orders.updateItem(
-                                    orderId,
-                                    { it.order_id }) { order ->
-                                    order.copy(
-                                        _isApproved = isApproved ?: order._isApproved,
-                                        quantity = quantity ?: order.quantity,
-                                        price = price?.toDouble() ?: order.price
-                                    )
-                                }
-                            )
-                            _getAllOrderState.value = GetAllOrdersState(success = updated)
-                        }
-                        // AUTO-SYNC: Order change hone par Product stock aur Sell History ko sync karo!
-                        _getSellHistory.value = GetSellHistoryState()
-                        getAllProduct(force = true)
-
-                        _uiEvent.trySend(UiEvent.ShowSnackbar("Order updated"))
-                        UpdateOrderState(success = result.data)
-                    }
-                }
-                _updateOrderState.update { it + (orderId to newState) }
-            }
-        }
-    }
-
-    fun isApprovedUser(userId: String, isApproveds: Boolean) {
-        _isApproved.update { it + (userId to IsApprovedUserState(isLoading = true)) }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.isApprovedUser(userId, isApproveds).collect { result ->
-                val newState = when (result) {
-                    is ResultState.Loading -> IsApprovedUserState(isLoading = true)
-                    is ResultState.Error -> {
-                        _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Approval failed"
-                            )
-                        )
-                        IsApprovedUserState(error = result.exception.message)
-                    }
-
-                    is ResultState.Success -> {
-                        val current = _getAllUserState.value.success
-                        if (current != null) {
-                            val updated = current.copy(
-                                users = current.users.updateItem(userId, { it.user_id }) { user ->
-                                    user.copy(_isApproved = isApproveds)
-                                }
-                            )
-                            _getAllUserState.value = GetAllUserState(success = updated)
-                        }
-                        _uiEvent.trySend(UiEvent.ShowSnackbar(if (isApproveds) "User approved" else "Approval revoked"))
-                        IsApprovedUserState(success = result.data)
-                    }
-                }
-                _isApproved.update { it + (userId to newState) }
-            }
-        }
-    }
-
-    fun isApproveOrder(orderId: String, isApproved: Boolean) {
-        _isApproveState.update { it + (orderId to ApproveOrderState(isLoading = true)) }
-
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.approveOrder(orderId, isApproved).collect { result ->
-                val newState = when (result) {
-                    is ResultState.Loading -> ApproveOrderState(isLoading = true)
-                    is ResultState.Error -> {
-                        _uiEvent.trySend(
-                            UiEvent.ShowSnackbar(
-                                result.exception.message ?: "Approval failed"
-                            )
-                        )
-                        ApproveOrderState(error = result.exception.message)
-                    }
-
-                    is ResultState.Success -> {
-                        val current = _getAllOrderState.value.success
-                        if (current != null) {
-                            val updated = current.copy(
-                                orders = current.orders.updateItem(
-                                    orderId,
-                                    { it.order_id }) { order ->
-                                    order.copy(_isApproved = isApproved)
-                                }
-                            )
-                            _getAllOrderState.value = GetAllOrdersState(success = updated)
-                        }
-                        // AUTO-SYNC: Order approve hote hi Sell History invalidate karo aur Products refresh karo!
-                        _getSellHistory.value = GetSellHistoryState()
-                        getAllProduct(force = true)
-
-                        _uiEvent.trySend(UiEvent.ShowSnackbar(if (isApproved) "Order approved" else "Order approval revoked"))
-                        ApproveOrderState(success = result.data)
-                    }
-                }
-                _isApproveState.update { it + (orderId to newState) }
-            }
-        }
-    }
-
-    // Clear helpers (Kept for backward compatibility with your existing UI calls)
+    // ===========================
+    // CLEAR HELPERS
+    // ===========================
     fun clearApprovalState(userId: String? = null) {
         _isApproved.update { if (userId != null) it - userId else emptyMap() }
     }

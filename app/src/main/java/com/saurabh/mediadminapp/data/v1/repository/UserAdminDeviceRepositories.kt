@@ -8,9 +8,7 @@ import com.saurabh.mediadminapp.data.v1.dto.AdminUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.Device
 import com.saurabh.mediadminapp.data.v1.dto.DeviceRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.Order
-import com.saurabh.mediadminapp.data.v1.dto.ProfileUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.User
-import com.saurabh.mediadminapp.data.v1.dto.UserCreateRequest
 import com.saurabh.mediadminapp.data.v1.dto.UserUpdateRequest
 
 interface UserRepository {
@@ -19,12 +17,6 @@ interface UserRepository {
 
     /** GET users/{user_id}. Admin (any user) / customer (own id only, else NOT_FOUND). */
     suspend fun get(userId: String): ApiResult<User>
-
-    /** GET users/me. Customer. */
-    suspend fun me(): ApiResult<User>
-
-    /** PATCH users/me (multipart when [image] != null); email/password change needs currentPassword. Customer. */
-    suspend fun updateMe(request: ProfileUpdateRequest, image: ImagePart? = null): ApiResult<User>
 
     /** PATCH users/{user_id} (multipart when [image] != null). Admin. */
     suspend fun adminUpdate(userId: String, request: UserUpdateRequest, image: ImagePart? = null): ApiResult<User>
@@ -40,9 +32,6 @@ interface UserRepository {
 
     /** POST users/{user_id}/unblock. Admin. */
     suspend fun unblock(userId: String): ApiResult<User>
-
-    /** POST users: public signup (multipart when [image] != null); account starts unapproved. Customer. */
-    suspend fun signup(request: UserCreateRequest, image: ImagePart? = null): ApiResult<User>
 
     /** GET users/{user_id}/orders. Admin (any user) / customer (own id only). */
     suspend fun ordersOf(userId: String, filter: OrderFilter = OrderFilter(), page: PageRequest = PageRequest()): ApiResult<List<Order>>

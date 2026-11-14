@@ -1,9 +1,12 @@
 package com.saurabh.mediadminapp.utils.ScreensState
 
-import com.saurabh.mediadminapp.network.response.GetSpecificProductResponse
+import com.saurabh.mediadminapp.data.v1.core.Pagination
+import com.saurabh.mediadminapp.data.v1.dto.*
+import com.saurabh.mediadminapp.data.v1.error.AppError
+import com.saurabh.mediadminapp.repository.PagedData
 
 data class GetSpecificProductState(
     val isLoading: Boolean = false,
-    val success: GetSpecificProductResponse? = null,
+    val success: Product? = null,
     val error: String? = null
 )

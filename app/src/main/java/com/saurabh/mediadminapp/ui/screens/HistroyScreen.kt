@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.data.v1.core.OrderStatus
+
 import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -47,7 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.SellHistory
+import com.saurabh.mediadminapp.data.v1.dto.Sale as SellHistory
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayDetailButton
 import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
@@ -146,7 +148,7 @@ fun HistoryScreen(
 
                         state.value.success != null -> {
                             HistoryLedgerScreen(
-                                histories = state.value.success!!.sell_history,
+                                histories = state.value.success!!.items,
                                 navController = navController,
                                 modifier = Modifier
                             )
@@ -162,21 +164,21 @@ fun aggregateSalesPerDay(data: List<SellHistory>, filter: SalesFilter): List<Pai
     val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     return when (filter) {
         SalesFilter.Day -> {
-            data.groupBy { it.date_of_sell }
-                .map { (date, sales) -> date to sales.sumOf { it.total_amount } }
+            data.groupBy { it.soldAt.toString().take(10) }
+                .map { (date, sales) -> date to sales.sumOf { it.totalAmount } }
                 .sortedBy { LocalDate.parse(it.first, formatter) }
         }
 
         SalesFilter.Month -> {
             val monthFormatter = DateTimeFormatter.ofPattern("MMM yyyy")
-            data.groupBy { LocalDate.parse(it.date_of_sell, formatter).withDayOfMonth(1) }
-                .map { (month, sales) -> month.format(monthFormatter) to sales.sumOf { it.total_amount } }
+            data.groupBy { LocalDate.parse(it.soldAt.toString().take(10), formatter).withDayOfMonth(1) }
+                .map { (month, sales) -> month.format(monthFormatter) to sales.sumOf { it.totalAmount } }
                 .sortedBy { YearMonth.parse(it.first, monthFormatter) }
         }
 
         SalesFilter.Year -> {
-            data.groupBy { LocalDate.parse(it.date_of_sell, formatter).year }
-                .map { (year, sales) -> year.toString() to sales.sumOf { it.total_amount } }
+            data.groupBy { LocalDate.parse(it.soldAt.toString().take(10), formatter).year }
+                .map { (year, sales) -> year.toString() to sales.sumOf { it.totalAmount } }
                 .sortedBy { it.first.toInt() }
         }
     }
@@ -195,7 +197,7 @@ fun HistoryLedgerScreen(
     }
 
     val visibleData = aggregated.takeLast(5)
-    val totalSalesValue = histories.sumOf { it.total_amount }
+    val totalSalesValue = histories.sumOf { it.totalAmount }
 
     val segments = visibleData.mapIndexed { index, (label, value) ->
         DonutSegment(
@@ -306,14 +308,14 @@ fun HistoryLedgerScreen(
                 )
             }
         } else {
-            itemsIndexed(histories, key = { _, item -> item.Sell_id }) { index, historyItem ->
+            itemsIndexed(histories, key = { _, item -> item.saleId }) { index, historyItem ->
                 val bgTint = cardColors[index % cardColors.size]
                 TimelineReceiptCard(
                     sale = historyItem,
                     bgColor = bgTint,
                     onDetailsClick = {
                         // Two-tier scannable hierarchy: navigate to dedicated SpecificOrderScreen
-                        navController.navigate(Routes.SpecificOrderRoutes.invoke(historyItem.Order_id))
+                        navController.navigate(Routes.SpecificOrderRoutes.invoke(historyItem.orderId))
                     }
                 )
             }
@@ -332,7 +334,7 @@ fun TimelineReceiptCard(
     bgColor: Color,
     onDetailsClick: () -> Unit
 ) {
-    val isDone = sale.isApproved
+    val isDone = sale.orderStatus == OrderStatus.SOLD
     val statusColor = if (isDone) ClayBadgeApproved else ClayBadgePending
     val statusText = if (isDone) "Completed" else "Pending"
 
@@ -351,8 +353,8 @@ fun TimelineReceiptCard(
                 modifier = Modifier.padding(end = 14.dp)
             ) {
                 ClayNetworkImage(
-                    initial = sale.product_name.firstOrNull()?.uppercase() ?: "P",
-                    imageUrl = sale.image_url,
+                    initial = sale.productName.firstOrNull()?.uppercase() ?: "P",
+                    imageUrl = sale.imageUrl,
                     avatarSize = 38.dp
                 )
             }
@@ -368,7 +370,7 @@ fun TimelineReceiptCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = sale.product_name,
+                        text = sale.productName,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = ClayTextPrimary,
@@ -384,14 +386,14 @@ fun TimelineReceiptCard(
                 }
 
                 Text(
-                    text = "Customer: ${sale.user_name}  •  Qty: ${sale.quantity}",
+                    text = "Customer: ${sale.userName}  •  Qty: ${sale.quantity}",
                     fontSize = 12.sp,
                     color = ClayTextSecondary,
                     fontWeight = FontWeight.Medium
                 )
 
                 Text(
-                    text = "Sold: ${sale.date_of_sell}  •  ID: ${sale.Sell_id}",
+                    text = "Sold: ${sale.soldAt.toString().take(10)}  •  ID: ${sale.saleId}",
                     fontSize = 11.sp,
                     color = ClayTextSecondary.copy(alpha = 0.8f)
                 )
@@ -416,7 +418,7 @@ fun TimelineReceiptCard(
                             text = "₹${
                                 NumberFormat.getInstance(
                                     Locale.Builder().setLanguage("en").setRegion("IN").build()
-                                ).format(sale.total_amount)
+                                ).format(sale.totalAmount)
                             }",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,

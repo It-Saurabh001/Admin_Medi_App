@@ -67,7 +67,7 @@ import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
-import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
+import com.saurabh.mediadminapp.utils.utilityFunctions.toImagePart
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SignUp — Claymorphism design + BUG-06 dual-Scaffold fix
@@ -452,7 +452,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                                         valid = false
                                     }
                                     if (valid) {
-                                        val imagePart = imageUri?.toMultipartBodyPart(context, "image")
+                                        val imagePart = imageUri?.toImagePart(context)
                                         viewModel.createAdmin(
                                             name, email, password, phoneNumber, imagePart
                                         )

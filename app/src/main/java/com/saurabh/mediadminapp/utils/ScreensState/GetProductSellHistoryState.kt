@@ -1,10 +1,12 @@
 package com.saurabh.mediadminapp.utils.ScreensState
 
-import com.saurabh.mediadminapp.network.response.GetProductSellHistoryResponse
-import com.saurabh.mediadminapp.network.response.GetSellHistoryResponse
+import com.saurabh.mediadminapp.data.v1.core.Pagination
+import com.saurabh.mediadminapp.data.v1.dto.*
+import com.saurabh.mediadminapp.data.v1.error.AppError
+import com.saurabh.mediadminapp.repository.PagedData
 
 data class GetProductSellHistoryState(
     val isLoading: Boolean = false,
-    val success: GetProductSellHistoryResponse? = null,
+    val success: PagedData<Sale>? = null,
     val error: String? = null
 )

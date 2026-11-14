@@ -8,9 +8,7 @@ import com.saurabh.mediadminapp.data.v1.dto.AdminUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.Device
 import com.saurabh.mediadminapp.data.v1.dto.DeviceRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.Order
-import com.saurabh.mediadminapp.data.v1.dto.ProfileUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.User
-import com.saurabh.mediadminapp.data.v1.dto.UserCreateRequest
 import com.saurabh.mediadminapp.data.v1.dto.UserUpdateRequest
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -38,30 +36,6 @@ interface UsersApi {
         @Query("updated_since") updatedSince: String? = null,
         @QueryMap page: Map<String, String> = emptyMap()
     ): Response<PagedEnvelope<User>>
-
-    /** Public signup (no token). */
-    @POST("users")
-    suspend fun createUser(@Body body: UserCreateRequest): Response<ApiEnvelope<User>>
-
-    @Multipart
-    @POST("users")
-    suspend fun createUserMultipart(
-        @PartMap fields: Map<String, @JvmSuppressWildcards RequestBody>,
-        @Part image: MultipartBody.Part? = null
-    ): Response<ApiEnvelope<User>>
-
-    @GET("users/me")
-    suspend fun getMe(): Response<ApiEnvelope<User>>
-
-    @PATCH("users/me")
-    suspend fun updateMe(@Body body: ProfileUpdateRequest): Response<ApiEnvelope<User>>
-
-    @Multipart
-    @PATCH("users/me")
-    suspend fun updateMeMultipart(
-        @PartMap fields: Map<String, @JvmSuppressWildcards RequestBody>,
-        @Part image: MultipartBody.Part? = null
-    ): Response<ApiEnvelope<User>>
 
     @GET("users/{user_id}")
     suspend fun getUser(@Path("user_id") userId: String): Response<ApiEnvelope<User>>

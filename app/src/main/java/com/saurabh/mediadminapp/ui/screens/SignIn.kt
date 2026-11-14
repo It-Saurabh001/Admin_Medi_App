@@ -98,11 +98,11 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
     // Success handling — navigate to OTP
     LaunchedEffect(state.value.success) {
         state.value.success?.let { response ->
-            if (response.status == 200 && response.admin_id != null) {
-                navController.navigate(Routes.VerifyOtpRoutes(userId = response.admin_id))
+            if (response.otpRequired) {
+                navController.navigate(Routes.VerifyOtpRoutes(userId = response.accountId))
                 viewModel.clearLoginState()
             } else {
-                val msg = response.message ?: "Invalid email or password"
+                val msg = "Invalid email or password"
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                 viewModel.clearLoginState()
             }

@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.data.v1.core.OrderStatus
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -50,7 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.network.response.Order
+import com.saurabh.mediadminapp.data.v1.dto.Order
 import com.saurabh.mediadminapp.ui.screens.components.ClayCard
 import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
 import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
@@ -137,7 +139,7 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
                             )
                         }
                         response.value.success != null -> {
-                            val order = response.value.success?.order
+                            val order = response.value.success
                             if (order != null) {
                                 ClayGradientBackdrop(gradient = ClayOrderGradient) {
                                     SpecificOrderReceiptView(
@@ -174,7 +176,7 @@ fun SpecificOrderReceiptView(
     viewModel: MyViewModel,
     modifier: Modifier = Modifier
 ) {
-    val isApproved = order.isApproved
+    val isApproved = (order.status == OrderStatus.APPROVED || order.status == OrderStatus.SOLD)
     val statusColor = if (isApproved) ClayBadgeApproved else ClayBadgePending
     val statusText = if (isApproved) "Approved" else "Pending Review"
 
@@ -216,7 +218,7 @@ fun SpecificOrderReceiptView(
         // ── 2. MILESTONE PROGRESS TRACK (Order Lifecycle) ─────────────────
         item {
             ClayStatusBadge(
-                text = order.order_id,
+                text = order.orderId,
                 color = Color.White
             )
 
@@ -291,14 +293,14 @@ fun SpecificOrderReceiptView(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             ClayNetworkImage(
-                                initial = order.product_name.firstOrNull()?.uppercase() ?: "P",
-                                imageUrl = order.image_url,
+                                initial = order.productName.firstOrNull()?.uppercase() ?: "P",
+                                imageUrl = order.imageUrl,
                                 avatarSize = 42.dp
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(
-                                    text = order.product_name.capitalizeEachWord(),
+                                    text = order.productName.capitalizeEachWord(),
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.ExtraBold,
                                     color = ClayTextPrimary
@@ -347,7 +349,7 @@ fun SpecificOrderReceiptView(
                             letterSpacing = 1.sp
                         )
                         Text(
-                            text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(order.total_amount)}",
+                            text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(order.totalAmount)}",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
                             color = ClayPrimary
@@ -374,10 +376,10 @@ fun SpecificOrderReceiptView(
                         color = ClayTextPrimary
                     )
 
-                    MetadataClusterRow(Icons.Default.AccountCircle, "Buyer Name", order.user_name)
-                    MetadataClusterRow(Icons.Default.Numbers, "Customer ID", order.user_id)
-                    MetadataClusterRow(Icons.Default.QrCode, "Product ID", order.product_id)
-                    MetadataClusterRow(Icons.Default.CalendarMonth, "Order Date", order.date_of_order_creation)
+                    MetadataClusterRow(Icons.Default.AccountCircle, "Buyer Name", order.userName)
+                    MetadataClusterRow(Icons.Default.Numbers, "Customer ID", order.userId)
+                    MetadataClusterRow(Icons.Default.QrCode, "Product ID", order.productId)
+                    MetadataClusterRow(Icons.Default.CalendarMonth, "Order Date", order.createdAt.toString())
 
                     if (!order.message.isNullOrEmpty()) {
                         HorizontalDivider(
@@ -406,9 +408,9 @@ fun SpecificOrderReceiptView(
             ClayPrimaryButton(
                 text = if (isApproved) "Revoke Approval (Set Pending)" else "Approve Order Dispatch",
                 onClick = {
-                    viewModel.isApproveOrder(order.order_id, !isApproved)
+                    viewModel.isApproveOrder(order.orderId, !isApproved)
                     // Refresh current order state
-                    viewModel.getOrderById(order.order_id)
+                    viewModel.getOrderById(order.orderId)
                 },
                 gradient = if (isApproved) {
                     Brush.horizontalGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))
