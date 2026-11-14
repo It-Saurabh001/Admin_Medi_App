@@ -2,7 +2,6 @@ package com.saurabh.mediadminapp.ui.screens
 
 import android.util.Log
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,13 +21,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -81,7 +76,12 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HistoryScreen(viewModel: MyViewModel, navController: NavController, onMenuClick: () -> Unit,scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()) {
+fun HistoryScreen(
+    viewModel: MyViewModel,
+    navController: NavController,
+    onMenuClick: () -> Unit,
+    scrollBehavior: TopAppBarScrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+) {
     val state = viewModel.getSellHistory.collectAsState()
 
     LaunchedEffect(key1 = Unit) {
@@ -97,10 +97,23 @@ fun HistoryScreen(viewModel: MyViewModel, navController: NavController, onMenuCl
         actionIconContentColor = Color.White
     )
 
-    Box(modifier = Modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection)) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .nestedScroll(scrollBehavior.nestedScrollConnection)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary))).statusBarsPadding() // Keeps status bar always colored ClayPrimary while TopAppBar collapses beneath it
-                .clipToBounds()) {
+            Column(
+                modifier = Modifier
+                    .background(
+                        brush = Brush.horizontalGradient(
+                            listOf(
+                                ClayPrimary,
+                                ClayPrimary
+                            )
+                        )
+                    )
+                    .statusBarsPadding() // Keeps status bar always colored ClayPrimary while TopAppBar collapses beneath it
+                    .clipToBounds()
+            ) {
                 TopAppBar(
                     title = {
                         Text(
@@ -121,6 +134,7 @@ fun HistoryScreen(viewModel: MyViewModel, navController: NavController, onMenuCl
                         state.value.isLoading -> {
                             ClayLoadingScreen(modifier = Modifier)
                         }
+
                         state.value.error != null -> {
                             Log.d("TAG", "HistoryScreen error: ${state.value.error}")
                             ClayErrorScreen(
@@ -129,6 +143,7 @@ fun HistoryScreen(viewModel: MyViewModel, navController: NavController, onMenuCl
                                 onRetry = { viewModel.getAllSellHistory() }
                             )
                         }
+
                         state.value.success != null -> {
                             HistoryLedgerScreen(
                                 histories = state.value.success!!.sell_history,
@@ -151,12 +166,14 @@ fun aggregateSalesPerDay(data: List<SellHistory>, filter: SalesFilter): List<Pai
                 .map { (date, sales) -> date to sales.sumOf { it.total_amount } }
                 .sortedBy { LocalDate.parse(it.first, formatter) }
         }
+
         SalesFilter.Month -> {
             val monthFormatter = DateTimeFormatter.ofPattern("MMM yyyy")
             data.groupBy { LocalDate.parse(it.date_of_sell, formatter).withDayOfMonth(1) }
                 .map { (month, sales) -> month.format(monthFormatter) to sales.sumOf { it.total_amount } }
                 .sortedBy { YearMonth.parse(it.first, monthFormatter) }
         }
+
         SalesFilter.Year -> {
             data.groupBy { LocalDate.parse(it.date_of_sell, formatter).year }
                 .map { (year, sales) -> year.toString() to sales.sumOf { it.total_amount } }
@@ -265,7 +282,11 @@ fun HistoryLedgerScreen(
                         ) {
                             DonutChart(
                                 segments = segments,
-                                centerLabel = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(totalSalesValue)}",
+                                centerLabel = "₹${
+                                    NumberFormat.getInstance(
+                                        Locale.Builder().setLanguage("en").setRegion("IN").build()
+                                    ).format(totalSalesValue)
+                                }",
                                 centerSubLabel = "Total Revenue",
                                 chartSize = 170.dp
                             )
@@ -324,26 +345,16 @@ fun TimelineReceiptCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Timeline Milestone Node
+            // Product Thumbnail / Timeline Milestone Node
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(end = 14.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(statusColor.copy(alpha = 0.14f))
-                        .border(1.5.dp, statusColor, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isDone) Icons.Default.CheckCircle else Icons.Default.Schedule,
-                        contentDescription = null,
-                        tint = statusColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                ClayNetworkImage(
+                    initial = sale.product_name.firstOrNull()?.uppercase() ?: "P",
+                    imageUrl = sale.image_url,
+                    avatarSize = 38.dp
+                )
             }
 
             // Scannable Primary Receipt Details
@@ -402,7 +413,11 @@ fun TimelineReceiptCard(
                             letterSpacing = 1.sp
                         )
                         Text(
-                            text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(sale.total_amount)}",
+                            text = "₹${
+                                NumberFormat.getInstance(
+                                    Locale.Builder().setLanguage("en").setRegion("IN").build()
+                                ).format(sale.total_amount)
+                            }",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = ClayPrimary

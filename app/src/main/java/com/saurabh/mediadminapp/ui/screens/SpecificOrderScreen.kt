@@ -290,20 +290,11 @@ fun SpecificOrderReceiptView(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(CircleShape)
-                                    .background(ClayPrimary.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Medication,
-                                    contentDescription = null,
-                                    tint = ClayPrimary,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            ClayNetworkImage(
+                                initial = order.product_name.firstOrNull()?.uppercase() ?: "P",
+                                imageUrl = order.image_url,
+                                avatarSize = 42.dp
+                            )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
                                 Text(

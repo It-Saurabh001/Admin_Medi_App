@@ -65,6 +65,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -628,7 +630,10 @@ fun EachUserCard(
     ) {
         // Header: avatar + name + badge
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            ClayAvatarBubble(initial = userItem.name.firstOrNull()?.uppercase() ?: "U")
+            ClayNetworkImage(
+                initial = userItem.name.firstOrNull()?.uppercase() ?: "U",
+                imageUrl = userItem.image_url
+            )
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(userItem.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = ClayTextPrimary, maxLines = 1)
@@ -698,20 +703,40 @@ fun EachUserCard(
 }
 
 // =============================================================================
-// CLAY AVATAR BUBBLE
+// CLAY AVATAR BUBBLE  (letter-only, kept for internal backward-compat)
 // =============================================================================
 
 @Composable
 private fun ClayAvatarBubble(initial: String) {
+    ClayNetworkImage(initial = initial, imageUrl = null)
+}
+
+// =============================================================================
+// CLAY NETWORK IMAGE  — shared avatar: letter fallback + Coil network overlay
+// =============================================================================
+
+/**
+ * Renders a clay-styled circular avatar.
+ * Shows [imageUrl] via Coil when it is non-null and non-blank.
+ * Falls back to [initial] letter while loading, on error, or when imageUrl is blank/null.
+ */
+@Composable
+fun ClayNetworkImage(
+    initial: String,
+    imageUrl: String?,
+    avatarSize: androidx.compose.ui.unit.Dp = 52.dp,
+    modifier: Modifier = Modifier
+) {
     var pressed by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.94f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "avatarScale"
     )
+    val showImage = !imageUrl.isNullOrBlank()
     Box(
-        modifier = Modifier
-            .size(52.dp)
+        modifier = modifier
+            .size(avatarSize)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clayCircleShadow(blurRadius = 12.dp, offsetY = 5.dp)
             .clip(CircleShape)
@@ -720,15 +745,29 @@ private fun ClayAvatarBubble(initial: String) {
                 drawContent()
                 val cr = CornerRadius(size.width / 2f)
                 val rim = 1.8.dp.toPx()
-                drawRoundRect(brush = Brush.verticalGradient(0f to Color.White.copy(0.90f), 0.35f to Color.White.copy(0f)), size = size, cornerRadius = cr)
-                drawRoundRect(brush = Brush.verticalGradient(0f to Color.White.copy(1f), 0.28f to Color.White.copy(0f)), size = size, cornerRadius = cr, style = Stroke(rim))
-                drawRoundRect(brush = Brush.verticalGradient(0.72f to Color.Black.copy(0f), 1f to Color.Black.copy(0.16f)), size = size, cornerRadius = cr, style = Stroke(rim))
+                drawRoundRect(brush = Brush.verticalGradient(0f to Color.White.copy(0.90f), 0.35f to Color.White.copy(0f)), cornerRadius = cr)
+                drawRoundRect(brush = Brush.verticalGradient(0f to Color.White.copy(1f), 0.28f to Color.White.copy(0f)), cornerRadius = cr, style = Stroke(rim))
+                drawRoundRect(brush = Brush.verticalGradient(0.72f to Color.Black.copy(0f), 1f to Color.Black.copy(0.16f)), cornerRadius = cr, style = Stroke(rim))
             }
             .border(2.dp, Color.White, CircleShape)
             .pointerInput(Unit) { detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false }) },
         contentAlignment = Alignment.Center
     ) {
-        Text(initial, fontSize = 20.sp, fontWeight = FontWeight.ExtraBold, color = ClayPrimary)
+        // Letter is always the base layer (visible while loading, on error, or when no url)
+        Text(initial, fontSize = (avatarSize.value * 0.38f).sp, fontWeight = FontWeight.ExtraBold, color = ClayPrimary)
+        // Image layer rendered on top only when url is non-blank; Coil paints over the letter on success
+        if (showImage) {
+            val painter = rememberAsyncImagePainter(model = imageUrl)
+            val state = painter.state
+            if (state !is coil.compose.AsyncImagePainter.State.Error) {
+                androidx.compose.foundation.Image(
+                    painter = painter,
+                    contentDescription = initial,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
     }
 }
 

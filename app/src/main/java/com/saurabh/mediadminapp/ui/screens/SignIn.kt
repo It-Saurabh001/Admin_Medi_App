@@ -304,7 +304,7 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
                         color = Color(0xFF555577),
                         fontSize = 14.sp
                     )
-                    TextButton(onClick = { navController.navigate(Routes.SignUpRoutes) }) {
+                    TextButton(onClick = { navController.navigate(Routes.SignUpRoutes.route) }) {
                         Text(
                             text = "Create account",
                             color = ClayPrimary,

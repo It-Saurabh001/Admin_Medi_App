@@ -1,7 +1,5 @@
 package com.saurabh.mediadminapp.ui.screens.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,12 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -29,7 +22,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -38,17 +30,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.network.response.Order
+import com.saurabh.mediadminapp.ui.screens.ClayNetworkImage
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import com.saurabh.mediadminapp.ui.theme.ClayBadgeApproved
 import com.saurabh.mediadminapp.ui.theme.ClayBadgePending
-import com.saurabh.mediadminapp.ui.theme.ClayFieldBg
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
-import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 import com.saurabh.mediadminapp.utils.ScreensState.ApproveOrderState
 import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
-import java.text.NumberFormat
-import java.util.Locale
 
 /**
  * Two-Tier Scannable Order Overview Card:
@@ -72,7 +61,9 @@ fun EachOrderCard(
     val statusText = if (isApproved) "Approved" else "Pending"
 
     ClayCardOrderScreen(
-        modifier = modifier.fillMaxSize().aspectRatio(0.9f),
+        modifier = modifier
+            .fillMaxSize()
+            .aspectRatio(0.9f),
         cornerRadius = 24.dp,
         bgColor = bgColor
     ) {
@@ -82,8 +73,8 @@ fun EachOrderCard(
             horizontalAlignment = Alignment.Start
         ) {
             Column(
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.Start
             )
             {
 
@@ -99,30 +90,23 @@ fun EachOrderCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                // icon + order ID
+                // icon/thumbnail + order ID
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.Top
                 )
                 {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(ClayFieldBg)
-                            .border(1.dp, Color.White, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocalShipping,
-                            contentDescription = null,
-                            tint = ClayPrimary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                    ClayNetworkImage(
+                        initial = order.product_name.firstOrNull()?.uppercase() ?: "P",
+                        imageUrl = order.image_url,
+                        avatarSize = 32.dp
+                    )
                     Spacer(modifier = Modifier.width(1.dp))
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         Text(
                             text = "${order.order_id} ",
                             fontWeight = FontWeight.ExtraBold,
@@ -149,7 +133,7 @@ fun EachOrderCard(
                     text = statusText,
                     color = statusColor
                 )
-                Spacer(modifier= Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 if (isLoading) {
                     CircularProgressIndicator(
@@ -161,7 +145,7 @@ fun EachOrderCard(
                     Switch(
                         checked = isApproved,
                         onCheckedChange = { onApprovalToggle(order.order_id, it) },
-                        modifier= Modifier.scale(0.78f),
+                        modifier = Modifier.scale(0.78f),
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = ClayBadgeApproved,

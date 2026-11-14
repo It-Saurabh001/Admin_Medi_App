@@ -18,7 +18,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,36 +25,46 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import com.saurabh.mediadminapp.ui.theme.ClayScreenBg
 import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
 import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
-import com.saurabh.mediadminapp.ui.screens.nav.Routes
 
 @Composable
 fun SplashScreen(navController: NavController, viewModel: MyViewModel) {
-    val isUserLoggedIn by viewModel.isAdminLoggedIn.collectAsState()
-    Log.d("TAG", "SplashScreen: isLoggedIn = $isUserLoggedIn")
+    // 1. Lifecycle-aware state collection (Boolean? -> true, false, or null)
+    val isUserLoggedIn by viewModel.isAdminLoggedIn.collectAsStateWithLifecycle()
 
     LaunchedEffect(isUserLoggedIn) {
-        Log.d("SplashScreen", "LaunchedEffect triggered with isUserLoggedIn=$isUserLoggedIn")
-        delay(1500.milliseconds)
-        if (isUserLoggedIn) {
+        // 2. Jab tak token check chal raha hai (null), wait karo — galat screen par jump mat karo!
+        val loggedIn = isUserLoggedIn ?: return@LaunchedEffect
+
+        Log.d("SplashScreen", "Token check completed: loggedIn=$loggedIn")
+        delay(1200.milliseconds)
+
+        // 3. NavHost ke exact route types ke saath match kiya gaya navigation:
+        if (loggedIn) {
             Log.d("SplashScreen", "Navigating to HomeRoutes")
-            navController.navigate(Routes.HomeRoutes()) {
-                popUpTo(Routes.SplashRoutes()) { inclusive = true }
+            // HomeRoutes String-based composable hai: composable(Routes.HomeRoutes.route)
+            navController.navigate(Routes.HomeRoutes.route) {
+                popUpTo(Routes.SplashRoutes.route) { inclusive = true }
+                launchSingleTop = true
             }
         } else {
             Log.d("SplashScreen", "Navigating to SignInRoutes")
-            navController.navigate(Routes.SignInRoutes) {
-                popUpTo(Routes.SplashRoutes()) { inclusive = true }
+            // SignInRoutes Type-Safe composable hai: composable<Routes.SignInRoutes>
+            navController.navigate(Routes.SignInRoutes.route) {
+                popUpTo(Routes.SplashRoutes.route) { inclusive = true }
+                launchSingleTop = true
             }
         }
     }
-    
+
     Scaffold(
         containerColor = ClayScreenBg
     ) { innerPadding ->
@@ -80,9 +89,9 @@ fun SplashScreen(navController: NavController, viewModel: MyViewModel) {
                     tint = Color(0xFF6366F1) // Indigo Primary
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             Text(
                 text = "MediAdmin",
                 fontSize = 32.sp,
@@ -90,9 +99,9 @@ fun SplashScreen(navController: NavController, viewModel: MyViewModel) {
                 color = ClayTextPrimary,
                 letterSpacing = 1.sp
             )
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             Text(
                 text = "Managing Medical Logistics",
                 fontSize = 16.sp,

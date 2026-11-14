@@ -1,13 +1,19 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -50,6 +56,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -57,8 +64,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.utils.utilityFunctions.toMultipartBodyPart
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SignUp — Claymorphism design + BUG-06 dual-Scaffold fix
@@ -94,6 +103,10 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
     var nameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri -> imageUri = uri }
 
     // Determine which screen state to show
     val screenState: SignUpScreen = when {
@@ -116,8 +129,8 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
         if (state.success != null) {
             Log.d("NAV", "SignUp success — navigating to SignIn")
             Toast.makeText(context, "Account created! Please sign in.", Toast.LENGTH_SHORT).show()
-            navController.navigate(Routes.SignInRoutes) {
-                popUpTo(Routes.SignUpRoutes) { inclusive = true }
+            navController.navigate(Routes.SignInRoutes.route) {
+                popUpTo(Routes.SignUpRoutes.route) { inclusive = true }
             }
         }
     }
@@ -248,6 +261,45 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                                 .padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            // ── Image picker (mirroring AddProductScreen) ──
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(90.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFEDE9FF))
+                                    .border(1.5.dp, SignUpPrimary.copy(0.35f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (imageUri != null) {
+                                    Image(
+                                        painter = rememberAsyncImagePainter(imageUri),
+                                        contentDescription = "Admin Photo Preview",
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Text("📷", fontSize = 32.sp)
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = {
+                                    launcher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                shape = RoundedCornerShape(50.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, SignUpPrimary.copy(0.5f))
+                            ) {
+                                Text(
+                                    text = if (imageUri == null) "Select Photo (optional)" else "Change Photo",
+                                    color = SignUpPrimary,
+                                    fontSize = 13.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+
                             // Name
                             ClayTextField(
                                 value = name,
@@ -400,8 +452,9 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                                         valid = false
                                     }
                                     if (valid) {
+                                        val imagePart = imageUri?.toMultipartBodyPart(context, "image")
                                         viewModel.createAdmin(
-                                            name, email, password, phoneNumber
+                                            name, email, password, phoneNumber, imagePart
                                         )
                                     }
                                 }
@@ -419,7 +472,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                                     fontSize = 14.sp
                                 )
                                 TextButton(onClick = {
-                                    navController.navigate(Routes.SignInRoutes)
+                                    navController.navigate(Routes.SignInRoutes.route)
                                 }) {
                                     Text(
                                         "Sign In",

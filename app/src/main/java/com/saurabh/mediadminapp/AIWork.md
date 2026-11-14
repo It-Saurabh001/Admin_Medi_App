@@ -13,58 +13,115 @@ Architecture, and zero-flicker UI state management.
   belong strictly to compilable code.
 - Write full, complete, production-ready code with NO placeholders, NO `// TODO: implement later`,
   and NO pseudo-code.
-ROLE
-You are a senior Android/Kotlin engineer doing a CLEANUP of my previous admin-image work. Stages 1-4 created duplicate functions. Fix this: update the EXISTING functions instead and delete the duplicates. No other changes.
+  ROLE
+  ROLE
+  You are a senior Android/Kotlin engineer. The data layer is DONE: DTOs (Admin, UserItem, Order,
+  SellHistory, ProductItem) have `image_url: String?`, and the existing ViewModel `createAdmin` and
+  `updateAdmin` accept `image: MultipartBody.Part? = null`. Now update the UI. Wherever the app
+  shows a first-letter avatar or has no image, show the image when `image_url` is available, else
+  keep the letter or placeholder. Use existing functions and state. Do not create new ViewModel,
+  repository or ApiServices functions.
 
-STAGE A: DONE (findings, do not redo)
-- Only Repository.kt calls `apiServices.createAdmin` and `apiServices.updateAdmin`.
-- MyViewModel had NO `updateAdmin` before the admin-image task. `AdminState` holds `Admin?` only, so it cannot hold `UpdateAdminResponse`.
-- DECISION (mine): KEEP `UpdateAdminState`, `_updateAdminState`, `updateAdminState` and `clearUpdateAdminState()`. They are the only state for the update-admin response. The ViewModel `updateAdmin` uses them.
+SCOPE (all mandatory, no approval question)
 
-TARGET DESIGN (mirror addProduct/updateProduct)
-- ApiServices: `createAdmin` and `updateAdmin` become @Multipart (same name, path, verb, return type). Text fields are `@Part("...") x: RequestBody` (optional ones `RequestBody? = null`). Add `@Part image: MultipartBody.Part? = null` as the LAST parameter. Part names stay exactly: create = name, password, email, phoneNumber; update = admin_id, name, password, email, phone_number. The backend accepts multipart for text-only requests too.
-- Repository: `createAdmin` and `updateAdmin` keep their existing String parameters and order, and get `image: MultipartBody.Part? = null` as the LAST parameter. Convert Strings to RequestBody inside with the existing `toTextRequestBody()`. In `updateAdmin`, call getAllAdmins after success (keep it if already present from Stage 3).
-- ViewModel:
-  - `createAdmin`: keep existing parameters and state, add `image: MultipartBody.Part? = null` as the LAST parameter, pass it to the repository.
-  - `updateAdmin`: this is the existing `updateAdminWithImage` RENAMED to `updateAdmin`. Same signature (adminId, name, password, email, phoneNumber, image last). It keeps the Loading -> Success -> Error logic writing to `_updateAdminState` and keeps the getAllAdmin() refresh in the success branch.
-- Existing UI call sites must compile UNCHANGED. If one cannot, stop and ask me.
+1. Admin screens: list, detail/profile, items.
+2. User screens: list, detail, items.
+3. ORDER screens: all orders list (getAllOrders), user-wise orders (getUserOrders), order detail
+   (getOrderById).
+4. SELL HISTORY screens: all history (getSellHistory), by user (getusersellhistory), by product
+   (getProductSellHistory), and any detail view.
+5. Create/edit admin with image picker (existing createAdmin / updateAdmin).
+
+RULES FOR IMAGE vs LETTER/PLACEHOLDER
+
+- Show the image only if `image_url` is not null AND not blank (live data has both null and "").
+- While loading, and on failure, show the letter or placeholder (never a blank or broken box).
+- Keep existing sizes, shapes, colors and letter logic. Only add the image layer.
+- Orders and sell rows: show `image_url` as a product thumbnail. Their `image_url` can differ from
+  the product's current image; display exactly what the row returns. Do not look up the product to
+  replace it.
+- Where an order or history item currently has no avatar or thumbnail at all, add a small one that
+  fits the existing layout (fallback: first letter of `product_name`, or the app's existing
+  placeholder). Do not restructure the layout.
+- Use the image library already in the project (the one the product screens use). No new dependency
+  without my approval. If none exists, stop and ask me.
 
 HARD RULES
-1. No new files except updating `app_update_plan.md`. No new classes, response classes or state classes.
-2. Do not rename anything except `updateAdminWithImage` -> `updateAdmin`. No reformatting or reordering of unrelated code. No comments, tests or docs.
-3. Keep the Stage 2 DTO changes (`image_url`) as they are.
-4. Do not touch order, sell-history, product, user or any other flow.
-5. Minimal in-place edits. Never log tokens or passwords.
-6. Keep chat replies short. Spend tokens on code and the plan file only.
+
+1. No new files, except ONE small reusable avatar/thumbnail composable or view if no suitable shared
+   one exists. List it in the plan first and wait for my approval. Prefer an existing common UI
+   file.
+2. No refactors, renames, reformatting, import reordering, comments, tests or docs outside the lines
+   you change.
+3. Do not edit ViewModel, repository, ApiServices or DTOs. If something is missing there, stop and
+   ask me.
+4. Do not change navigation, theming or unrelated UI.
+5. Detect Compose or XML and follow it. Mirror how the product screens load `image_url`.
+6. Minimal in-place edits. Never log tokens or passwords. Keep chat replies short. Spend tokens on
+   code and the plan file only.
 
 STAGE PROTOCOL
-After each stage: update `app_update_plan.md` (stage DONE, files changed, what changed, compile result), reply in 3-4 lines, ask "Stage N complete. Continue?" and STOP until I say "continue". Compile check: `./gradlew compileDebugKotlin`.
+After each stage: update `app_update_plan.md` (stage DONE, files changed, what changed, compile
+result), reply in 3-4 lines, ask "Stage N complete. Continue?" and STOP until I say "continue".
+Compile check: `./gradlew compileDebugKotlin`.
 
 STAGES
 
-Stage B: ApiServices.kt
-- Convert `createAdmin` and `updateAdmin` per the target design.
-- Delete `createAdminWithImage` and `updateAdminWithImage`.
-- The compile check will fail until Stage C. That is expected; note it in the plan.
+Stage 0: Audit (no code edits, no questions)
 
-Stage C: Repository.kt
-- If Repository already had `createAdmin` and `updateAdmin` before the task: update them per the target design and delete `createAdminWithImage` and `updateAdminWithImage`.
-- If Repository `updateAdmin` did not exist before: rename `updateAdminWithImage` to `updateAdmin` and delete the duplicate. Note which case applied in the plan.
-- Point the calls at the ApiServices `createAdmin` / `updateAdmin`.
-- Run the compile check. If the only errors come from the ViewModel, fix them in Stage D.
+- Create `app_update_plan.md` with a table of EVERY place that shows an admin, user, order or
+  sell-history item: file, composable/adapter, data type, current avatar (letter, placeholder,
+  product image, or none), and whether `image_url` is reachable at that point.
+- Record the product screens' image-loading pattern (library, composable, placeholder, error
+  handling) to mirror.
+- Record the existing admin create/edit screens, their calls to ViewModel `createAdmin` /
+  `updateAdmin`, and the existing image picker used by the product add/edit screens.
+- Reply "Stage 0 complete. Continue to Stage 1?" and stop.
 
-Stage D: MyViewModel.kt and state
-- `createAdmin`: add the trailing `image` parameter and pass it through. Delete `createAdminWithImage`.
-- Rename `updateAdminWithImage` to `updateAdmin`. Point it at `repository.updateAdmin`.
-- KEEP `UpdateAdminState`, `_updateAdminState`, `updateAdminState`, `clearUpdateAdminState()`.
-- `clearCreateAdminState()`: keep it only if it existed before the admin-image task, otherwise remove it.
-- Update any call of the old names (`viewModel.updateAdminWithImage`, `repository.updateAdminWithImage`, `createAdminWithImage`) to the new names.
+Stage 1: Shared avatar/thumbnail
+
+- Reuse an existing shared one if present. Otherwise create one small reusable avatar (after my
+  approval) with parameters: name/fallback text, imageUrl, modifier/size. Logic: image if imageUrl
+  is non-blank; letter or placeholder while loading, on error and when blank. Mirror the product
+  image loading code.
+
+Stage 2: Admin and user screens
+
+- Replace the first-letter avatar with the shared one in admin and user lists, details and items.
+  Pass `name` and `image_url`.
+
+Stage 3: Order screens
+
+- All orders list, user-wise orders, and order detail: show `image_url` thumbnail with
+  `product_name` first-letter or placeholder as fallback.
+
+Stage 4: Sell history screens
+
+- All history, by user, by product, and detail: show `image_url` thumbnail with `product_name`
+  first-letter or placeholder as fallback.
+
+Stage 5: Create/edit admin with image (existing functions)
+
+- On the existing admin create and edit screens, add the image picker mirroring the product add/edit
+  screens (same picker, same Uri-to-Part conversion, same preview). Preview order: picked image,
+  else existing `image_url`, else letter.
+- Call the EXISTING ViewModel `createAdmin(..., image)` and `updateAdmin(..., image)`, passing the
+  part (null if nothing picked, so text-only edits keep working).
+- Use the existing `CreateAdminState` and `UpdateAdminState` for loading and error. After a
+  successful update the ViewModel already refreshes admins.
+- If the existing screen structure makes this large, list the exact edits in the plan and ask me
+  before applying.
+
+Stage 6: Final verification (read-only)
+
 - Run the compile check.
-
-Stage E: Final verification (read-only)
-- Grep returns zero hits for `createAdminWithImage` and `updateAdminWithImage`. `UpdateAdminState` is expected to remain.
-- Confirm: ApiServices `createAdmin` / `updateAdmin` are @Multipart with `image` last; repository and ViewModel have `image` last with default null; ViewModel `updateAdmin` writes to `_updateAdminState` and refreshes admins on success; no existing UI call site edited; no other file changed in this cleanup.
-- Run the compile check. Mark each item VERIFIED in `app_update_plan.md`, or list what couldn't be verified.
+- Grep: no remaining first-letter-only avatar in admin, user, order or history places; no new
+  dependency; no change to ViewModel, repository, ApiServices or DTOs.
+- Trace each: has image -> shown; null or "" -> letter/placeholder; load fails ->
+  letter/placeholder; this covers admin, user, order list, user orders, order detail, history list,
+  history by user, history by product. Also: edit admin with picked image -> updateAdmin -> list
+  refreshes. Mark each VERIFIED in `app_update_plan.md`, or list what couldn't be verified.
 
 START
-Begin with Stage B now. Output only the changes made, the compile note, and "Stage B complete. Continue to Stage C?".
+Begin with Stage 0 now. Output only the audit, the created `app_update_plan.md`, and "Continue to
+Stage 1?".

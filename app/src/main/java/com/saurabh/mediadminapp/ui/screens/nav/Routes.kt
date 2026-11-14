@@ -13,10 +13,16 @@ sealed class Routes{
     }
 
     @Serializable
-    object SignUpRoutes
+    object SignUpRoutes {
+        const val route = "SignUpRoutes"
+        operator fun invoke() = route
+    }
 
     @Serializable
-    object SignInRoutes
+    object SignInRoutes {
+        const val route = "SignInRoutes"
+        operator fun invoke() = route
+    }
 
     @Serializable
     object ProfileRoutes {

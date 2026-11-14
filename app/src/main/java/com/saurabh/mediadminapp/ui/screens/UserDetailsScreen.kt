@@ -216,43 +216,11 @@ fun UserDetailsHub(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Hardware BlurMaskFilter Shadow Avatar (Anti-aliased)
-                Box(
-                    modifier = Modifier
-                        .size(116.dp)
-                        .drawBehind {
-                            val r = size.width / 2f
-                            drawIntoCanvas { canvas ->
-                                canvas.nativeCanvas.drawCircle(
-                                    size.width / 2f,
-                                    size.height / 2f + 8.dp.toPx(),
-                                    r,
-                                    android.graphics.Paint().apply {
-                                        isAntiAlias = true
-                                        color = android.graphics.Color.argb(75, 108, 99, 255)
-                                        maskFilter = android.graphics.BlurMaskFilter(
-                                            22.dp.toPx(),
-                                            android.graphics.BlurMaskFilter.Blur.NORMAL
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                        .clip(CircleShape)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White, Color(0xFFFAF9FF), Color(0xFFEDE9FE))
-                            )
-                        )
-                        .border(2.5.dp, Color.White, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = initial,
-                        fontSize = 46.sp,
-                        fontWeight = FontWeight.Black,
-                        color = ClayPrimary
-                    )
-                }
+                ClayNetworkImage(
+                    initial = initial,
+                    imageUrl = user.image_url,
+                    avatarSize = 116.dp
+                )
 
                 Spacer(modifier = Modifier.height(14.dp))
 

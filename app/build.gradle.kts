@@ -10,7 +10,6 @@ plugins {
 }
 
 
-
 val secretProperties = Properties()
 val secretPropertiesFile = rootProject.file("secrets.properties")
 
@@ -63,9 +62,10 @@ android {
         buildConfig = true
     }
 }
-kotlin{
+kotlin {
     compilerOptions {
-        jvmTarget.set( org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 dependencies {
@@ -92,7 +92,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
-
+    implementation("androidx.core:core-splashscreen:1.2.0")
 
     implementation("com.squareup.okhttp3:logging-interceptor:5.4.0")
 

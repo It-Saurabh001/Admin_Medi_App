@@ -1,7 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens.nav
 
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -22,7 +21,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -53,21 +51,19 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,6 +81,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -114,27 +111,90 @@ import com.saurabh.mediadminapp.ui.screens.UpdateUserDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.UserDetailsScreen
 import com.saurabh.mediadminapp.ui.theme.ClayPrimary
 import com.saurabh.mediadminapp.ui.theme.ClaySecondary
+import com.saurabh.mediadminapp.utils.UiEvent
 import kotlinx.coroutines.launch
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavApp(viewModel: MyViewModel) {
+    // 1. Lifecycle-aware state collection
+    val isLoggedIn by viewModel.isAdminLoggedIn.collectAsStateWithLifecycle()
+    val adminState by viewModel.getAllAdminState.collectAsStateWithLifecycle()
+    val loggedInAdminId by viewModel.loggedInAdminId.collectAsStateWithLifecycle()
+
+    // 2. ZERO AUTH FLASH GUARD:
+    // Jab tak ViewModel token check kar raha hai (null), kuch bhi render mat karo (SplashScreen ruki rahegi).
+    val loggedIn = isLoggedIn ?: return
+
     val navController = rememberNavController()
     val coroutineScope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    // ── YouTube-style shared scroll behavior ──
+    // 3. Centralized One-Time Snackbar Collector (Poore app ke UiEvents yahan handle honge!)
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is UiEvent.ShowSnackbar -> {
+                    snackbarHostState.showSnackbar(
+                        message = event.message,
+                        duration = SnackbarDuration.Short
+                    )
+                }
+            }
+        }
+    }
+
+    // 4. Memoized Admin Lookup (Har recomposition par loop nahi chalega)
+    val admin: Admin? = remember(adminState.success, loggedInAdminId) {
+        adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
+    }
+
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-
-    // Smoothly hide BottomBar when TopAppBar is > 35% collapsed
     val isBottomBarHidden by remember {
         derivedStateOf { scrollBehavior.state.collapsedFraction > 0.35f }
     }
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)    // Observe backstack changes — drives isAuthRoute, topBar, bottomBar
+
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val isHomeScreen = currentRoute?.contains("HomeRoutes", ignoreCase = true) == true
-    Log.d("TAG", "Current drawerValue: ${drawerState.currentValue}, isAnimationRunning: ${drawerState.isAnimationRunning}, currentRoute: $currentRoute")
+
+    // 5. Clean Route Helpers (Single source of truth for route checks)
+    val isHomeScreen = remember(currentRoute) {
+        currentRoute?.contains("HomeRoutes", ignoreCase = true) == true
+    }
+
+    val isTopLevelRoute = remember(currentRoute) {
+        currentRoute?.let { route ->
+            route.contains("HomeRoutes", ignoreCase = true) ||
+                    route.contains("productRoutes", ignoreCase = true) ||
+                    route.contains("OrdersRoutes", ignoreCase = true) ||
+                    route.contains("HistoryRoutes", ignoreCase = true)
+        } ?: false
+    }
+
+    val isAuthRoute = remember(currentRoute) {
+        when {
+            currentRoute == null -> true
+            currentRoute.contains("SplashRoutes", ignoreCase = true) -> true
+            currentRoute.contains("SignInRoutes", ignoreCase = true) -> true
+            currentRoute.contains("SignUpRoutes", ignoreCase = true) -> true
+            currentRoute.contains("VerifyOtpRoutes", ignoreCase = true) -> true
+            else -> false
+        }
+    }
+
+    // Tab selection derived directly from currentRoute (No manual sync bugs on Back press!)
+    val selectedTab = remember(currentRoute) {
+        when {
+            currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
+            currentRoute?.contains("productRoutes", ignoreCase = true) == true -> 1
+            currentRoute?.contains("OrdersRoutes", ignoreCase = true) == true -> 2
+            currentRoute?.contains("HistoryRoutes", ignoreCase = true) == true -> 3
+            else -> -1
+        }
+    }
+
     val bottomNavItems = remember {
         listOf(
             BottomNavigationItem("Dashboard", Icons.Filled.Home),
@@ -143,183 +203,129 @@ fun NavApp(viewModel: MyViewModel) {
             BottomNavigationItem("History", Icons.Filled.Menu)
         )
     }
-    // Login state + admin profile data
-    val isLoggedIn by viewModel.isAdminLoggedIn.collectAsState()
-    val adminState by viewModel.getAllAdminState.collectAsState()
-    val loggedInAdminId by viewModel.loggedInAdminId.collectAsState()
-    val admin: Admin? = adminState.success?.admins?.find { it.admin_id == loggedInAdminId }
-    // ─────────────────────────────────────────────────────────────────────────
-    // isAuthRoute: true when on auth screens OR backstack not yet settled (null)
-    // ?: true fallback is INTENTIONAL — keeps the drawer gesture detector from
-    // initializing on Frame 0 before the first backstack entry is delivered.
-    // ─────────────────────────────────────────────────────────────────────────
-    val isAuthRoute = when {
-        currentRoute == null -> true
-        currentRoute.contains("SplashRoutes") -> true
-        currentRoute.contains("SignInRoutes") -> true
-        currentRoute.contains("SignUpRoutes") -> true
-        currentRoute.contains("VerifyOtpRoutes") -> true
-        else -> false
-    }
 
-    // Bottom-nav tab index — no PagerState, plain saveable int
-    var selected by rememberSaveable { mutableIntStateOf(0) }
-
-    val isBottomBarVisible = currentRoute?.let { route ->
-        route.contains("HomeRoutes", ignoreCase = true) ||
-                route.contains("productRoutes", ignoreCase = true) ||
-                route.contains("OrdersRoutes", ignoreCase = true) ||
-                route.contains("HistoryRoutes", ignoreCase = true)
-    } ?: false
-
-
-    LaunchedEffect(drawerState) {
-        snapshotFlow { drawerState.currentValue }.collect { newState ->
-            Log.e("DRAWER_DEBUG", "🎯 State Changed to: $newState | Route: $currentRoute")
-            if (newState == DrawerValue.Open) {
-                // यह स्टैक ट्रेस प्रिंट करेगा जिससे पता चलेगा कि ओपन कमांड कहाँ से फायर हुई
-                Log.e("DRAWER_DEBUG", "🚨 Drawer Opened! Stack Trace:", Exception("Tracking Drawer Open"))
-            }
-        }
-    }
-
+    // Reset TopAppBar scroll offset & close drawer on route change
     LaunchedEffect(currentRoute) {
-        Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(currentRoute) triggered: Route changed to $currentRoute")
         scrollBehavior.state.heightOffset = 0f
         scrollBehavior.state.contentOffset = 0f
-        selected = when {
-            currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
-            currentRoute?.contains("productRoutes", ignoreCase = true) == true -> 1
-            currentRoute?.contains("OrdersRoutes", ignoreCase = true) == true -> 2
-            currentRoute?.contains("HistoryRoutes", ignoreCase = true) == true -> 3
-            else -> -1 // Profile, Settings, About, Details आदि पर कोई टैब सेलेक्ट नहीं रहेगा
-        }
-        if (currentRoute != null && !isHomeScreen && drawerState.isOpen) {
-            Log.d("TAG", " DRAWER_DEBUGRoute changed to: $currentRoute | drawer isOpen: ${drawerState.isOpen}")
+        if (currentRoute != null && !isTopLevelRoute && drawerState.isOpen) {
             drawerState.close()
         }
-
     }
-    // ── 2. LAUNCHED EFFECTS TRACKER ──
-    LaunchedEffect(isLoggedIn) {
-        Log.d("DRAWER_DEBUG", "⚡ LaunchedEffect(isLoggedIn) triggered: isLoggedIn=$isLoggedIn, isOpen=${drawerState.isOpen}")
-        if (isLoggedIn) {
+
+    // 6. Consolidated Session & Navigation Guard (Sirf EK LaunchedEffect!)
+    LaunchedEffect(loggedIn, isAuthRoute, currentRoute) {
+        if (loggedIn) {
             viewModel.getAllAdmin()
-            if (drawerState.isOpen) {
-                drawerState.close()
+            if (isAuthRoute && currentRoute != null) {
+                navController.navigate(Routes.HomeRoutes.route) {
+                    popUpTo(0) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+        } else {
+            if (drawerState.isOpen) drawerState.close()
+            if (!isAuthRoute && currentRoute != null) {
+                navController.navigate(Routes.SignInRoutes.route) {
+                    popUpTo(0) { inclusive = true }
+                    launchSingleTop = true
+                }
             }
         }
     }
-    // ── Login → Home ──────────────────────────────────────────────────────────
-    // If the app finds an active session while sitting on an auth screen (e.g.
-    // cold start with persisted tokens), skip to the Home graph.
-    LaunchedEffect(isLoggedIn, isAuthRoute,currentRoute) {
-        if (isLoggedIn && isAuthRoute && currentRoute != null) {
-            Log.d("NAV", "Admin session active on auth screen -> forcing navigation to Home")
-            navController.navigate(Routes.HomeRoutes()) {
-                popUpTo(0) { inclusive = true }
-                launchSingleTop = true
-            }
-        }
-    }
-
-    LaunchedEffect(isLoggedIn) {
-        if (!isLoggedIn && !isAuthRoute && currentRoute != null) {
-            Log.w("NAV", "Session lost on protected route ($currentRoute) -> redirecting to SignIn")
-            navController.navigate(Routes.SignInRoutes) {
-                popUpTo(0) { inclusive = true }
-                launchSingleTop = true
-            }
-        }
-    }
-
-
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = isHomeScreen,
+        gesturesEnabled = isHomeScreen, // Swipe gesture sirf Home par, par menu button sabhi main tabs par kaam karega!
         drawerContent = {
-
-                AppDrawerContent(
-                    admin = admin,
-                    currentRoute = currentRoute,
-                    onProfileClick = {
-                        coroutineScope.launch { drawerState.close() }
-                        navController.navigate(Routes.ProfileRoutes.route) { launchSingleTop = true }
-                    },
-                    onSettingsClick = {
-                        coroutineScope.launch { drawerState.close() }
-                        navController.navigate(Routes.SettingsRoutes.route) { launchSingleTop = true }
-                    },
-                    onAboutClick = {
-                        coroutineScope.launch { drawerState.close() }
-                        navController.navigate(Routes.AboutRoutes.route) { launchSingleTop = true }
-                    },
-                    onLogoutClick = {
-                        coroutineScope.launch {
-                            drawerState.close()
-                            viewModel.setAdminLoggedOut()
-                        }
+            AppDrawerContent(
+                admin = admin,
+                currentRoute = currentRoute,
+                onProfileClick = {
+                    coroutineScope.launch { drawerState.close() }
+                    navController.navigate(Routes.ProfileRoutes.route) { launchSingleTop = true }
+                },
+                onSettingsClick = {
+                    coroutineScope.launch { drawerState.close() }
+                    navController.navigate(Routes.SettingsRoutes.route) { launchSingleTop = true }
+                },
+                onAboutClick = {
+                    coroutineScope.launch { drawerState.close() }
+                    navController.navigate(Routes.AboutRoutes.route) { launchSingleTop = true }
+                },
+                onLogoutClick = {
+                    coroutineScope.launch {
+                        drawerState.close()
+                        viewModel.setAdminLoggedOut()
                     }
-                )
-
+                }
+            )
         }
     ) {
-        val openDrawer = {
-            Log.i("TAG", "DRAWER_DEBUG TopBar menu icon CLICKED on route: $currentRoute")
-            if (isHomeScreen) coroutineScope.launch { drawerState.open() }
+        // Fixed: Menu icon ab Home, Products, Orders, History chaaro tabs se drawer khol sakega!
+        val openDrawer: () -> Unit = remember(isTopLevelRoute) {
+            {
+                if (isTopLevelRoute) {
+                    coroutineScope.launch { drawerState.open() }
+                }
+            }
         }
 
         Scaffold(
             containerColor = Color.Transparent,
             contentWindowInsets = WindowInsets(0, 0, 0, 0),
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // Added SnackbarHost!
             modifier = Modifier
                 .fillMaxSize()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .background(Color.Transparent),
             bottomBar = {
                 AnimatedVisibility(
-                    visible = isBottomBarVisible && !isBottomBarHidden,
+                    visible = isTopLevelRoute && !isBottomBarHidden,
                     enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut(),
-//                    modifier = Modifier .background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClaySecondary)))
+                    exit = slideOutVertically { it } + fadeOut()
                 ) {
                     AppBottomBar(
                         items = bottomNavItems,
-                        selected = selected,
+                        selected = selectedTab,
                         onItemSelected = { index ->
-                            selected = index
-                            val route = when (index) {
-                                0 -> Routes.HomeRoutes()
-                                1 -> Routes.ProductRoutes()
-                                2 -> Routes.OrdersRoutes()
-                                3 -> Routes.HistoryRoutes()
-                                else -> Routes.HomeRoutes()
+                            val targetRoute = when (index) {
+                                0 -> Routes.HomeRoutes.route
+                                1 -> Routes.ProductRoutes.route
+                                2 -> Routes.OrdersRoutes.route
+                                3 -> Routes.HistoryRoutes.route
+                                else -> Routes.HomeRoutes.route
                             }
-                            navController.navigate(route) {
-                                launchSingleTop = true
-                                restoreState = true
-                                popUpTo(Routes.HomeRoutes.route) { saveState = true }
+                            if (currentRoute != targetRoute) {
+                                navController.navigate(targetRoute) {
+                                    launchSingleTop = true
+                                    restoreState = true
+                                    popUpTo(Routes.HomeRoutes.route) { saveState = true }
+                                }
                             }
                         }
                     )
                 }
             }
         ) { _ ->
-            // Do NOT pass innerPadding here — this keeps the status bar edge-to-edge and prevents
-            // the LazyColumn from resizing/bouncing when the bottomBar animates out.
+            // 7. Dynamic Start Destination: Agar pehle se loggedIn hai toh seedha Home khulega!
+            // remember { } lagaya hai taaki बीच में state change hone par NavHost recreate na ho.
+            val initialDestination = remember {
+                if (loggedIn) Routes.HomeRoutes.route else Routes.SignInRoutes.route
+            }
+
             NavHost(
                 navController = navController,
-                startDestination = Routes.SplashRoutes.route,
+                startDestination = initialDestination,
                 modifier = Modifier.fillMaxSize()
-            ){
+            ) {
                 composable(Routes.SplashRoutes.route) {
                     SplashScreen(navController, viewModel)
                 }
-                composable<Routes.SignInRoutes> {
+                composable(Routes.SignInRoutes.route) {
                     SignIn(viewModel, navController)
                 }
-                composable<Routes.SignUpRoutes> {
+                composable(Routes.SignUpRoutes.route) {
                     SignUp(viewModel, navController)
                 }
                 composable<Routes.VerifyOtpRoutes> { backStackEntry ->
@@ -328,43 +334,90 @@ fun NavApp(viewModel: MyViewModel) {
                 }
 
                 composable(Routes.HomeRoutes.route) {
-                    HomeScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior)
+                    HomeScreen(
+                        viewModel,
+                        navController,
+                        onMenuClick = openDrawer,
+                        scrollBehavior = scrollBehavior
+                    )
                 }
 
                 navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
-                    composable(Routes.ProductRoutes.route) { ProductScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior) }
+                    composable(Routes.ProductRoutes.route) {
+                        ProductScreen(
+                            viewModel,
+                            navController,
+                            onMenuClick = openDrawer,
+                            scrollBehavior = scrollBehavior
+                        )
+                    }
                     composable(
                         Routes.SpecificProductRoutes.route,
                         arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                    ) { b -> SpecificProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
-                    composable(Routes.AddProductRoutes.route) { AddProductScreen(viewModel, navController) }
+                    ) { b ->
+                        val productId = b.arguments?.getString("productId") ?: return@composable
+                        SpecificProductScreen(productId, viewModel, navController)
+                    }
+                    composable(Routes.AddProductRoutes.route) {
+                        AddProductScreen(viewModel, navController)
+                    }
                     composable(
                         Routes.UpdateProductRoutes.route,
                         arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                    ) { b -> UpdateProductScreen(b.arguments?.getString("productId")!!, viewModel, navController) }
+                    ) { b ->
+                        val productId = b.arguments?.getString("productId") ?: return@composable
+                        UpdateProductScreen(productId, viewModel, navController)
+                    }
                 }
 
                 navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
-                    composable(Routes.OrdersRoutes.route) { OrderDetailsScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior) }
+                    composable(Routes.OrdersRoutes.route) {
+                        OrderDetailsScreen(
+                            viewModel,
+                            navController,
+                            onMenuClick = openDrawer,
+                            scrollBehavior = scrollBehavior
+                        )
+                    }
                     composable(
                         Routes.SpecificOrderRoutes.route,
                         arguments = listOf(navArgument("orderId") { type = NavType.StringType })
-                    ) { b -> SpecificOrderScreen(b.arguments?.getString("orderId")!!, viewModel, navController) }
+                    ) { b ->
+                        val orderId = b.arguments?.getString("orderId") ?: return@composable
+                        SpecificOrderScreen(orderId, viewModel, navController)
+                    }
                 }
-                composable(Routes.HistoryRoutes.route) { HistoryScreen(viewModel, navController, onMenuClick = openDrawer,scrollBehavior = scrollBehavior) }
+
+                composable(Routes.HistoryRoutes.route) {
+                    HistoryScreen(
+                        viewModel,
+                        navController,
+                        onMenuClick = openDrawer,
+                        scrollBehavior = scrollBehavior
+                    )
+                }
                 composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
                 composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
                 composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
 
-                navigation(startDestination = Routes.UserDetailsRoutes.route, route = "user_details") {
+                navigation(
+                    startDestination = Routes.UserDetailsRoutes.route,
+                    route = "user_details"
+                ) {
                     composable(
                         Routes.UserDetailsRoutes.route,
                         arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                    ) { b -> UserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
+                    ) { b ->
+                        val userId = b.arguments?.getString("userId") ?: return@composable
+                        UserDetailsScreen(userId, viewModel, navController)
+                    }
                     composable(
                         Routes.UpdateUserDetailsRoutes.route,
                         arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                    ) { b -> UpdateUserDetailsScreen(b.arguments?.getString("userId")!!, viewModel, navController) }
+                    ) { b ->
+                        val userId = b.arguments?.getString("userId") ?: return@composable
+                        UpdateUserDetailsScreen(userId, viewModel, navController)
+                    }
                 }
             }
         }
