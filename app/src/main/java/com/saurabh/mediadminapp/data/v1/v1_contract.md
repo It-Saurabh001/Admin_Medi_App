@@ -1,4 +1,4 @@
-# data.v1 contract (Part 1). Root: app/src/main/java/com/saurabh/mediadminapp/data/v1/ ; package prefix `com.saurabh.mediadminapp.data.v1`
+﻿# data.v1 contract (Part 1). Root: app/src/main/java/com/saurabh/mediadminapp/data/v1/ ; package prefix `com.saurabh.mediadminapp.data.v1`
 
 Conventions: Gson only. DTO props are camelCase with `@SerializedName("snake_case")`. Use `ApiEnvelope<Unit?>` when `data` is null. Gson instance for any Retrofit/test: `V1Gson.instance`.
 
@@ -66,32 +66,19 @@ Conventions: Gson only. DTO props are camelCase with `@SerializedName("snake_cas
 - `PasswordResetRequestData(otpExpiresIn: Int)`
 - `PasswordResetConfirmRequest(email: String, otp: String, newPassword: String, accountType: String = "user")` -> POST `auth/password-reset/confirm`; response `ApiEnvelope<Unit?>`
 
-## network/V1TokenStore.kt (pkg ...network)
-- `interface V1TokenStore { fun getAccessToken(): String?; fun getRefreshToken(): String?; fun saveSession(accessToken: String, refreshToken: String, role: String?, accountId: String?, accountType: String?, expiresInSeconds: Long?); fun clear() }`
+## network/V1RefreshApi.kt (pkg ...network)
 - `interface V1RefreshApi { @POST("auth/refresh") fun refresh(@Header("Authorization") bearerRefreshToken: String): Call<ApiEnvelope<RefreshData>> }`
 
 ## network/V1Qualifiers.kt
 - `@V1Retrofit` (authenticated Retrofit), `@V1AuthRetrofit` (no token/authenticator: login, verify-otp, password-reset, refresh, signup), `@V1OkHttp`, `@V1AuthOkHttp`
 
 ## network interceptors
-- `network/VersionInterceptor.kt`: `class VersionInterceptor(events: AppEvents, versionName: String = BuildConfig.VERSION_NAME) : Interceptor` (adds X-App-Version; 426 -> `UpgradeRequired(X-Min-App-Version)`)
-- `network/V1AuthInterceptor.kt`: `class V1AuthInterceptor(store: V1TokenStore) : Interceptor`; `companion fun relativePath(encodedPath: String): String`, `companion fun isExcluded(method: String, encodedPath: String): Boolean`. Skips: auth/login, auth/verify-otp, auth/password-reset*, auth/refresh, app-config, openapi.json, health*, POST users, and any request already carrying `Authorization`.
-- `network/ErrorEventInterceptor.kt`: `class ErrorEventInterceptor(events: AppEvents) : Interceptor` (403 ACCOUNT_BLOCKED -> AccountBlocked; 401 TOKEN_INVALID -> SessionInvalid; 429 -> RateLimited); `internal fun peekCode(response: Response): ErrorCode?`
-- `network/V1TokenAuthenticator.kt`: `class V1TokenAuthenticator(store: V1TokenStore, refreshApi: () -> V1RefreshApi, events: AppEvents) : Authenticator` (401 + TOKEN_EXPIRED -> single-flight refresh, saves both tokens; other 401 code or refresh 401/403 or 2nd attempt -> `store.clear()` + SessionInvalid; 401 on requests without Authorization header and offline/5xx refresh failures leave the session untouched)
 - `network/RedactingLogger.kt`: `class RedactingLogger(sink: (String) -> Unit = AppLogger) : HttpLoggingInterceptor.Logger`; `companion fun redact(message: String): String`
 
-## network/V1NetworkModule.kt (Hilt, SingletonComponent)
-- `object V1NetworkModule`; `val V1_BASE_URL: String` (= `BuildConfig.WirelessPhysicalDevice` trimmed + `/api/v1/`; Retrofit paths are RELATIVE with no leading slash, e.g. `@GET("products")`, `@POST("auth/login")`)
-- Provides: `V1TokenStore` (TokenManager), `@V1AuthOkHttp OkHttpClient`, `@V1AuthRetrofit Retrofit`, `V1RefreshApi`, `V1TokenAuthenticator`, `@V1OkHttp OkHttpClient`, `@V1Retrofit Retrofit`. Both Retrofits use `GsonConverterFactory.create(V1Gson.instance)`, 90 s timeouts, redacted logging. Create APIs with `retrofit.create(XApi::class.java)` from `@V1Retrofit` (or `@V1AuthRetrofit` for token-less calls).
 
-## TokenManager (existing file network/TokenManager.kt, additive; implements V1TokenStore)
-- New: `override fun saveSession(accessToken, refreshToken, role, accountId, accountType, expiresInSeconds)`, `override fun clear()` (no event), `fun getRole(): String?`, `fun getAccountId(): String?`, `fun getAccountType(): String?`, `fun getExpiresAt(): Long` (epoch ms, 0 = unknown), `override fun getAccessToken(): String?`, `override fun getRefreshToken(): String?`
-- Unchanged/compatible: `saveTokens`, `updateTokens`, `saveAdminId`, `saveRole`, `getUserRole`, `getAdminId`, `isLoggedIn()`, `clearTokens()`, `invalidateSession()`, `sessionExpiredEvent`, `getInstance`
-- Storage: `EncryptedSharedPreferences` file `auth_prefs_secure` (fallback to plain `auth_prefs` if Keystore fails); one-time migration from plain `auth_prefs`; `role` shares the old `admin_role` key; `saveSession` also mirrors `account_id` into old `admin_id`.
 
 ## Build
 - `app/build.gradle.kts`: added `testImplementation` mockwebserver 5.5.0, kotlinx-coroutines-test 1.10.2.
-- Tests: `app/src/test/java/com/saurabh/mediadminapp/data/v1/{SafeApiCallTest,EnumsAndPagingTest,V1TokenAuthenticatorTest}.kt`
 
 ---
 # PART 2 (DTOs + APIs). Packages: `...data.v1.dto`, `...data.v1.api`. All DTO props are camelCase with `@SerializedName(snake_case)` (JSON key = snake_case of the name). `Instant?`/`LocalDate?` via V1Gson adapters. Money = Double.
@@ -221,3 +208,51 @@ Conventions: Gson only. DTO props are camelCase with `@SerializedName("snake_cas
 - TopProduct.productId, .productName, .quantity, .revenue, .imageUrl (no row example)
 - AuditLog.details (free-form shape)
 - InventoryApi.listExpired element = Batch; listLowStock / listOutOfStock element = Product (examples empty, shapes assumed)
+
+---
+## UPDATED existing classes (package `com.saurabh.mediadminapp.network`; consolidation: no parallel stack)
+- `AuthInterceptor`: v1 branch (path contains `/api/v1/`): adds `Authorization: Bearer <access>` unless the request already has an Authorization header or the path is public (auth/login, auth/verify-otp, auth/password-reset*, auth/refresh, app-config, openapi.json, health*, POST users); no 422 handling on v1. Added companion: `fun isV1Path(encodedPath: String): Boolean`, `fun v1RelativePath(encodedPath: String): String`, `fun isV1Excluded(method: String, encodedPath: String): Boolean`. Legacy behavior unchanged.
+- `TokenAuthenticator(tokenManager: TokenManager, apiServiceProvider: Lazy<ApiServices>, v1RefreshApi: () -> V1RefreshApi = {throws}, appEvents: AppEvents = AppEvents())` (no longer `@Inject`; provided in ApiProvider). v1 paths: 401 with `code=TOKEN_EXPIRED` -> single-flight refresh via `V1RefreshApi.refresh("Bearer <refresh>")`, saves BOTH tokens + role + account_id/type + expiry via `tokenManager.saveSession`, retries once; any other 401 code / refresh 401-403 / 2nd attempt -> `tokenManager.invalidateSession()` + `AppEvents.SessionInvalid`; 401 on requests without Authorization header and offline/5xx refresh failures leave the session untouched. Legacy paths: old behavior. Both flows use the ONE `TokenManager.refreshLock`.
+- `TokenManager` (additive; all old getters/setters kept): `internal constructor(prefs: SharedPreferences)` (tests), `val refreshLock: ReentrantLock`, `fun saveSession(accessToken: String, refreshToken: String, role: String?, accountId: String?, accountType: String?, expiresInSeconds: Long?)`, `fun clear()` (no event), `fun getRole(): String?`, `fun getAccountId(): String?`, `fun getAccountType(): String?`, `fun getExpiresAt(): Long` (epoch ms, 0 = unknown), `getAccessToken()`, `getRefreshToken()`, `isLoggedIn()`. Storage: EncryptedSharedPreferences file `auth_prefs_secure` (falls back to plain `auth_prefs` if Keystore fails) with one-time migration from the plain file; `role` shares the old `admin_role` key and `saveSession` mirrors account_id into the old `admin_id`.
+- `ApiProvider` (Hilt): `val V1_BASE_URL: String` (BuildConfig base + `api/v1/`; Retrofit paths are relative, no leading slash). `provideTokenAuthenticator` now also takes `Lazy<V1RefreshApi>` + `AppEvents`; `provideHttpClient` now also takes `AppEvents` and adds `VersionInterceptor` + `ErrorEventInterceptor` (both active on `/api/v1/` paths only). New providers: `@V1OkHttp OkHttpClient` (= main client `.newBuilder().build()`), `@V1AuthOkHttp OkHttpClient` (= main client without authenticator), `@V1Retrofit Retrofit`, `@V1AuthRetrofit Retrofit` (both `GsonConverterFactory.create(V1Gson.instance)`), `V1RefreshApi`. The v1 Gson adapters apply only to v1 Retrofits; old Retrofits keep plain Gson. Provided HttpLoggingInterceptor now uses `RedactingLogger` (Log tag "OkHttp") and redacts the Authorization header.
+- `LoggingInterceptor`: request/response bodies pass through `RedactingLogger.redact`; Authorization header logged as `[REDACTED]`.
+
+## NEW
+- `data/v1/network/VersionInterceptor.kt`: `class VersionInterceptor(events: AppEvents, versionName: String = BuildConfig.VERSION_NAME) : Interceptor` (v1 paths only: X-App-Version; 426 -> `AppEvent.UpgradeRequired(X-Min-App-Version)`).
+- `data/v1/network/ErrorEventInterceptor.kt`: `class ErrorEventInterceptor(events: AppEvents) : Interceptor` (v1 paths only; peeks body: 403 ACCOUNT_BLOCKED -> AccountBlocked; 401 TOKEN_INVALID -> SessionInvalid; 429 -> RateLimited); `internal fun peekCode(response: Response): ErrorCode?`.
+- `data/v1/network/RedactingLogger.kt`, `V1Qualifiers.kt`, `V1RefreshApi.kt` (see sections above).
+- REMOVED (merged into the classes above): V1AuthInterceptor, V1TokenAuthenticator, V1NetworkModule, V1TokenStore.
+
+---
+# PART 3 Repository interfaces (dir data/v1/repository/, package `...data.v1.repository`). No implementations, no @Binds yet. All return `ApiResult<T>`; lists are `ApiResult<List<T>>` with pagination in `ApiResult.Success.pagination`.
+
+## Filters.kt
+- `DateRange(from: LocalDate? = null, to: LocalDate? = null)`
+- `ImagePart(fileName: String, mimeType: String, bytes: ByteArray)`, `FilePart(fileName: String, mimeType: String, bytes: ByteArray)` (no OkHttp types)
+- `ProductFilter(q?, category?, scheduleType?, requiresPrescription: Boolean?, isActive: Boolean?, inStock: Boolean?, updatedSince: Instant?)`
+- `OrderFilter(status: OrderStatus?, productId?, userId?, dateRange: DateRange = DateRange(), updatedSince: Instant?)`
+- `SalesFilter(dateRange: DateRange, productId?, userId?, orderId?, batchId?, updatedSince: Instant?)`
+- `UserFilter(q?, isApproved: Boolean?, isBlocked: Boolean?, includeDeleted: Boolean?, updatedSince: Instant?)`
+- `StockMovementFilter(productId?, batchId?, reason?, performedBy?, dateRange: DateRange)`
+- `AuditFilter(entity?, entityId?, actorId?, action?, dateRange: DateRange)`
+## AppConfigAuthRepositories.kt
+- `AppConfigRepository`: `getAppConfig(): ApiResult<AppConfig>`; `getApiIndex(): ApiResult<ApiIndex>`; `health(): ApiResult<HealthResponse>`
+- `AuthRepository`: `login(email, password, accountType): ApiResult<LoginData>`; `verifyOtp(accountId, otp, accountType): ApiResult<TokenData>`; `logout(): ApiResult<LogoutData>`; `requestPasswordReset(email, accountType): ApiResult<PasswordResetRequestData>`; `confirmPasswordReset(email, otp, newPassword, accountType): ApiResult<Unit?>`; non-suspend: `isLoggedIn(): Boolean`, `currentRole(): String?`, `currentAccountId(): String?`, `currentAccountType(): String?`, `clearSession()`
+## UserAdminDeviceRepositories.kt
+- `UserRepository`: `list(filter: UserFilter, page: PageRequest): ApiResult<List<User>>`; `get(userId): ApiResult<User>`; `me()`; `updateMe(request: ProfileUpdateRequest, image: ImagePart? = null)`; `adminUpdate(userId, request: UserUpdateRequest, image: ImagePart? = null)`; `delete(userId)`; `approve(userId)`; `block(userId)`; `unblock(userId)`; `signup(request: UserCreateRequest, image: ImagePart? = null)` (all `ApiResult<User>`); `ordersOf(userId, filter: OrderFilter, page: PageRequest): ApiResult<List<Order>>`
+- `AdminRepository`: `list(q?, role?, page): ApiResult<List<Admin>>`; `get(adminId)`; `create(request: AdminCreateRequest, image?)`; `update(adminId, request: AdminUpdateRequest, image?)`; `delete(adminId)` (`ApiResult<Admin>`)
+- `DeviceRepository`: `register(request: DeviceRegisterRequest): ApiResult<Device>`; `unregister(deviceId): ApiResult<Device>`
+## ProductInventoryRepositories.kt
+- `ProductRepository`: `list(filter: ProductFilter, page): ApiResult<List<Product>>`; `get(productId)`; `byBarcode(barcode)`; `create(request: ProductCreateRequest, image?)`; `update(productId, request: ProductUpdateRequest, image?)`; `deactivate(productId)`; `reactivate(productId)` (`ApiResult<Product>`); `categories(page): ApiResult<List<ProductCategory>>`
+- `InventoryRepository`: `batches(productId, includeExpired: Boolean?, inStock: Boolean?, page): ApiResult<List<Batch>>`; `batch(batchId): ApiResult<Batch>`; `createBatch(productId, request: BatchCreateRequest): ApiResult<StockOperationResult>`; `updateBatch(batchId, request: BatchUpdateRequest): ApiResult<Batch>`; `writeOff(batchId, note: String? = null): ApiResult<WriteOffResult>`; `purchase(productId, request: StockPurchaseRequest, idempotencyKey: String): ApiResult<StockOperationResult>`; `adjust(productId, request: StockAdjustRequest): ApiResult<StockOperationResult>`; `movements(filter: StockMovementFilter, page): ApiResult<List<StockMovement>>`; `nearExpiry(days: Int?, page): ApiResult<List<Batch>>`; `expired(page): ApiResult<List<Batch>>`; `lowStock(page): ApiResult<List<Product>>`; `outOfStock(page): ApiResult<List<Product>>`
+## OrderSalesRepositories.kt
+- `OrderRepository`: `list(filter: OrderFilter, page): ApiResult<List<Order>>`; `get(orderId)`; `create(request: OrderCreateRequest, prescription: FilePart? = null, idempotencyKey: String)`; `edit(orderId, request: OrderEditRequest)`; `approve(orderId)`; `reject(orderId, reason: String? = null)`; `cancel(orderId, reason: String? = null)`; `verifyPrescription(orderId, verified: Boolean = true)`; `sell(orderId, idempotencyKey: String)`; `returnOrder(orderId, reason: String? = null)`; `uploadPrescription(orderId, file: FilePart, doctorName: String? = null, patientName: String? = null)` (all `ApiResult<Order>`); `invoice(orderId): ApiResult<Invoice>`
+- `SalesRepository`: `list(filter: SalesFilter, page): ApiResult<List<Sale>>`
+## SupplierReportAuditRepositories.kt
+- `SalesReportResult(rows: List<SalesReportRow>, summary: SalesReportSummary?, pagination: Pagination?)`
+- `SupplierRepository`: `list(q?, isActive: Boolean?, page): ApiResult<List<Supplier>>`; `get(supplierId)`; `create(request: SupplierCreateRequest)`; `update(supplierId, request: SupplierUpdateRequest)`; `deactivate(supplierId)` (`ApiResult<Supplier>`)
+- `ReportRepository`: `dashboardSummary(): ApiResult<DashboardSummary>`; `salesReport(range: DateRange, groupBy: String?, page): ApiResult<SalesReportResult>`; `topProducts(range: DateRange, page): ApiResult<List<TopProduct>>`
+- `AuditRepository`: `list(filter: AuditFilter, page): ApiResult<List<AuditLog>>`
+
+## Tests (src/test/java/com/saurabh/mediadminapp/data/v1/)
+- `SafeApiCallTest`, `EnumsAndPagingTest`, `TokenAuthenticatorTest` (consolidated TokenAuthenticator: 5 parallel v1 401 -> one refresh; legacy path still uses `admin/refreshToken`), `DtoParsingTest` (response.md examples). Build: `testOptions { unitTests.isReturnDefaultValues = true }` added.

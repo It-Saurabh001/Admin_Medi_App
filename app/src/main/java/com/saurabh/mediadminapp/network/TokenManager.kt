@@ -9,14 +9,20 @@ import kotlinx.coroutines.flow.asSharedFlow
 import androidx.core.content.edit
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.saurabh.mediadminapp.data.v1.network.V1TokenStore
 import com.saurabh.mediadminapp.utils.AppLogger
+import java.util.concurrent.locks.ReentrantLock
 
 
-class TokenManager private constructor(context: Context) : V1TokenStore {
+/**
+ * Token store. Backed by EncryptedSharedPreferences (falls back to the plain file if the Keystore is
+ * unavailable). The internal constructor exists for tests.
+ */
+class TokenManager internal constructor(private val prefs: SharedPreferences) {
 
-    // Encrypted store (falls back to the plain file if the Keystore is unavailable).
-    private val prefs: SharedPreferences = createPrefs(context)
+    private constructor(context: Context) : this(createPrefs(context))
+
+    /** Single lock shared by the legacy and the v1 refresh flows (TokenAuthenticator). */
+    val refreshLock = ReentrantLock()
 
     private val _sessionExpiredEvent = MutableSharedFlow<Unit>(
         replay = 0,
@@ -111,7 +117,7 @@ class TokenManager private constructor(context: Context) : V1TokenStore {
     }
 
     /** v1 session save: both tokens + role + account identity + absolute expiry (epoch ms). */
-    override fun saveSession(
+    fun saveSession(
         accessToken: String,
         refreshToken: String,
         role: String?,
@@ -146,9 +152,9 @@ class TokenManager private constructor(context: Context) : V1TokenStore {
 
     // ── Read helpers ──────────────────────────────────────────────────────────
 
-    override fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
+    fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
 
-    override fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
+    fun getRefreshToken(): String? = prefs.getString(KEY_REFRESH_TOKEN, null)
 
     fun getUserRole(): String? = prefs.getString(KEY_ADMIN_ROLE, null)
 
@@ -171,7 +177,7 @@ class TokenManager private constructor(context: Context) : V1TokenStore {
     // ── Eviction helpers ──────────────────────────────────────────────────────
 
     /** Clears everything synchronously, without emitting [sessionExpiredEvent]. */
-    override fun clear() {
+    fun clear() {
         prefs.edit().clear().commit()
     }
 

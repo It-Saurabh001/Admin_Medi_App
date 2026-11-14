@@ -13,16 +13,53 @@ class AuthInterceptor(private val tokenManager: TokenManager) : Interceptor {
             "/admin/requestAdminPasswordReset",
             "/admin/resetAdminPasswordWithOtp"
         )
+
+        private const val V1_MARKER = "api/v1/"
+
+        /** True for requests to the v1 API (path contains /api/v1/). */
+        fun isV1Path(encodedPath: String): Boolean = encodedPath.contains(V1_MARKER)
+
+        /** Path relative to /api/v1/ without leading/trailing slashes. */
+        fun v1RelativePath(encodedPath: String): String {
+            val i = encodedPath.indexOf(V1_MARKER)
+            val rel = if (i >= 0) encodedPath.substring(i + V1_MARKER.length) else encodedPath
+            return rel.trim('/')
+        }
+
+        /** v1 endpoints that must not carry the access token. */
+        fun isV1Excluded(method: String, encodedPath: String): Boolean {
+            val rel = v1RelativePath(encodedPath)
+            return rel.startsWith("auth/login") ||
+                rel.startsWith("auth/verify-otp") ||
+                rel.startsWith("auth/password-reset") ||
+                rel.startsWith("auth/refresh") ||
+                rel.startsWith("app-config") ||
+                rel.startsWith("openapi.json") ||
+                rel.startsWith("health") ||
+                (method.equals("POST", ignoreCase = true) && rel == "users")
+        }
     }
 
 
     override fun intercept(chain: Interceptor.Chain): Response {
-
-
-        Log.d("TAG", "Intercepter--------------------------------------------------------------")
-
         val originalRequest = chain.request()
         val path = originalRequest.url.encodedPath
+
+        // ── v1 API: bearer on everything except the public endpoints; no 422 special-casing ──
+        if (isV1Path(path)) {
+            if (originalRequest.header("Authorization") != null || isV1Excluded(originalRequest.method, path)) {
+                return chain.proceed(originalRequest)
+            }
+            val v1Token = tokenManager.getAccessToken()
+            if (v1Token.isNullOrBlank()) return chain.proceed(originalRequest)
+            return chain.proceed(
+                originalRequest.newBuilder().header("Authorization", "Bearer $v1Token").build()
+            )
+        }
+
+        // ── legacy API (unchanged behavior) ──
+        Log.d("TAG", "Intercepter--------------------------------------------------------------")
+
         // Check if current URL is excluded
         val isExcluded = EXCLUDED_PATHS.any { path.startsWith(it) }
         // If excluded or no token, send request as is

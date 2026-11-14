@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.network
 
+import com.saurabh.mediadminapp.data.v1.network.RedactingLogger
 import com.saurabh.mediadminapp.utils.AppLogger
 import okhttp3.Interceptor
 import okhttp3.Response
@@ -26,8 +27,8 @@ class LoggingInterceptor : Interceptor {
         AppLogger.logRequest(
             method = request.method,
             url = request.url.toString(),
-            headers = request.headers.toMultimap().mapValues { it.value.joinToString(",") },
-            body = if (request.url.toString().contains("password", true)) "[PROTECTED]" else bodyString
+            headers = request.headers.toMultimap().mapValues { (k, v) -> if (k.equals("authorization", true)) "[REDACTED]" else v.joinToString(",") },
+            body = if (request.url.toString().contains("password", true)) "[PROTECTED]" else bodyString?.let { RedactingLogger.redact(it) }
         )
 
         val response = try {
@@ -50,7 +51,7 @@ class LoggingInterceptor : Interceptor {
             code = response.code,
             url = response.request.url.toString(),
             durationMs = durationMs,
-            body = responseBodyString
+            body = RedactingLogger.redact(responseBodyString)
         )
 
         return response

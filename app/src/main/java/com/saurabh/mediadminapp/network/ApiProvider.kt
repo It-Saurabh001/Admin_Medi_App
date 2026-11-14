@@ -3,12 +3,23 @@ package com.saurabh.mediadminapp.network
 import com.saurabh.mediadminapp.BuildConfig
 import android.content.Context
 import android.util.Log
+import com.saurabh.mediadminapp.data.v1.core.AppEvents
+import com.saurabh.mediadminapp.data.v1.core.V1Gson
+import com.saurabh.mediadminapp.data.v1.network.ErrorEventInterceptor
+import com.saurabh.mediadminapp.data.v1.network.RedactingLogger
+import com.saurabh.mediadminapp.data.v1.network.V1AuthOkHttp
+import com.saurabh.mediadminapp.data.v1.network.V1AuthRetrofit
+import com.saurabh.mediadminapp.data.v1.network.V1OkHttp
+import com.saurabh.mediadminapp.data.v1.network.V1RefreshApi
+import com.saurabh.mediadminapp.data.v1.network.V1Retrofit
+import com.saurabh.mediadminapp.data.v1.network.VersionInterceptor
 import dagger.Module
 import dagger.Lazy
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -48,6 +59,9 @@ annotation class MainApiService
 object ApiProvider {
     val BASE_URL1 = BuildConfig.WirelessPhysicalDevice
 
+    /** BuildConfig base + "api/v1/" (single trailing slash). */
+    val V1_BASE_URL: String get() = BASE_URL1.trimEnd('/') + "/api/v1/"
+
     // ── TokenManager ──────────────────────────────────────────────────────────
 
     @Provides
@@ -64,12 +78,13 @@ object ApiProvider {
         return LoggingInterceptor()
     }
 
-    // ── Logging interceptor ───────────────────────────────────────────────────
+    // ── Logging interceptor (tokens / otp / passwords / Authorization are redacted) ──
 
     @Provides
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
-        return HttpLoggingInterceptor().apply {
+        return HttpLoggingInterceptor(RedactingLogger { Log.d("OkHttp", it) }).apply {
+            redactHeader("Authorization")
             level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY
                     else HttpLoggingInterceptor.Level.NONE
         }
@@ -121,15 +136,17 @@ object ApiProvider {
         return AuthInterceptor(tokenManager)
     }
 
-    // ── TokenAuthenticator — injected with the isolated auth service ──────────
+    // ── TokenAuthenticator — legacy refresh via the isolated auth service, v1 via V1RefreshApi (lazy) ──
 
     @Provides
     @Singleton
     fun provideTokenAuthenticator(
         tokenManager: TokenManager,
-        @AuthApiService authApiServiceProvider: Lazy<ApiServices>
+        @AuthApiService authApiServiceProvider: Lazy<ApiServices>,
+        v1RefreshApi: Lazy<V1RefreshApi>,
+        appEvents: AppEvents
     ): TokenAuthenticator {
-        return TokenAuthenticator(tokenManager, authApiServiceProvider)
+        return TokenAuthenticator(tokenManager, authApiServiceProvider, { v1RefreshApi.get() }, appEvents)
     }
 
     // ── Main (authenticated) OkHttpClient ─────────────────────────────────────
@@ -140,13 +157,16 @@ object ApiProvider {
         loggingInterceptor: HttpLoggingInterceptor,
         customLoggingInterceptor: LoggingInterceptor,
         authInterceptor: AuthInterceptor,
-        tokenAuthenticator: TokenAuthenticator
+        tokenAuthenticator: TokenAuthenticator,
+        appEvents: AppEvents
     ): OkHttpClient {
         Log.d("PERF_TRACE", "Hilt provideHttpClient [Thread: ${Thread.currentThread().name}]")
         return OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
             .addInterceptor(customLoggingInterceptor)
+            .addInterceptor(VersionInterceptor(appEvents))      // v1 paths only: X-App-Version + 426
             .addInterceptor(authInterceptor)    // injects Bearer token on outgoing requests
+            .addInterceptor(ErrorEventInterceptor(appEvents))   // v1 paths only: blocked / invalid / rate-limited events
             .authenticator(tokenAuthenticator)  // retries with fresh token on 401 responses
             .connectTimeout(90, TimeUnit.SECONDS)
             .readTimeout(90, TimeUnit.SECONDS)
@@ -176,4 +196,41 @@ object ApiProvider {
     fun provideApiServices(@MainRetrofit retrofit: Retrofit): ApiServices {
         return retrofit.create(ApiServices::class.java)
     }
+
+    // ── v1 (derived from the existing main client: same timeouts, logging, interceptors) ──
+
+    @Provides
+    @Singleton
+    @V1OkHttp
+    fun provideV1OkHttp(client: OkHttpClient): OkHttpClient = client.newBuilder().build()
+
+    /** Same client WITHOUT the authenticator (used for auth/refresh so it can never recurse). */
+    @Provides
+    @Singleton
+    @V1AuthOkHttp
+    fun provideV1AuthOkHttp(client: OkHttpClient): OkHttpClient =
+        client.newBuilder().authenticator(Authenticator.NONE).build()
+
+    @Provides
+    @Singleton
+    @V1Retrofit
+    fun provideV1Retrofit(@V1OkHttp client: OkHttpClient): Retrofit = Retrofit.Builder()
+        .baseUrl(V1_BASE_URL)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create(V1Gson.instance))
+        .build()
+
+    @Provides
+    @Singleton
+    @V1AuthRetrofit
+    fun provideV1AuthRetrofit(@V1AuthOkHttp client: OkHttpClient): Retrofit = Retrofit.Builder()
+        .baseUrl(V1_BASE_URL)
+        .client(client)
+        .addConverterFactory(GsonConverterFactory.create(V1Gson.instance))
+        .build()
+
+    @Provides
+    @Singleton
+    fun provideV1RefreshApi(@V1AuthRetrofit retrofit: Retrofit): V1RefreshApi =
+        retrofit.create(V1RefreshApi::class.java)
 }
