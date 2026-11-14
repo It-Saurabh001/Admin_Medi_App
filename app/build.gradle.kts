@@ -80,6 +80,8 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.compose.animation.core.lint)
     testImplementation(libs.junit)
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
