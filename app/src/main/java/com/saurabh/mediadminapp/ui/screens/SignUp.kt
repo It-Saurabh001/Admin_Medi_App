@@ -2,490 +2,260 @@ package com.saurabh.mediadminapp.ui.screens
 
 import android.net.Uri
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import com.saurabh.mediadminapp.utils.utilityFunctions.toImagePart
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SignUp — Claymorphism design + BUG-06 dual-Scaffold fix
-//
-// OLD BUG: when { state.isLoading -> Scaffold{...}; state.error -> Scaffold{...} }
-// did NOT have early returns, so the main form Scaffold always rendered below,
-// creating 2 full-screen Scaffolds stacked — the top one absorbed all touches.
-//
-// FIX: Single layout with AnimatedContent switching between Loading, Success,
-// Error, and Form states. Zero stacked Scaffolds.
-// ─────────────────────────────────────────────────────────────────────────────
+private const val SIGNUP_MIN_PASSWORD = 8
 
-private val SignUpGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFFFF6584), Color(0xFF6C63FF))
-)
-private val SignUpPrimary = Color(0xFF6C63FF)
-private val SignUpAccent = Color(0xFFFF6584)
-
-private enum class SignUpScreen { FORM, LOADING, SUCCESS }
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
     val state by viewModel.createAdminState.collectAsState()
     val context = LocalContext.current
 
-    var name by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var phoneNumber by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var isPasswordVisible by remember { mutableStateOf(false) }
-    var isConfirmPasswordVisible by remember { mutableStateOf(false) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var phoneNumber by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
     var nameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
+    var phoneError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmError by remember { mutableStateOf<String?>(null) }
+    var formError by remember { mutableStateOf<String?>(null) }
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri -> imageUri = uri }
+    ) { uri -> if (uri != null) imageUri = uri }
 
-    // Determine which screen state to show
-    val screenState: SignUpScreen = when {
-        state.isLoading -> SignUpScreen.LOADING
-        state.success != null -> SignUpScreen.SUCCESS
-        else -> SignUpScreen.FORM
+    fun goToSignIn(message: String? = null) {
+        val signIn = runCatching { navController.getBackStackEntry(Routes.SignInRoutes.route) }.getOrNull()
+        if (signIn != null) {
+            if (message != null) signIn.savedStateHandle[AUTH_MESSAGE_KEY] = message
+            navController.popBackStack(Routes.SignInRoutes.route, inclusive = false)
+        } else {
+            navController.navigate(Routes.SignInRoutes.route) {
+                popUpTo(Routes.SignUpRoutes.route) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
     }
 
-    Log.d("SignUp", "Current screen state: $screenState")
-    // Error Toast
+    // Error -> field / form messages
     LaunchedEffect(state.error) {
-        if (state.error != null) {
-            Toast.makeText(context, state.error.toString(), Toast.LENGTH_LONG).show()
-            Log.d("TAG", "SignUp: error : ${state.error}")
-        }
+        val error = state.error ?: return@LaunchedEffect
+        Log.d("TAG", "SignUp: error : $error")
+        val appError = state.appError
+        nameError = appError.fieldError("name")
+        emailError = appError.fieldError("email")
+        phoneError = appError.fieldError("phone_number")
+        passwordError = appError.fieldError("password")
+        formError = if (listOf(nameError, emailError, phoneError, passwordError).all { it == null }) error else null
     }
 
     // Navigate on success
     LaunchedEffect(state.success) {
         if (state.success != null) {
             Log.d("NAV", "SignUp success — navigating to SignIn")
-            Toast.makeText(context, "Account created! Please sign in.", Toast.LENGTH_SHORT).show()
-            navController.navigate(Routes.SignInRoutes.route) {
-                popUpTo(Routes.SignUpRoutes.route) { inclusive = true }
-            }
+            goToSignIn("Account created. Please sign in.")
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(brush = SignUpGradient),
-        contentAlignment = Alignment.Center
-    ) {
-        // Decorative blobs
-        ClayBlob(
-            modifier = Modifier
-                .size(200.dp)
-                .align(Alignment.TopStart)
-                .padding(top = 8.dp),
-            color = Color.White.copy(alpha = 0.10f)
-        )
-        ClayBlob(
-            modifier = Modifier
-                .size(140.dp)
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 24.dp, end = 8.dp),
-            color = Color(0xFF48CAE4).copy(alpha = 0.18f)
-        )
-
-        // Single-state animated content — ZERO stacked Scaffolds
-        AnimatedContent(
-            targetState = screenState,
-            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
-            label = "signUpState"
-        ) { screen ->
-            when (screen) {
-                SignUpScreen.LOADING -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = Color.White, strokeWidth = 4.dp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "Creating your account…",
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        topBar = {
+            TopAppBar(
+                title = { Text("Create account", style = MaterialTheme.typography.titleLarge) },
+                navigationIcon = {
+                    IconButton(onClick = { goToSignIn() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
                     }
-                }
-
-                SignUpScreen.SUCCESS -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("🎉", fontSize = 64.sp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "Account Created!",
-                                color = Color.White,
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                "Redirecting to sign in…",
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontSize = 14.sp
-                            )
-                        }
-                    }
-                }
-
-                SignUpScreen.FORM -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 24.dp, vertical = 36.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        // Logo badge
-                        Box(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .shadow(
-                                    elevation = 16.dp,
-                                    shape = CircleShape,
-                                    ambientColor = SignUpAccent.copy(0.2f),
-                                    spotColor = SignUpAccent.copy(0.2f)
-                                )
-                                .clip(CircleShape)
-                                .background(Color.White),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("✨", fontSize = 32.sp)
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Text(
-                            text = "Create Account",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            )
+        }
+    ) { innerPadding ->
+        AuthFormColumn(
+            modifier = Modifier.padding(innerPadding),
+            verticalArrangement = Arrangement.Top
+        ) {
+            // ── Profile photo (optional) ──
+            Surface(
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.size(96.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (imageUri != null) {
+                        Image(
+                            painter = rememberAsyncImagePainter(imageUri),
+                            contentDescription = "Profile photo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
-                        Text(
-                            text = "Join the MediAdmin family",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.82f),
-                            textAlign = TextAlign.Center
+                    } else {
+                        Icon(
+                            Icons.Outlined.AddAPhoto,
+                            contentDescription = null,
+                            modifier = Modifier.size(32.dp)
                         )
-                        Spacer(modifier = Modifier.height(28.dp))
-
-                        // ── Clay Card ─────────────────────────────────────
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(28.dp),
-                                    ambientColor = SignUpAccent.copy(0.15f),
-                                    spotColor = SignUpPrimary.copy(0.15f)
-                                )
-                                .clip(RoundedCornerShape(28.dp))
-                                .background(Color(0xFFFAF9FF))
-                                .padding(24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            // ── Image picker (mirroring AddProductScreen) ──
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(90.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFEDE9FF))
-                                    .border(1.5.dp, SignUpPrimary.copy(0.35f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (imageUri != null) {
-                                    Image(
-                                        painter = rememberAsyncImagePainter(imageUri),
-                                        contentDescription = "Admin Photo Preview",
-                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Text("📷", fontSize = 32.sp)
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            androidx.compose.material3.OutlinedButton(
-                                onClick = {
-                                    launcher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                },
-                                shape = RoundedCornerShape(50.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, SignUpPrimary.copy(0.5f))
-                            ) {
-                                Text(
-                                    text = if (imageUri == null) "Select Photo (optional)" else "Change Photo",
-                                    color = SignUpPrimary,
-                                    fontSize = 13.sp
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Name
-                            ClayTextField(
-                                value = name,
-                                onValueChange = {
-                                    name = it
-                                    nameError = null
-                                },
-                                label = "Full Name",
-                                leadingIcon = {
-                                    Icon(Icons.Default.Person, null, tint = SignUpPrimary)
-                                }
-                            )
-                            if (nameError != null) {
-                                Text(
-                                    text = nameError!!,
-                                    color = Color(0xFFE53935),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 4.dp, top = 2.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            // Email
-                            ClayTextField(
-                                value = email,
-                                onValueChange = {
-                                    email = it
-                                    emailError = null
-                                },
-                                label = "Email address",
-                                leadingIcon = {
-                                    Icon(Icons.Default.Email, null, tint = SignUpPrimary)
-                                },
-                                keyboardType = KeyboardType.Email
-                            )
-                            if (emailError != null) {
-                                Text(
-                                    text = emailError!!,
-                                    color = Color(0xFFE53935),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 4.dp, top = 2.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            // Phone
-                            ClayTextField(
-                                value = phoneNumber,
-                                onValueChange = { phoneNumber = it },
-                                label = "+91 Phone Number",
-                                leadingIcon = {
-                                    Icon(Icons.Default.Phone, null, tint = SignUpPrimary)
-                                },
-                                keyboardType = KeyboardType.Phone
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            // Password
-                            ClayTextField(
-                                value = password,
-                                onValueChange = {
-                                    password = it
-                                    passwordError = null
-                                },
-                                label = "Password",
-                                leadingIcon = {
-                                    Icon(Icons.Default.Lock, null, tint = SignUpPrimary)
-                                },
-                                keyboardType = KeyboardType.Password,
-                                visualTransformation = if (isPasswordVisible)
-                                    VisualTransformation.None else PasswordVisualTransformation(),
-                                trailingIcon = {
-                                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
-                                        Icon(
-                                            if (isPasswordVisible) Icons.Default.Visibility
-                                            else Icons.Default.VisibilityOff,
-                                            contentDescription = "Toggle",
-                                            tint = SignUpPrimary
-                                        )
-                                    }
-                                }
-                            )
-                            Spacer(modifier = Modifier.height(14.dp))
-
-                            // Confirm Password
-                            ClayTextField(
-                                value = confirmPassword,
-                                onValueChange = {
-                                    confirmPassword = it
-                                    passwordError = null
-                                },
-                                label = "Confirm Password",
-                                leadingIcon = {
-                                    Icon(Icons.Default.Lock, null, tint = SignUpPrimary)
-                                },
-                                keyboardType = KeyboardType.Password,
-                                visualTransformation = if (isConfirmPasswordVisible)
-                                    VisualTransformation.None else PasswordVisualTransformation(),
-                                trailingIcon = {
-                                    IconButton(onClick = {
-                                        isConfirmPasswordVisible = !isConfirmPasswordVisible
-                                    }) {
-                                        Icon(
-                                            if (isConfirmPasswordVisible) Icons.Default.Visibility
-                                            else Icons.Default.VisibilityOff,
-                                            contentDescription = "Toggle",
-                                            tint = SignUpPrimary
-                                        )
-                                    }
-                                }
-                            )
-                            if (passwordError != null) {
-                                Text(
-                                    text = passwordError!!,
-                                    color = Color(0xFFE53935),
-                                    fontSize = 12.sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(start = 4.dp, top = 2.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // Sign Up button
-                            ClayGradientButton(
-                                text = "Create Account →",
-                                isLoading = false,
-                                onClick = {
-                                    Log.d("SignUp", "Sign Up button clicked for email: $email")
-                                    var valid = true
-                                    if (name.isBlank()) {
-                                        nameError = "Name is required"
-                                        valid = false
-                                    }
-                                    if (!email.contains("@")) {
-                                        emailError = "Enter a valid email"
-                                        valid = false
-                                    }
-                                    if (password != confirmPassword) {
-                                        passwordError = "Passwords do not match"
-                                        valid = false
-                                    }
-                                    if (password.length < 6) {
-                                        passwordError = "Password must be at least 6 characters"
-                                        valid = false
-                                    }
-                                    if (valid) {
-                                        val imagePart = imageUri?.toImagePart(context)
-                                        viewModel.createAdmin(
-                                            name, email, password, phoneNumber, imagePart
-                                        )
-                                    }
-                                }
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Text(
-                                    "Already have an account? ",
-                                    color = Color(0xFF555577),
-                                    fontSize = 14.sp
-                                )
-                                TextButton(onClick = {
-                                    navController.navigate(Routes.SignInRoutes.route)
-                                }) {
-                                    Text(
-                                        "Sign In",
-                                        color = SignUpPrimary,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
             }
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedButton(
+                onClick = {
+                    launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+            ) {
+                Text(
+                    text = if (imageUri == null) "Add photo (optional)" else "Change photo",
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Set up an admin account for your pharmacy.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it; nameError = null; formError = null },
+                label = { Text("Full name") },
+                leadingIcon = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                singleLine = true,
+                isError = nameError != null,
+                supportingText = nameError?.let { { SupportingText(it) } },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = email,
+                onValueChange = { email = it; emailError = null; formError = null },
+                label = { Text("Email") },
+                leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                singleLine = true,
+                isError = emailError != null,
+                supportingText = emailError?.let { { SupportingText(it) } },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = phoneNumber,
+                onValueChange = { phoneNumber = it; phoneError = null; formError = null },
+                label = { Text("Phone number") },
+                leadingIcon = { Icon(Icons.Outlined.Phone, contentDescription = null) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Next),
+                singleLine = true,
+                isError = phoneError != null,
+                supportingText = { SupportingText(phoneError, "Optional") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PasswordField(
+                value = password,
+                onValueChange = { password = it; passwordError = null; formError = null },
+                label = "Password",
+                error = passwordError,
+                hint = "Minimum 8 characters",
+                imeAction = ImeAction.Next
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            PasswordField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it; confirmError = null },
+                label = "Confirm password",
+                error = confirmError
+            )
+
+            AuthFormError(formError)
+
+            Spacer(modifier = Modifier.height(16.dp))
+            AuthPrimaryButton(
+                text = "Create account",
+                isLoading = state.isLoading,
+                onClick = {
+                    Log.d("SignUp", "Create account clicked")
+                    nameError = if (name.isBlank()) "Name is required" else null
+                    emailError = if (!email.contains("@")) "Enter a valid email" else null
+                    passwordError = if (password.length < SIGNUP_MIN_PASSWORD) "Minimum 8 characters" else null
+                    confirmError = if (password != confirmPassword) "Passwords do not match" else null
+                    if (listOf(nameError, emailError, passwordError, confirmError).all { it == null }) {
+                        val imagePart = imageUri?.toImagePart(context)
+                        viewModel.createAdmin(name.trim(), email.trim(), password, phoneNumber.trim(), imagePart)
+                    }
+                }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Spacer(modifier = Modifier.height(8.dp))
+            AuthFooterLink(
+                prompt = "Already have an account?",
+                action = "Sign in",
+                onClick = { goToSignIn() }
+            )
         }
     }
 }

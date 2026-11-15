@@ -25,6 +25,30 @@ sealed class Routes{
     }
 
     @Serializable
+    object ForgotPasswordRoutes {
+        const val route = "ForgotPasswordRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object ResetPasswordRoutes {
+        const val route = "ResetPasswordRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object UpgradeRequiredRoutes {
+        const val route = "UpgradeRequiredRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object AccountBlockedRoutes {
+        const val route = "AccountBlockedRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
     object ProfileRoutes {
         const val route = "ProfileRoutes"
         operator fun invoke() = route
@@ -44,6 +68,18 @@ sealed class Routes{
     @Serializable
     object AboutRoutes {
         const val route = "AboutRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object ReportsRoutes {
+        const val route = "ReportsRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object TopProductsRoutes {
+        const val route = "TopProductsRoutes"
         operator fun invoke() = route
     }
 

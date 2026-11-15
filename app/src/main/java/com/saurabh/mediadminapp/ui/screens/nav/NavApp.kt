@@ -1,86 +1,70 @@
 package com.saurabh.mediadminapp.ui.screens.nav
 
-import android.annotation.SuppressLint
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkHorizontally
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import com.saurabh.mediadminapp.ui.adaptive.rememberWindowSize
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material3.DrawerValue
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.ShoppingBag
+import androidx.compose.material.icons.outlined.Dashboard
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Medication
+import androidx.compose.material.icons.outlined.MoreHoriz
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.ShoppingBag
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -93,9 +77,14 @@ import androidx.navigation.toRoute
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.data.v1.dto.Admin
 import com.saurabh.mediadminapp.ui.screens.AboutScreen
+import com.saurabh.mediadminapp.ui.screens.ReportsScreen
+import com.saurabh.mediadminapp.ui.screens.TopProductsScreen
+import com.saurabh.mediadminapp.ui.screens.AccountBlockedScreen
+import com.saurabh.mediadminapp.ui.screens.ForgotPasswordScreen
+import com.saurabh.mediadminapp.ui.screens.ResetPasswordScreen
+import com.saurabh.mediadminapp.ui.screens.UpgradeRequiredScreen
 import com.saurabh.mediadminapp.ui.screens.AddProductScreen
 import com.saurabh.mediadminapp.ui.screens.HistoryScreen
-import com.saurabh.mediadminapp.ui.screens.HomeScreen
 import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.OtpScreen
 import com.saurabh.mediadminapp.ui.screens.ProductScreen
@@ -109,12 +98,8 @@ import com.saurabh.mediadminapp.ui.screens.SplashScreen
 import com.saurabh.mediadminapp.ui.screens.UpdateProductScreen
 import com.saurabh.mediadminapp.ui.screens.UpdateUserDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.UserDetailsScreen
-import com.saurabh.mediadminapp.ui.theme.ClayPrimary
-import com.saurabh.mediadminapp.ui.theme.ClaySecondary
 import com.saurabh.mediadminapp.utils.UiEvent
-import kotlinx.coroutines.launch
 
-@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NavApp(viewModel: MyViewModel) {
@@ -123,15 +108,13 @@ fun NavApp(viewModel: MyViewModel) {
     val adminState by viewModel.getAllAdminState.collectAsStateWithLifecycle()
     val loggedInAdminId by viewModel.loggedInAdminId.collectAsStateWithLifecycle()
 
-    // 2. ZERO AUTH FLASH GUARD:
-    // Jab tak ViewModel token check kar raha hai (null), kuch bhi render mat karo (SplashScreen ruki rahegi).
+    // 2. ZERO AUTH FLASH GUARD: render nothing while the token check is pending (splash stays).
     val loggedIn = isLoggedIn ?: return
 
     val navController = rememberNavController()
-    val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // 3. Centralized One-Time Snackbar Collector (Poore app ke UiEvents yahan handle honge!)
+    // 3. Centralized one-time snackbar collector
     LaunchedEffect(Unit) {
         viewModel.uiEvent.collect { event ->
             when (event) {
@@ -145,25 +128,18 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    // 4. Memoized Admin Lookup (Har recomposition par loop nahi chalega)
+    // 4. Memoized admin lookup
     val admin: Admin? = remember(adminState.success, loggedInAdminId) {
         adminState.success?.items?.find { it.adminId == loggedInAdminId }
     }
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
-    val isBottomBarHidden by remember {
-        derivedStateOf { scrollBehavior.state.collapsedFraction > 0.35f }
-    }
 
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    var showMoreSheet by rememberSaveable { mutableStateOf(false) }
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    // 5. Clean Route Helpers (Single source of truth for route checks)
-    val isHomeScreen = remember(currentRoute) {
-        currentRoute?.contains("HomeRoutes", ignoreCase = true) == true
-    }
-
+    // 5. Route helpers
     val isTopLevelRoute = remember(currentRoute) {
         currentRoute?.let { route ->
             route.contains("HomeRoutes", ignoreCase = true) ||
@@ -180,11 +156,26 @@ fun NavApp(viewModel: MyViewModel) {
             currentRoute.contains("SignInRoutes", ignoreCase = true) -> true
             currentRoute.contains("SignUpRoutes", ignoreCase = true) -> true
             currentRoute.contains("VerifyOtpRoutes", ignoreCase = true) -> true
+            currentRoute.contains("ForgotPasswordRoutes", ignoreCase = true) -> true
+            currentRoute.contains("ResetPasswordRoutes", ignoreCase = true) -> true
+            currentRoute.contains("AccountBlockedRoutes", ignoreCase = true) -> true
             else -> false
         }
     }
 
-    // Tab selection derived directly from currentRoute (No manual sync bugs on Back press!)
+    // Forced update: blocks every other route (back disabled on the screen).
+    val upgradeRequiredVersion by viewModel.upgradeRequiredVersion.collectAsStateWithLifecycle()
+    val isUpgradeRoute = currentRoute == Routes.UpgradeRequiredRoutes.route
+    LaunchedEffect(upgradeRequiredVersion, currentRoute) {
+        if (upgradeRequiredVersion != null && currentRoute != null && !isUpgradeRoute) {
+            navController.navigate(Routes.UpgradeRequiredRoutes.route) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+
+    // Tab selection derived from currentRoute
     val selectedTab = remember(currentRoute) {
         when {
             currentRoute?.contains("HomeRoutes", ignoreCase = true) == true -> 0
@@ -195,26 +186,16 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    val bottomNavItems = remember {
-        listOf(
-            BottomNavigationItem("Dashboard", Icons.Filled.Home),
-            BottomNavigationItem("Products", Icons.Filled.Add),
-            BottomNavigationItem("Orders", Icons.Filled.ShoppingCart),
-            BottomNavigationItem("History", Icons.Filled.Menu)
-        )
-    }
-
-    // Reset TopAppBar scroll offset & close drawer on route change
+    // Reset TopAppBar scroll offset & close the More sheet on route change
     LaunchedEffect(currentRoute) {
         scrollBehavior.state.heightOffset = 0f
         scrollBehavior.state.contentOffset = 0f
-        if (currentRoute != null && !isTopLevelRoute && drawerState.isOpen) {
-            drawerState.close()
-        }
+        showMoreSheet = false
     }
 
-    // 6. Consolidated Session & Navigation Guard (Sirf EK LaunchedEffect!)
+    // 6. Consolidated session & navigation guard
     LaunchedEffect(loggedIn, isAuthRoute, currentRoute) {
+        if (isUpgradeRoute) return@LaunchedEffect
         if (loggedIn) {
             viewModel.getAllAdmin()
             if (isAuthRoute && currentRoute != null) {
@@ -224,7 +205,7 @@ fun NavApp(viewModel: MyViewModel) {
                 }
             }
         } else {
-            if (drawerState.isOpen) drawerState.close()
+            showMoreSheet = false
             if (!isAuthRoute && currentRoute != null) {
                 navController.navigate(Routes.SignInRoutes.route) {
                     popUpTo(0) { inclusive = true }
@@ -234,555 +215,388 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = isHomeScreen, // Swipe gesture sirf Home par, par menu button sabhi main tabs par kaam karega!
-        drawerContent = {
-            AppDrawerContent(
-                admin = admin,
-                currentRoute = currentRoute,
-                onProfileClick = {
-                    coroutineScope.launch { drawerState.close() }
-                    navController.navigate(Routes.ProfileRoutes.route) { launchSingleTop = true }
-                },
-                onSettingsClick = {
-                    coroutineScope.launch { drawerState.close() }
-                    navController.navigate(Routes.SettingsRoutes.route) { launchSingleTop = true }
-                },
-                onAboutClick = {
-                    coroutineScope.launch { drawerState.close() }
-                    navController.navigate(Routes.AboutRoutes.route) { launchSingleTop = true }
-                },
-                onLogoutClick = {
-                    coroutineScope.launch {
-                        drawerState.close()
-                        viewModel.setAdminLoggedOut()
-                    }
-                }
-            )
-        }
-    ) {
-        // Fixed: Menu icon ab Home, Products, Orders, History chaaro tabs se drawer khol sakega!
-        val openDrawer: () -> Unit = remember(isTopLevelRoute) {
-            {
-                if (isTopLevelRoute) {
-                    coroutineScope.launch { drawerState.open() }
-                }
-            }
-        }
+    // Screens' menu buttons open the More sheet (replaces the old drawer).
+    val openDrawer: () -> Unit = remember(isTopLevelRoute) {
+        { if (isTopLevelRoute) showMoreSheet = true }
+    }
 
-        Scaffold(
-            containerColor = Color.Transparent,
-            contentWindowInsets = WindowInsets(0, 0, 0, 0),
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) }, // Added SnackbarHost!
-            modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(scrollBehavior.nestedScrollConnection)
-                .background(Color.Transparent),
-            bottomBar = {
-                AnimatedVisibility(
-                    visible = isTopLevelRoute && !isBottomBarHidden,
-                    enter = slideInVertically { it } + fadeIn(),
-                    exit = slideOutVertically { it } + fadeOut()
-                ) {
-                    AppBottomBar(
-                        items = bottomNavItems,
-                        selected = selectedTab,
-                        onItemSelected = { index ->
-                            val targetRoute = when (index) {
-                                0 -> Routes.HomeRoutes.route
-                                1 -> Routes.ProductRoutes.route
-                                2 -> Routes.OrdersRoutes.route
-                                3 -> Routes.HistoryRoutes.route
-                                else -> Routes.HomeRoutes.route
-                            }
-                            if (currentRoute != targetRoute) {
-                                navController.navigate(targetRoute) {
-                                    launchSingleTop = true
-                                    restoreState = true
-                                    popUpTo(Routes.HomeRoutes.route) { saveState = true }
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-        ) { _ ->
-            // 7. Dynamic Start Destination: Agar pehle se loggedIn hai toh seedha Home khulega!
-            // remember { } lagaya hai taaki बीच में state change hone par NavHost recreate na ho.
-            val initialDestination = remember {
-                if (loggedIn) Routes.HomeRoutes.route else Routes.SignInRoutes.route
-            }
-
-            NavHost(
-                navController = navController,
-                startDestination = initialDestination,
-                modifier = Modifier.fillMaxSize()
-            ) {
-                composable(Routes.SplashRoutes.route) {
-                    SplashScreen(navController, viewModel)
-                }
-                composable(Routes.SignInRoutes.route) {
-                    SignIn(viewModel, navController)
-                }
-                composable(Routes.SignUpRoutes.route) {
-                    SignUp(viewModel, navController)
-                }
-                composable<Routes.VerifyOtpRoutes> { backStackEntry ->
-                    val verifyOtpRoutes: Routes.VerifyOtpRoutes = backStackEntry.toRoute()
-                    OtpScreen(verifyOtpRoutes.userId ?: "", viewModel, navController)
-                }
-
-                composable(Routes.HomeRoutes.route) {
-                    HomeScreen(
-                        viewModel,
-                        navController,
-                        onMenuClick = openDrawer,
-                        scrollBehavior = scrollBehavior
-                    )
-                }
-
-                navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
-                    composable(Routes.ProductRoutes.route) {
-                        ProductScreen(
-                            viewModel,
-                            navController,
-                            onMenuClick = openDrawer,
-                            scrollBehavior = scrollBehavior
-                        )
-                    }
-                    composable(
-                        Routes.SpecificProductRoutes.route,
-                        arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                    ) { b ->
-                        val productId = b.arguments?.getString("productId") ?: return@composable
-                        SpecificProductScreen(productId, viewModel, navController)
-                    }
-                    composable(Routes.AddProductRoutes.route) {
-                        AddProductScreen(viewModel, navController)
-                    }
-                    composable(
-                        Routes.UpdateProductRoutes.route,
-                        arguments = listOf(navArgument("productId") { type = NavType.StringType })
-                    ) { b ->
-                        val productId = b.arguments?.getString("productId") ?: return@composable
-                        UpdateProductScreen(productId, viewModel, navController)
-                    }
-                }
-
-                navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
-                    composable(Routes.OrdersRoutes.route) {
-                        OrderDetailsScreen(
-                            viewModel,
-                            navController,
-                            onMenuClick = openDrawer,
-                            scrollBehavior = scrollBehavior
-                        )
-                    }
-                    composable(
-                        Routes.SpecificOrderRoutes.route,
-                        arguments = listOf(navArgument("orderId") { type = NavType.StringType })
-                    ) { b ->
-                        val orderId = b.arguments?.getString("orderId") ?: return@composable
-                        SpecificOrderScreen(orderId, viewModel, navController)
-                    }
-                }
-
-                composable(Routes.HistoryRoutes.route) {
-                    HistoryScreen(
-                        viewModel,
-                        navController,
-                        onMenuClick = openDrawer,
-                        scrollBehavior = scrollBehavior
-                    )
-                }
-                composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
-                composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
-                composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
-
-                navigation(
-                    startDestination = Routes.UserDetailsRoutes.route,
-                    route = "user_details"
-                ) {
-                    composable(
-                        Routes.UserDetailsRoutes.route,
-                        arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                    ) { b ->
-                        val userId = b.arguments?.getString("userId") ?: return@composable
-                        UserDetailsScreen(userId, viewModel, navController)
-                    }
-                    composable(
-                        Routes.UpdateUserDetailsRoutes.route,
-                        arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                    ) { b ->
-                        val userId = b.arguments?.getString("userId") ?: return@composable
-                        UpdateUserDetailsScreen(userId, viewModel, navController)
-                    }
+    val windowInfo = rememberWindowSize()
+    val tabRoutes = listOf(Routes.HomeRoutes.route, Routes.ProductRoutes.route, Routes.OrdersRoutes.route, Routes.HistoryRoutes.route)
+    val onTabSelected: (Int) -> Unit = { index ->
+        if (index == MORE_TAB) {
+            showMoreSheet = true
+        } else {
+            val targetRoute = tabRoutes.getOrElse(index) { Routes.HomeRoutes.route }
+            when {
+                currentRoute == targetRoute -> Unit
+                selectedTab == index -> navController.popBackStack(targetRoute, inclusive = false) // re-tap: pop to tab root
+                else -> navController.navigate(targetRoute) {
+                    launchSingleTop = true
+                    restoreState = true
+                    popUpTo(Routes.HomeRoutes.route) { saveState = true }
                 }
             }
         }
     }
+    // Back from a non-Dashboard tab root goes to Dashboard, then exits.
+    BackHandler(enabled = currentRoute in tabRoutes.drop(1)) {
+        navController.navigate(Routes.HomeRoutes.route) {
+            popUpTo(Routes.HomeRoutes.route) { inclusive = false }
+            launchSingleTop = true
+        }
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(scrollBehavior.nestedScrollConnection),
+        bottomBar = {
+            if (isTopLevelRoute && windowInfo.isCompact) {
+                AppNavigationBar(
+                    selected = if (showMoreSheet) MORE_TAB else selectedTab,
+                    onItemSelected = onTabSelected
+                )
+            }
+        }
+    ) { innerPadding ->
+        // 7. Dynamic Start Destination: Agar pehle se loggedIn hai toh seedha Home khulega!
+        // remember { } lagaya hai taaki बीच में state change hone par NavHost recreate na ho.
+        val initialDestination = remember {
+            if (loggedIn) Routes.HomeRoutes.route else Routes.SignInRoutes.route
+        }
+
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(bottom = innerPadding.calculateBottomPadding())
+                .consumeWindowInsets(PaddingValues(bottom = innerPadding.calculateBottomPadding()))
+        ) {
+        if (isTopLevelRoute && !windowInfo.isCompact) {
+            AppNavigationRail(
+                selected = if (showMoreSheet) MORE_TAB else selectedTab,
+                onItemSelected = onTabSelected
+            )
+        }
+        NavHost(
+            navController = navController,
+            startDestination = initialDestination,
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            enterTransition = { fadeIn(tween(250)) + slideInHorizontally(tween(250)) { it / 12 } },
+            exitTransition = { fadeOut(tween(200)) },
+            popEnterTransition = { fadeIn(tween(250)) },
+            popExitTransition = { fadeOut(tween(200)) + slideOutHorizontally(tween(250)) { it / 12 } }
+        ) {
+            composable(Routes.SplashRoutes.route) {
+                SplashScreen(navController, viewModel)
+            }
+            composable(Routes.SignInRoutes.route) {
+                SignIn(viewModel, navController)
+            }
+            composable(Routes.SignUpRoutes.route) {
+                SignUp(viewModel, navController)
+            }
+            composable(Routes.ForgotPasswordRoutes.route) {
+                ForgotPasswordScreen(viewModel, navController)
+            }
+            composable(Routes.ResetPasswordRoutes.route) {
+                ResetPasswordScreen(viewModel, navController)
+            }
+            composable(Routes.UpgradeRequiredRoutes.route) {
+                UpgradeRequiredScreen(viewModel)
+            }
+            composable(Routes.AccountBlockedRoutes.route) {
+                AccountBlockedScreen(viewModel, navController)
+            }
+            composable<Routes.VerifyOtpRoutes> { backStackEntry ->
+                val verifyOtpRoutes: Routes.VerifyOtpRoutes = backStackEntry.toRoute()
+                OtpScreen(verifyOtpRoutes.userId ?: "", viewModel, navController)
+            }
+
+            composable(Routes.HomeRoutes.route) {
+                DashboardScreen(
+                    viewModel,
+                    navController,
+                    onMenuClick = openDrawer,
+                    scrollBehavior = scrollBehavior
+                )
+            }
+
+            navigation(startDestination = Routes.ProductRoutes.route, route = "productRoutes") {
+                composable(Routes.ProductRoutes.route) {
+                    ProductScreen(
+                        viewModel,
+                        navController,
+                        onMenuClick = openDrawer,
+                        scrollBehavior = scrollBehavior
+                    )
+                }
+                composable(
+                    Routes.SpecificProductRoutes.route,
+                    arguments = listOf(navArgument("productId") { type = NavType.StringType })
+                ) { b ->
+                    val productId = b.arguments?.getString("productId") ?: return@composable
+                    SpecificProductScreen(productId, viewModel, navController)
+                }
+                composable(Routes.AddProductRoutes.route) {
+                    AddProductScreen(viewModel, navController)
+                }
+                composable(
+                    Routes.UpdateProductRoutes.route,
+                    arguments = listOf(navArgument("productId") { type = NavType.StringType })
+                ) { b ->
+                    val productId = b.arguments?.getString("productId") ?: return@composable
+                    UpdateProductScreen(productId, viewModel, navController)
+                }
+            }
+
+            navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
+                composable(Routes.OrdersRoutes.route) {
+                    OrderDetailsScreen(
+                        viewModel,
+                        navController,
+                        onMenuClick = openDrawer,
+                        scrollBehavior = scrollBehavior
+                    )
+                }
+                composable(
+                    Routes.SpecificOrderRoutes.route,
+                    arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+                ) { b ->
+                    val orderId = b.arguments?.getString("orderId") ?: return@composable
+                    SpecificOrderScreen(orderId, viewModel, navController)
+                }
+            }
+
+            composable(Routes.HistoryRoutes.route) {
+                HistoryScreen(
+                    viewModel,
+                    navController,
+                    onMenuClick = openDrawer,
+                    scrollBehavior = scrollBehavior
+                )
+            }
+            composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
+            composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
+            composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
+            composable(Routes.ReportsRoutes.route) { ReportsScreen(viewModel, navController) }
+            composable(Routes.TopProductsRoutes.route) { TopProductsScreen(viewModel, navController) }
+
+            navigation(
+                startDestination = Routes.UserDetailsRoutes.route,
+                route = "user_details"
+            ) {
+                composable(
+                    Routes.UserDetailsRoutes.route,
+                    arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                ) { b ->
+                    val userId = b.arguments?.getString("userId") ?: return@composable
+                    UserDetailsScreen(userId, viewModel, navController)
+                }
+                composable(
+                    Routes.UpdateUserDetailsRoutes.route,
+                    arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                ) { b ->
+                    val userId = b.arguments?.getString("userId") ?: return@composable
+                    UpdateUserDetailsScreen(userId, viewModel, navController)
+                }
+            }
+        }
+        }
+    }
+
+    if (showMoreSheet) {
+        MoreSheet(
+            admin = admin,
+            onDismiss = { showMoreSheet = false },
+            onProfileClick = {
+                showMoreSheet = false
+                navController.navigate(Routes.ProfileRoutes.route) { launchSingleTop = true }
+            },
+            onSettingsClick = {
+                showMoreSheet = false
+                navController.navigate(Routes.SettingsRoutes.route) { launchSingleTop = true }
+            },
+            onAboutClick = {
+                showMoreSheet = false
+                navController.navigate(Routes.AboutRoutes.route) { launchSingleTop = true }
+            },
+            onLogoutClick = {
+                showMoreSheet = false
+                viewModel.setAdminLoggedOut()
+            }
+        )
+    }
 }
 
+private const val MORE_TAB = 4
+
+private data class TopLevelTab(
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+)
+
+// "Inventory" tab from the spec has no route yet; History keeps slot 3 until it exists.
+private val topLevelTabs = listOf(
+    TopLevelTab("Dashboard", Icons.Filled.Dashboard, Icons.Outlined.Dashboard),
+    TopLevelTab("Products", Icons.Filled.Medication, Icons.Outlined.Medication),
+    TopLevelTab("Orders", Icons.Filled.ShoppingBag, Icons.Outlined.ShoppingBag),
+    TopLevelTab("History", Icons.Filled.History, Icons.Outlined.History),
+    TopLevelTab("More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz),
+)
+
 // =============================================================================
-// Bottom Navigation Bar — extracted composable for reusability
+// M3 NavigationBar (labels always shown, outlined/filled icon pair)
 // =============================================================================
 @Composable
-private fun AppBottomBar(
-    items: List<BottomNavigationItem>,
+private fun AppNavigationBar(
     selected: Int,
     onItemSelected: (Int) -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                brush = Brush.horizontalGradient(
-                    colors = listOf(ClayPrimary, ClaySecondary)
-                )
+    NavigationBar(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        topLevelTabs.forEachIndexed { index, tab ->
+            val isSelected = selected == index
+            NavigationBarItem(
+                selected = isSelected,
+                onClick = { onItemSelected(index) },
+                icon = {
+                    Icon(
+                        imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
+                        contentDescription = null
+                    )
+                },
+                label = {
+                    Text(
+                        text = tab.label,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                },
+                alwaysShowLabel = true
             )
-            .background(
-                brush = Brush.verticalGradient(
-                    0.0f to Color.White.copy(alpha = 0.16f),
-                    0.35f to Color.Transparent
-                )
-            )
-            .drawBehind {
-                drawLine(
-                    brush = Brush.horizontalGradient(
-                        colors = listOf(
-                            Color.White.copy(alpha = 0.04f),
-                            Color.White.copy(alpha = 0.45f),
-                            Color.White.copy(alpha = 0.04f)
-                        )
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(size.width, 0f),
-                    strokeWidth = 1.dp.toPx()
-                )
-            }
-            .navigationBarsPadding()
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
-    )
-    {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            items.forEachIndexed { index, item ->
-                val isSelected = selected == index
-                val animatedCorner by animateDpAsState(
-                    targetValue = if (isSelected) 22.dp else 18.dp,
-                    animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = Spring.StiffnessMediumLow
-                    ),
-                    label = "cornerAnim"
-                )
-
-                // Drives shadow fade-in/out without needing elevation change
-                val animatedShadowAlpha by animateFloatAsState(
-                    targetValue = if (isSelected) 1f else 0f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "shadowAlpha"
-                )
-
-                val animatedIconTint by animateColorAsState(
-                    targetValue = if (isSelected) ClayPrimary else Color.White,
-                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "iconTintAnim"
-                )
-
-                val currentShape = RoundedCornerShape(animatedCorner) // uniform all sides
-
-                Box(
-                    modifier = Modifier
-                        .height(44.dp)
-                        .drawBehind {
-                            if (animatedShadowAlpha > 0f) {
-                                val cr = animatedCorner.toPx()
-                                drawIntoCanvas { canvas ->
-                                    canvas.nativeCanvas.drawRoundRect(
-                                        /* left   */ 3.dp.toPx(),
-                                        /* top    */ 4.dp.toPx(),
-                                        /* right  */ size.width - 3.dp.toPx(),
-                                        /* bottom */ size.height + 3.dp.toPx(),
-                                        /* rx     */ cr,
-                                        /* ry     */ cr,
-                                        android.graphics.Paint().apply {
-                                            isAntiAlias = true
-                                            color = android.graphics.Color.argb(
-                                                (55 * animatedShadowAlpha).toInt(),
-                                                0, 0, 0
-                                            )
-                                            maskFilter = android.graphics.BlurMaskFilter(
-                                                10.dp.toPx(),
-                                                android.graphics.BlurMaskFilter.Blur.NORMAL
-                                            )
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        // Pill base color
-                        .then(
-                            if (isSelected) {
-                                Modifier.background(
-                                    brush = Brush.verticalGradient(
-                                        colors = listOf(
-                                            Color(0xFFFFFFFF), // Top — direct light
-                                            Color(0xFFF2F6FC), // Upper body
-                                            Color(0xFFE5EBF7), // Lower body
-                                            Color(0xFFD5DFEE)  // Bottom — contact zone
-                                        )
-                                    ),
-                                    shape = currentShape
-                                )
-                            } else {
-                                Modifier.background(
-                                    color = Color(0xFF1E293B).copy(alpha = 0.70f),
-                                    shape = currentShape
-                                )
-                            }
-                        )
-
-                        // 5-layer pillow lighting model (unchanged, still fully valid)
-                        .drawWithContent {
-                            drawContent()
-                            if (isSelected) {
-                                val cr = CornerRadius(animatedCorner.toPx())
-                                val rimWidth = 1.8.dp.toPx()
-
-                                // Layer 1 — Top Specular Highlight
-                                drawRoundRect(
-                                    brush = Brush.verticalGradient(
-                                        0.00f to Color.White.copy(alpha = 0.80f),
-                                        0.30f to Color.White.copy(alpha = 0.18f),
-                                        0.52f to Color.White.copy(alpha = 0.00f)
-                                    ),
-                                    size = size,
-                                    cornerRadius = cr
-                                )
-
-                                // Layer 2 — Bottom Contact Shadow
-                                drawRoundRect(
-                                    brush = Brush.verticalGradient(
-                                        0.48f to Color.Black.copy(alpha = 0.00f),
-                                        0.78f to Color.Black.copy(alpha = 0.06f),
-                                        1.00f to Color.Black.copy(alpha = 0.22f)
-                                    ),
-                                    size = size,
-                                    cornerRadius = cr
-                                )
-
-                                // Layer 3 — Side Curvature Shading
-                                drawRoundRect(
-                                    brush = Brush.horizontalGradient(
-                                        0.00f to Color.Black.copy(alpha = 0.08f),
-                                        0.15f to Color.Black.copy(alpha = 0.00f),
-                                        0.85f to Color.Black.copy(alpha = 0.00f),
-                                        1.00f to Color.Black.copy(alpha = 0.08f)
-                                    ),
-                                    size = size,
-                                    cornerRadius = cr
-                                )
-
-                                // Layer 4 — Top Rim Highlight
-                                drawRoundRect(
-                                    brush = Brush.verticalGradient(
-                                        0.00f to Color.White.copy(alpha = 1.00f),
-                                        0.38f to Color.White.copy(alpha = 0.30f),
-                                        0.65f to Color.White.copy(alpha = 0.00f)
-                                    ),
-                                    size = size,
-                                    cornerRadius = cr,
-                                    style = Stroke(width = rimWidth)
-                                )
-
-                                // Layer 5 — Bottom Rim Shadow
-                                drawRoundRect(
-                                    brush = Brush.verticalGradient(
-                                        0.40f to Color.Black.copy(alpha = 0.00f),
-                                        0.78f to Color.Black.copy(alpha = 0.08f),
-                                        1.00f to Color.Black.copy(alpha = 0.22f)
-                                    ),
-                                    size = size,
-                                    cornerRadius = cr,
-                                    style = Stroke(width = rimWidth)
-                                )
-                            }
-                        }
-                        .clip(currentShape)
-                        .animateContentSize(
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioLowBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        )
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) { onItemSelected(index) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            horizontal = if (isSelected) 16.dp else 12.dp,
-                            vertical = 8.dp
-                        ),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = item.name,
-                            tint = animatedIconTint,
-                            modifier = Modifier.size(20.dp)
-                        )
-
-                        AnimatedVisibility(
-                            visible = isSelected,
-                            enter = fadeIn(animationSpec = tween(180, delayMillis = 40)) +
-                                    expandHorizontally(
-                                        animationSpec = spring(
-                                            dampingRatio = Spring.DampingRatioLowBouncy,
-                                            stiffness = Spring.StiffnessMediumLow
-                                        )
-                                    ),
-                            exit = fadeOut(animationSpec = tween(100)) +
-                                    shrinkHorizontally(
-                                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
-                                    )
-                        ) {
-                            Row {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = item.name,
-                                    color = ClayPrimary,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }
 
-// =============================================================================
-// Drawer Content — extracted composable for cleanliness
-// =============================================================================
 @Composable
-private fun AppDrawerContent(
+private fun AppNavigationRail(selected: Int, onItemSelected: (Int) -> Unit) {
+    NavigationRail(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = Modifier.fillMaxHeight()
+    ) {
+        Spacer(Modifier.weight(1f))
+        topLevelTabs.forEachIndexed { index, tab ->
+            val isSelected = selected == index
+            NavigationRailItem(
+                selected = isSelected,
+                onClick = { onItemSelected(index) },
+                icon = { Icon(if (isSelected) tab.selectedIcon else tab.unselectedIcon, contentDescription = null) },
+                label = { Text(tab.label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                alwaysShowLabel = true
+            )
+        }
+        Spacer(Modifier.weight(1f))
+    }
+}
+
+// =============================================================================
+// More sheet (replaces the navigation drawer; same destinations, no route change)
+// =============================================================================
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MoreSheet(
     admin: Admin?,
-    currentRoute: String?,
+    onDismiss: () -> Unit,
     onProfileClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onAboutClick: () -> Unit,
     onLogoutClick: () -> Unit
 ) {
-    ModalDrawerSheet(
-        drawerShape = RoundedCornerShape(topEnd = 20.dp, bottomEnd = 20.dp),
-        drawerContainerColor = Color.White,
-        modifier = Modifier.fillMaxWidth(0.82f)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
-        // Gradient header card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(Color(0xFF6C63FF), Color(0xFF48CAE4))
-                    )
-                )
-                .padding(horizontal = 24.dp, vertical = 36.dp)
-        ) {
-            Column {
-                val initial = admin?.name?.firstOrNull()?.toString()?.uppercase() ?: "A"
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.25f)),
-                    contentAlignment = Alignment.Center
-                ) {
+        Column(modifier = Modifier.navigationBarsPadding()) {
+            ListItem(
+                headlineContent = {
                     Text(
-                        text = initial,
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        text = admin?.name ?: "Admin",
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-                }
-                Spacer(modifier = Modifier.height(14.dp))
-                Text(
-                    text = admin?.name ?: "Admin User",
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                },
+                supportingContent = admin?.email?.let { email ->
+                    {
+                        Text(
+                            text = email,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
+                leadingContent = { Icon(Icons.Outlined.Person, contentDescription = null) },
+                colors = ListItemDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                 )
-                Text(
-                    text = admin?.email ?: "admin@mediadmin.app",
-                    color = Color.White.copy(alpha = 0.82f),
-                    fontSize = 13.sp
-                )
-            }
+            )
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            MoreItem("Profile", Icons.Outlined.Person, onProfileClick)
+            MoreItem("Settings", Icons.Outlined.Settings, onSettingsClick)
+            MoreItem("About", Icons.Outlined.Info, onAboutClick)
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+            MoreItem("Logout", Icons.AutoMirrored.Outlined.Logout, onLogoutClick, isError = true)
+            Spacer(modifier = Modifier.height(16.dp))
         }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        NavigationDrawerItem(
-            label = { Text("Profile", fontWeight = FontWeight.Medium) },
-            selected = currentRoute?.contains("ProfileRoutes") == true,
-            onClick = onProfileClick,
-            icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-        NavigationDrawerItem(
-            label = { Text("Settings", fontWeight = FontWeight.Medium) },
-            selected = currentRoute?.contains("SettingsRoutes") == true,
-            onClick = onSettingsClick,
-            icon = { Icon(Icons.Default.Settings, contentDescription = "Settings") },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-        NavigationDrawerItem(
-            label = { Text("About", fontWeight = FontWeight.Medium) },
-            selected = currentRoute?.contains("AboutRoutes") == true,
-            onClick = onAboutClick,
-            icon = { Icon(Icons.Default.Info, contentDescription = "About") },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
-        HorizontalDivider(
-            color = Color(0xFFEEEEEE),
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-
-        NavigationDrawerItem(
-            label = { Text("Logout", fontWeight = FontWeight.Medium, color = Color(0xFFE53935)) },
-            selected = false,
-            onClick = onLogoutClick,
-            icon = {
-                Icon(
-                    Icons.AutoMirrored.Filled.ExitToApp,
-                    contentDescription = "Logout",
-                    tint = Color(0xFFE53935)
-                )
-            },
-            modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
     }
+}
+
+@Composable
+private fun MoreItem(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    isError: Boolean = false
+) {
+    val iconColor =
+        if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+    val textColor =
+        if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+    ListItem(
+        headlineContent = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        },
+        leadingContent = { Icon(icon, contentDescription = null) },
+        colors = ListItemDefaults.colors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+            headlineColor = textColor,
+            leadingIconColor = iconColor
+        ),
+        modifier = Modifier.clickable(onClick = onClick)
+    )
 }
 
 data class BottomNavigationItem(val name: String, val icon: ImageVector)

@@ -1,463 +1,347 @@
 package com.saurabh.mediadminapp.ui.screens
 
-import android.util.Log
-import android.widget.Toast
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.keyframes
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
+import android.os.SystemClock
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.MarkEmailRead
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.ui.screens.components.ClayOutlinedButton
-import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
+import com.saurabh.mediadminapp.data.v1.error.AppError
+import com.saurabh.mediadminapp.data.v1.error.ErrorCode
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
-import com.saurabh.mediadminapp.ui.theme.ClayError
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlin.math.roundToInt
-import kotlin.time.Duration.Companion.milliseconds
 
-// ─────────────────────────────────────────────────────────────────────────────
-// OTP Screen — Production-Grade Claymorphism with Focus & Shake Error Feedback
-// ─────────────────────────────────────────────────────────────────────────────
+private const val DEFAULT_OTP_LENGTH = 6
+private const val DEFAULT_OTP_TTL_S = 300
+private const val DEFAULT_OTP_MAX_ATTEMPTS = 5
 
-private val OtpGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF48CAE4), Color(0xFF6C63FF))
-)
-private val OtpPrimary = Color(0xFF6C63FF)
-private val OtpSecondary = Color(0xFF48CAE4)
-
-private enum class OtpScreenState { FORM, LOADING, SUCCESS }
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostController) {
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    var otp by remember { mutableStateOf("") }
-    var isResendEnabled by remember { mutableStateOf(false) }
-    var timeLeft by remember { mutableIntStateOf(60) }
-    var hasError by remember { mutableStateOf(false) }
-    val shakeOffset = remember { Animatable(0f) }
-    val state by viewModel.verifyOtpState.collectAsState()
+    val config = remember { viewModel.cachedAppConfig()?.otp }
+    val otpLength = config?.length?.takeIf { it in 4..8 } ?: DEFAULT_OTP_LENGTH
+    val ttlSeconds = config?.expiresIn?.takeIf { it > 0 } ?: DEFAULT_OTP_TTL_S
+    val maxAttempts = config?.maxAttempts?.takeIf { it > 0 } ?: DEFAULT_OTP_MAX_ATTEMPTS
 
-    val screenState: OtpScreenState = when {
-        state.isLoading -> OtpScreenState.LOADING
-        state.success != null -> OtpScreenState.SUCCESS
-        else -> OtpScreenState.FORM
-    }
+    val state by viewModel.verifyOtpState.collectAsStateWithLifecycle()
+    val haptics = LocalHapticFeedback.current
+    val clipboard = LocalClipboardManager.current
+    val focusManager = LocalFocusManager.current
+    val focusRequester = remember { FocusRequester() }
 
-    // Countdown timer for resend
-    LaunchedEffect(isResendEnabled) {
-        if (!isResendEnabled) {
-            timeLeft = 60
-            while (timeLeft > 0) {
-                delay(1000L.milliseconds)
-                timeLeft--
-            }
-            isResendEnabled = true
+    var otp by rememberSaveable { mutableStateOf("") }
+    var otpError by rememberSaveable { mutableStateOf<String?>(null) }
+    var failedAttempts by rememberSaveable { mutableIntStateOf(0) }
+    // Deadline survives rotation / process-light recreation.
+    val deadline by rememberSaveable { mutableLongStateOf(SystemClock.elapsedRealtime() + ttlSeconds * 1000L) }
+    var secondsLeft by remember { mutableIntStateOf(ttlSeconds) }
+    val expired = secondsLeft <= 0
+
+    fun backToLogin(message: String) {
+        runCatching {
+            navController.getBackStackEntry(Routes.SignInRoutes.route)
+                .savedStateHandle[AUTH_MESSAGE_KEY] = message
+            navController.popBackStack(Routes.SignInRoutes.route, inclusive = false)
+        }.onFailure {
+            navController.navigate(Routes.SignInRoutes.route) { popUpTo(0) { inclusive = true } }
         }
     }
 
-    // Function to trigger shake animation
-    fun triggerErrorShake() {
-        hasError = true
-        coroutineScope.launch {
-            shakeOffset.animateTo(
-                targetValue = 0f,
-                animationSpec = keyframes {
-                    durationMillis = 400
-                    0f at 0
-                    -12f at 50
-                    12f at 100
-                    -8f at 150
-                    8f at 200
-                    -4f at 250
-                    4f at 300
-                    0f at 400
-                }
+    fun verify() {
+        if (state.isLoading) return
+        when {
+            adminId.isBlank() -> backToLogin("Session expired. Sign in again.")
+            expired -> otpError = "Code expired. Request a new one."
+            otp.length != otpLength -> {
+                otpError = "Enter all $otpLength digits"
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
+            else -> {
+                focusManager.clearFocus()
+                viewModel.verifyAdminOtp(adminId, otp)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    LaunchedEffect(deadline) {
+        while (true) {
+            secondsLeft = ((deadline - SystemClock.elapsedRealtime()) / 1000L).toInt().coerceAtLeast(0)
+            if (secondsLeft == 0) break
+            delay(1000L)
+        }
+    }
+
+    LaunchedEffect(state.error) {
+        val error = state.error ?: return@LaunchedEffect
+        val appError = state.appError
+        val code = (appError as? AppError.Api)?.code
+        viewModel.clearVerifyOtpState()
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        otp = ""
+        when {
+            // Non-admin role: the ViewModel already rejected the session.
+            appError == null && error == "Admin account required" -> backToLogin(error)
+            code == ErrorCode.ACCOUNT_BLOCKED ->
+                navController.navigate(Routes.AccountBlockedRoutes.route) { popUpTo(0) { inclusive = true } }
+            code == ErrorCode.ACCOUNT_NOT_APPROVED -> backToLogin("This admin account is awaiting approval.")
+            code == ErrorCode.RATE_LIMITED -> backToLogin("Too many attempts. Sign in again.")
+            else -> {
+                failedAttempts++
+                if (failedAttempts >= maxAttempts) backToLogin("Too many attempts. Sign in again.")
+                else otpError = appError.fieldError("otp") ?: error
+            }
+        }
+    }
+
+    LaunchedEffect(state.success) {
+        val response = state.success ?: return@LaunchedEffect
+        if (response.accessToken.isNotBlank()) {
+            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            delay(600L)
+            navController.navigate(Routes.HomeRoutes()) {
+                popUpTo(navController.graph.id) { inclusive = true }
+                launchSingleTop = true
+            }
+        } else {
+            otpError = "Invalid code, please try again"
+        }
+        viewModel.clearVerifyOtpState()
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        topBar = {
+            TopAppBar(
+                title = { Text("Verify code", style = MaterialTheme.typography.titleLarge) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.navigateUp() }) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    titleContentColor = MaterialTheme.colorScheme.onBackground,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
         }
-    }
-
-    // Handle verification errors
-    LaunchedEffect(state.error) {
-        if (state.error != null) {
-            Log.d("NAV", "OtpScreen error: ${state.error}")
-            Toast.makeText(context, state.error.toString(), Toast.LENGTH_LONG).show()
-            triggerErrorShake()
-            viewModel.clearVerifyOtpState()
-        }
-    }
-
-    // Handle verification response success/failure
-    LaunchedEffect(state.success) {
-        state.success?.let { response ->
-            if (response.accessToken.isNotBlank()) {
-                Log.d("NAV", "OTP verified — waiting for NavApp isLoggedIn redirect to Home")
-                Toast.makeText(context, "✓ Verified successfully!", Toast.LENGTH_SHORT).show()
-                // Success स्क्रीन/एनीमेशन दिखाने के लिए 800ms का पॉज
-                kotlinx.coroutines.delay(800)
-
-                // पूरी ऑथ हिस्ट्री (SignIn, OTP) को हटाकर सीधे Home पर जाएं
-                navController.navigate(Routes.HomeRoutes()) {
-                    popUpTo(navController.graph.id) { inclusive = true }
-                    launchSingleTop = true
-                }
-                viewModel.clearVerifyOtpState()
-            } else {
-                val msg = "Invalid OTP, please try again"
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                triggerErrorShake()
-                viewModel.clearVerifyOtpState()
-            }
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(brush = OtpGradient),
-        contentAlignment = Alignment.Center
-    ) {
-        // Decorative blobs
-        ClayBlob(
-            modifier = Modifier
-                .size(160.dp)
-                .align(Alignment.TopStart)
-                .padding(top = 16.dp, start = 8.dp),
-            color = Color.White.copy(alpha = 0.10f)
-        )
-        ClayBlob(
-            modifier = Modifier
-                .size(100.dp)
-                .align(Alignment.BottomEnd)
-                .padding(bottom = 48.dp, end = 16.dp),
-            color = Color(0xFFFF6584).copy(alpha = 0.18f)
-        )
-
-        // Back button
-        IconButton(
-            onClick = { navController.navigateUp() },
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f)),
-                contentAlignment = Alignment.Center
+    ) { innerPadding ->
+        if (state.success != null) {
+            Column(
+                modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Back",
-                    tint = Color.White
+                    imageVector = Icons.Outlined.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text("Verified", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Taking you to your dashboard",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            return@Scaffold
         }
 
-        AnimatedContent(
-            targetState = screenState,
-            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(200)) },
-            label = "otpState"
-        ) { screen ->
-            when (screen) {
-                OtpScreenState.LOADING -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(color = Color.White, strokeWidth = 4.dp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Verifying OTP…", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        AuthFormColumn(
+            modifier = Modifier.padding(innerPadding),
+            verticalArrangement = Arrangement.Top
+        ) {
+            AuthHeader(
+                icon = Icons.Outlined.MarkEmailRead,
+                title = "Check your email",
+                subtitle = "Enter the $otpLength-digit code we sent to your admin email."
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+
+            OtpBoxes(
+                value = otp,
+                length = otpLength,
+                isError = otpError != null,
+                enabled = !state.isLoading && !expired,
+                focusRequester = focusRequester,
+                onValueChange = { input ->
+                    val digits = input.filter(Char::isDigit).take(otpLength)
+                    if (digits != otp) {
+                        otp = digits
+                        otpError = null
+                        if (digits.length == otpLength) {
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            verify()
                         }
                     }
-                }
+                },
+                onDone = ::verify
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            SupportingText(otpError, if (expired) "Code expired" else "${otp.length}/$otpLength digits")
 
-                OtpScreenState.SUCCESS -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("✅", fontSize = 72.sp)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("Verified!", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                            Text("Taking you to your dashboard…", color = Color.White.copy(0.8f), fontSize = 14.sp)
-                        }
-                    }
-                }
-
-                OtpScreenState.FORM -> {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 24.dp, vertical = 48.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        // Shield badge
-                        Box(
-                            modifier = Modifier
-                                .size(88.dp)
-                                .shadow(
-                                    elevation = 18.dp,
-                                    shape = CircleShape,
-                                    ambientColor = OtpPrimary.copy(0.25f),
-                                    spotColor = OtpSecondary.copy(0.25f)
-                                )
-                                .clip(CircleShape)
-                                .background(Color.White),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("🛡️", fontSize = 38.sp)
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        Text(
-                            "OTP Verification",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Enter the 6-digit code sent to\nyour registered email",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.82f),
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(32.dp))
-
-                        // ── Clay OTP Card with Shake & Error Outline ───────────────
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .offset { IntOffset(shakeOffset.value.roundToInt(), 0) }
-                                .shadow(
-                                    elevation = 24.dp,
-                                    shape = RoundedCornerShape(28.dp),
-                                    ambientColor = if (hasError) ClayError.copy(0.3f) else OtpPrimary.copy(0.18f),
-                                    spotColor = if (hasError) ClayError.copy(0.3f) else OtpSecondary.copy(0.18f)
-                                )
-                                .clip(RoundedCornerShape(28.dp))
-                                .background(Color(0xFFFAF9FF))
-                                .border(
-                                    width = if (hasError) 2.dp else 0.dp,
-                                    color = if (hasError) ClayError else Color.Transparent,
-                                    shape = RoundedCornerShape(28.dp)
-                                )
-                                .padding(28.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            // ── OTP digit boxes ───────────────────────────
-                            OtpInputField(
-                                otp = otp,
-                                hasError = hasError,
-                                onOtpChange = { input ->
-                                    val cleaned = input.filter { it.isDigit() }
-                                    if (cleaned.length <= 6) {
-                                        otp = cleaned
-                                        if (hasError) hasError = false
-                                    }
-                                }
-                            )
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            // Formatted Countdown Timer
-                            val minutes = timeLeft / 60
-                            val seconds = timeLeft % 60
-                            val formattedTime = "%02d:%02d".format(minutes, seconds)
-
-                            Text(
-                                text = if (isResendEnabled) "Didn't receive the code?"
-                                else "Resend code in $formattedTime",
-                                fontSize = 13.sp,
-                                color = if (isResendEnabled) OtpPrimary else Color(0xFF888AAA),
-                                fontWeight = if (isResendEnabled) FontWeight.SemiBold else FontWeight.Normal,
-                                textAlign = TextAlign.Center
-                            )
-
-                            if (isResendEnabled) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                ClayOutlinedButton(
-                                    text = "Resend OTP",
-                                    onClick = {
-                                        isResendEnabled = false
-                                        Toast.makeText(context, "OTP Resent!", Toast.LENGTH_SHORT).show()
-                                    },
-                                    accentColor = OtpPrimary
-                                )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = if (expired) "Code expired" else "Expires in %d:%02d".format(secondsLeft / 60, secondsLeft % 60),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (expired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                TextButton(
+                    onClick = {
+                        clipboard.getText()?.text?.filter(Char::isDigit)?.take(otpLength)
+                            ?.takeIf { it.isNotEmpty() }
+                            ?.let { pasted ->
+                                otp = pasted
+                                otpError = null
+                                if (pasted.length == otpLength) verify()
                             }
-
-                            Spacer(modifier = Modifier.height(20.dp))
-
-                            // Verify button
-                            ClayPrimaryButton(
-                                text = "Verify OTP →",
-                                isLoading = false,
-                                onClick = {
-                                    when {
-                                        otp.length != 6 -> {
-                                            Toast.makeText(context, "Please enter all 6 digits", Toast.LENGTH_SHORT).show()
-                                            triggerErrorShake()
-                                        }
-                                        else -> {
-                                            viewModel.verifyAdminOtp(adminId, otp)
-                                        }
-                                    }
-                                }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        TextButton(onClick = { navController.navigateUp() }) {
-                            Text(
-                                "← Wrong account? Go back",
-                                color = Color.White.copy(0.85f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+                    },
+                    enabled = !state.isLoading && !expired,
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
+                    Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.size(6.dp))
+                    Text("Paste", style = MaterialTheme.typography.labelLarge)
                 }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            AuthPrimaryButton(text = "Verify", isLoading = state.isLoading, onClick = ::verify)
+            Spacer(modifier = Modifier.height(8.dp))
+            // Resend = sign in again (Login keeps the typed email/password in saved state).
+            TextButton(
+                onClick = { backToLogin("Sign in again to get a new code.") },
+                enabled = !state.isLoading,
+                modifier = Modifier.heightIn(min = 48.dp)
+            ) {
+                Text("Didn't get a code? Send a new one", style = MaterialTheme.typography.labelLarge)
             }
         }
     }
 }
 
-// =============================================================================
-// OTP Digit Input — 6 individual styled boxes with error & focus indicators
-// =============================================================================
+/** Single hidden text field drawn as [length] boxes, so IME input, paste and autofill all work. */
 @Composable
-private fun OtpInputField(
-    otp: String,
-    hasError: Boolean,
-    onOtpChange: (String) -> Unit
+private fun OtpBoxes(
+    value: String,
+    length: Int,
+    isError: Boolean,
+    enabled: Boolean,
+    focusRequester: FocusRequester,
+    onValueChange: (String) -> Unit,
+    onDone: () -> Unit,
 ) {
     BasicTextField(
-        value = otp,
-        onValueChange = onOtpChange,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+        value = value,
+        onValueChange = onValueChange,
+        enabled = enabled,
         singleLine = true,
-        textStyle = TextStyle(color = Color.Transparent, fontSize = 1.sp),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { onDone() }),
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusRequester(focusRequester)
+            .semantics { contentDescription = "Verification code, $length digits" },
         decorationBox = {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
-                repeat(6) { index ->
-                    val char = otp.getOrNull(index)
-                    val isFocused = otp.length == index || (otp.length == 6 && index == 5)
-                    OtpDigitCell(
-                        char = char,
-                        isFocused = isFocused,
-                        hasError = hasError,
-                        modifier = Modifier.weight(1f)
-                    )
+                repeat(length) { i ->
+                    val char = value.getOrNull(i)
+                    val focused = enabled && i == value.length.coerceAtMost(length - 1)
+                    val borderColor = when {
+                        isError -> MaterialTheme.colorScheme.error
+                        focused -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.outline
+                    }
+                    Surface(
+                        shape = MaterialTheme.shapes.medium,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier
+                            .weight(1f)
+                            .widthIn(max = 56.dp)
+                            .aspectRatio(0.85f)
+                            .border(if (focused || isError) 2.dp else 1.dp, borderColor, MaterialTheme.shapes.medium)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = char?.toString() ?: "",
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
             }
         }
     )
-}
-
-@Composable
-private fun OtpDigitCell(
-    char: Char?,
-    isFocused: Boolean,
-    hasError: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val borderColor = when {
-        hasError -> ClayError
-        isFocused -> Color(0xFF6C63FF)
-        char != null -> Color(0xFF6C63FF).copy(0.5f)
-        else -> Color(0xFFD0C8FF)
-    }
-    Box(
-        modifier = modifier
-            .height(52.dp)
-            .shadow(
-                elevation = if (char != null) 8.dp else 2.dp,
-                shape = RoundedCornerShape(14.dp),
-                ambientColor = if (hasError) ClayError.copy(0.2f) else Color(0xFF6C63FF).copy(0.15f),
-                spotColor = if (hasError) ClayError.copy(0.2f) else Color(0xFF6C63FF).copy(0.15f)
-            )
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (hasError) Color(0xFFFFF0F2) else Color(0xFFF0EEFF))
-            .border(
-                width = if (isFocused || hasError) 2.dp else 1.dp,
-                color = borderColor,
-                shape = RoundedCornerShape(14.dp)
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = char?.toString() ?: "",
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (hasError) ClayError else Color(0xFF6C63FF)
-        )
-        // Cursor blink indicator when focused and no char yet
-        if (isFocused && char == null && !hasError) {
-            Box(
-                modifier = Modifier
-                    .width(2.dp)
-                    .height(24.dp)
-                    .background(Color(0xFF6C63FF))
-            )
-        }
-    }
 }

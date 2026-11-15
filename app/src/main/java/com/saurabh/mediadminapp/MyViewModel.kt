@@ -83,6 +83,10 @@ class MyViewModel @Inject constructor(
     private val _upgradeRequiredVersion = MutableStateFlow<String?>(null)
     val upgradeRequiredVersion: StateFlow<String?> = _upgradeRequiredVersion.asStateFlow()
 
+    /** Non-null when GET /app-config failed and nothing is cached (Splash shows Retry). */
+    private val _appConfigError = MutableStateFlow<String?>(null)
+    val appConfigError: StateFlow<String?> = _appConfigError.asStateFlow()
+
     // ===========================
     // 1. AUTHENTICATION STATES
     // ===========================
@@ -268,12 +272,19 @@ class MyViewModel @Inject constructor(
         }
     }
 
+    /** Last fetched app-config (uploads limits, enums, otp); null until loaded. */
+    fun cachedAppConfig(): com.saurabh.mediadminapp.data.v1.dto.AppConfig? = repository.cachedAppConfig()
+
     /** Fetches app-config once at startup; flags a forced update when min_app_version > this build. */
     fun getAppConfig() {
+        _appConfigError.value = null
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAppConfig().collectInto(
-                onError = { _, _ -> },
+                onError = { msg, _ ->
+                    if (repository.cachedAppConfig() == null) _appConfigError.value = msg?.takeIf { it.isNotBlank() } ?: "Could not reach the server"
+                },
                 onSuccess = { c ->
+                    _appConfigError.value = null
                     val min = c.minAppVersion
                     if (min != null && isVersionLower(BuildConfig.VERSION_NAME, min)) _upgradeRequiredVersion.value = min
                 }
@@ -321,6 +332,8 @@ class MyViewModel @Inject constructor(
 
     // FIX 3: Master Reset Function so re-logging in never shows stale data or locked buttons
     private fun resetAllStatesOnLogout() {
+        _salesReportState.value = SalesReportState()
+        _topProductsState.value = TopProductsState()
         _isAdminLoggedIn.value = false
         _loggedInAdminId.value = null
         _createAdminState.value = CreateAdminState()
@@ -399,6 +412,9 @@ class MyViewModel @Inject constructor(
             )
         }
     }
+
+    /** Email last used for requestPasswordReset (prefills ResetPassword). */
+    fun lastResetEmail(): String? = resetEmail
 
     fun requestPasswordReset(email: String) {
         if (_passwordResetState.value.isLoading) return
@@ -479,6 +495,108 @@ class MyViewModel @Inject constructor(
                 onSuccess = {
                     getAllAdmin(force = true)
                     snackbar("Admin updated successfully")
+                }
+            )
+        }
+    }
+
+    // ===========================
+    // REPORTS (GET /reports/sales, /reports/top-products)
+    // ===========================
+    private val _salesReportState = MutableStateFlow(SalesReportState())
+    val salesReportState: StateFlow<SalesReportState> = _salesReportState.asStateFlow()
+    private var salesReportPage = PageRequest()
+    private var salesReportJob: kotlinx.coroutines.Job? = null
+
+    /** Loads page 1 for [query] (null = keep current). Cached unless the query changed or [force]. */
+    fun loadSalesReport(query: ReportQuery? = null, force: Boolean = false) {
+        val s = _salesReportState.value
+        val q = query ?: s.query
+        if (!force && q == s.query && s.loaded && s.error == null) return
+        salesReportPage = PageRequest(sort = q.sort, order = q.order)
+        val page = salesReportPage
+        salesReportJob?.cancel()
+        salesReportJob = viewModelScope.launch(Dispatchers.IO) {
+            repository.getSalesReport(q.range, q.groupBy, page).collectInto(
+                onLoading = { _salesReportState.update { it.copy(query = q, isLoading = true, error = null, appError = null) } },
+                onError = { m, e ->
+                    _salesReportState.update { it.copy(query = q, isLoading = false, error = m ?: "Could not load report", appError = e) }
+                },
+                onSuccess = { r ->
+                    _salesReportState.value = SalesReportState(
+                        query = q, rows = r.rows, summary = r.summary, pagination = r.pagination,
+                        endReached = page.isLast(r.pagination), loaded = true
+                    )
+                }
+            )
+        }
+    }
+
+    fun loadMoreSalesReport() {
+        val s = _salesReportState.value
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { salesReportPage.loadMore(it) }
+        if (next == null) { _salesReportState.update { it.copy(endReached = true) }; return }
+        _salesReportState.update { it.copy(isLoadingMore = true) }
+        val q = s.query
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getSalesReport(q.range, q.groupBy, next).collectInto(
+                onError = { m, _ -> _salesReportState.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { r ->
+                    if (_salesReportState.value.query != q) return@collectInto
+                    salesReportPage = next
+                    _salesReportState.update {
+                        it.copy(rows = it.rows + r.rows, pagination = r.pagination, isLoadingMore = false, endReached = next.isLast(r.pagination))
+                    }
+                }
+            )
+        }
+    }
+
+    private val _topProductsState = MutableStateFlow(TopProductsState())
+    val topProductsState: StateFlow<TopProductsState> = _topProductsState.asStateFlow()
+    private var topProductsPage = PageRequest()
+    private var topProductsJob: kotlinx.coroutines.Job? = null
+
+    fun loadTopProducts(query: ReportQuery? = null, force: Boolean = false) {
+        val s = _topProductsState.value
+        val q = query ?: s.query
+        if (!force && q == s.query && s.loaded && s.error == null) return
+        topProductsPage = PageRequest(sort = q.sort, order = q.order)
+        val page = topProductsPage
+        topProductsJob?.cancel()
+        topProductsJob = viewModelScope.launch(Dispatchers.IO) {
+            repository.getTopProducts(q.range, page).collectInto(
+                onLoading = { _topProductsState.update { it.copy(query = q, isLoading = true, error = null, appError = null) } },
+                onError = { m, e ->
+                    _topProductsState.update { it.copy(query = q, isLoading = false, error = m ?: "Could not load top products", appError = e) }
+                },
+                onSuccess = { d ->
+                    _topProductsState.value = TopProductsState(
+                        query = q, rows = d.items, pagination = d.pagination,
+                        endReached = page.isLast(d.pagination), loaded = true
+                    )
+                }
+            )
+        }
+    }
+
+    fun loadMoreTopProducts() {
+        val s = _topProductsState.value
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { topProductsPage.loadMore(it) }
+        if (next == null) { _topProductsState.update { it.copy(endReached = true) }; return }
+        _topProductsState.update { it.copy(isLoadingMore = true) }
+        val q = s.query
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getTopProducts(q.range, next).collectInto(
+                onError = { m, _ -> _topProductsState.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { d ->
+                    if (_topProductsState.value.query != q) return@collectInto
+                    topProductsPage = next
+                    _topProductsState.update {
+                        it.copy(rows = it.rows + d.items, pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
+                    }
                 }
             )
         }

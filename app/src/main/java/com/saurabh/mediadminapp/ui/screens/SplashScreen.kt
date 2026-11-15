@@ -1,19 +1,21 @@
 package com.saurabh.mediadminapp.ui.screens
 
 import android.util.Log
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Button
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,93 +23,86 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.R
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
-import com.saurabh.mediadminapp.ui.theme.ClayScreenBg
-import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
-import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun SplashScreen(navController: NavController, viewModel: MyViewModel) {
-    // 1. Lifecycle-aware state collection (Boolean? -> true, false, or null)
+    // Boolean? -> true, false, or null (still checking)
     val isUserLoggedIn by viewModel.isAdminLoggedIn.collectAsStateWithLifecycle()
+    val upgradeRequired by viewModel.upgradeRequiredVersion.collectAsStateWithLifecycle()
+    val configError by viewModel.appConfigError.collectAsStateWithLifecycle()
 
-    LaunchedEffect(isUserLoggedIn) {
-        // 2. Jab tak token check chal raha hai (null), wait karo — galat screen par jump mat karo!
+    LaunchedEffect(isUserLoggedIn, upgradeRequired, configError) {
+        // Wait for the token check; never jump to the wrong screen.
         val loggedIn = isUserLoggedIn ?: return@LaunchedEffect
-
+        // Config failed with nothing cached: stay here and offer Retry (unless an update is forced).
+        if (configError != null && upgradeRequired == null) return@LaunchedEffect
         Log.d("SplashScreen", "Token check completed: loggedIn=$loggedIn")
         delay(1200.milliseconds)
 
-        // 3. NavHost ke exact route types ke saath match kiya gaya navigation:
-        if (loggedIn) {
-            Log.d("SplashScreen", "Navigating to HomeRoutes")
-            // HomeRoutes String-based composable hai: composable(Routes.HomeRoutes.route)
-            navController.navigate(Routes.HomeRoutes.route) {
-                popUpTo(Routes.SplashRoutes.route) { inclusive = true }
-                launchSingleTop = true
-            }
-        } else {
-            Log.d("SplashScreen", "Navigating to SignInRoutes")
-            // SignInRoutes Type-Safe composable hai: composable<Routes.SignInRoutes>
-            navController.navigate(Routes.SignInRoutes.route) {
-                popUpTo(Routes.SplashRoutes.route) { inclusive = true }
-                launchSingleTop = true
-            }
+        val target = when {
+            upgradeRequired != null -> Routes.UpgradeRequiredRoutes.route
+            loggedIn -> Routes.HomeRoutes.route
+            else -> Routes.SignInRoutes.route
+        }
+        navController.navigate(target) {
+            popUpTo(Routes.SplashRoutes.route) { inclusive = true }
+            launchSingleTop = true
         }
     }
 
     Scaffold(
-        containerColor = ClayScreenBg
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .padding(innerPadding)
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(140.dp)
-                    .background(Color(0xFFE2E8F0), CircleShape)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MedicalServices,
-                    contentDescription = "Splash Logo",
-                    modifier = Modifier.fillMaxSize(),
-                    tint = Color(0xFF6366F1) // Indigo Primary
+            Image(
+                painter = painterResource(R.drawable.ic_logo),
+                contentDescription = null,
+                modifier = Modifier.size(120.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Admin",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            val error = configError
+            if (error != null && upgradeRequired == null) {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    textAlign = TextAlign.Center,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 360.dp)
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { viewModel.getAppConfig() }) { Text("Retry") }
+            } else {
+                LinearProgressIndicator(
+                    modifier = Modifier.width(120.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
                 )
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "MediAdmin",
-                fontSize = 32.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = ClayTextPrimary,
-                letterSpacing = 1.sp
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Managing Medical Logistics",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = ClayTextSecondary
-            )
         }
     }
 }

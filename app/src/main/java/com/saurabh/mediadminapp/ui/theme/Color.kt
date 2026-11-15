@@ -1,101 +1,87 @@
 package com.saurabh.mediadminapp.ui.theme
 
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// ── Light scheme ─────────────────────────────────────────────────────────────
+internal val LightPrimary = Color(0xFF0B7A6B)
+internal val LightOnPrimary = Color(0xFFFFFFFF)
+internal val LightPrimaryContainer = Color(0xFFBDEFE3)
+internal val LightOnPrimaryContainer = Color(0xFF00201B)
+internal val LightSecondary = Color(0xFF3F7D3A)
+internal val LightOnSecondary = Color(0xFFFFFFFF)
+internal val LightSecondaryContainer = Color(0xFFD5F0C4)
+internal val LightOnSecondaryContainer = Color(0xFF0F2B07)
+internal val LightTertiary = Color(0xFF5C7A12)
+internal val LightOnTertiary = Color(0xFFFFFFFF)
+internal val LightTertiaryContainer = Color(0xFFE3F5B0)
+internal val LightOnTertiaryContainer = Color(0xFF1A2400)
+internal val LightError = Color(0xFFB3261E)
+internal val LightOnError = Color(0xFFFFFFFF)
+internal val LightErrorContainer = Color(0xFFF9DEDC)
+internal val LightOnErrorContainer = Color(0xFF410E0B)
+internal val LightBackground = Color(0xFFFBF9F1)
+internal val LightOnBackground = Color(0xFF191D1B)
+internal val LightSurface = Color(0xFFFBF9F1)
+internal val LightOnSurface = Color(0xFF191D1B)
+internal val LightSurfaceVariant = Color(0xFFDBE5E0)
+internal val LightOnSurfaceVariant = Color(0xFF3F4945)
+internal val LightOutline = Color(0xFF6F7975)
+internal val LightOutlineVariant = Color(0xFFBFC9C4)
+internal val LightSurfaceContainerLowest = Color(0xFFFFFFFF)
+internal val LightSurfaceContainerLow = Color(0xFFF5F4EB)
+internal val LightSurfaceContainer = Color(0xFFF0EFE6)
+internal val LightSurfaceContainerHigh = Color(0xFFEAE9E0)
+internal val LightSurfaceContainerHighest = Color(0xFFE4E3DA)
+internal val LightInverseSurface = Color(0xFF2E312F)
+internal val LightInverseOnSurface = Color(0xFFF0F1EC)
+internal val LightInversePrimary = Color(0xFF6FD9C3)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// ── Dark scheme ──────────────────────────────────────────────────────────────
+internal val DarkPrimary = Color(0xFF6FD9C3)
+internal val DarkOnPrimary = Color(0xFF00372F)
+internal val DarkPrimaryContainer = Color(0xFF005046)
+internal val DarkOnPrimaryContainer = Color(0xFFBDEFE3)
+internal val DarkSecondary = Color(0xFFA3D49A)
+internal val DarkOnSecondary = Color(0xFF0B3A0C)
+internal val DarkSecondaryContainer = Color(0xFF245A28)
+internal val DarkOnSecondaryContainer = Color(0xFFBFF0B5)
+internal val DarkTertiary = Color(0xFFC5DF73)
+internal val DarkOnTertiary = Color(0xFF2B3400)
+internal val DarkTertiaryContainer = Color(0xFF3F4B00)
+internal val DarkOnTertiaryContainer = Color(0xFFDFF98F)
+internal val DarkError = Color(0xFFFFB4AB)
+internal val DarkOnError = Color(0xFF690005)
+internal val DarkErrorContainer = Color(0xFF93000A)
+internal val DarkOnErrorContainer = Color(0xFFFFDAD6)
+internal val DarkBackground = Color(0xFF0F1513)
+internal val DarkOnBackground = Color(0xFFDFE4E0)
+internal val DarkSurface = Color(0xFF0F1513)
+internal val DarkOnSurface = Color(0xFFDFE4E0)
+internal val DarkSurfaceVariant = Color(0xFF3F4945)
+internal val DarkOnSurfaceVariant = Color(0xFFBFC9C4)
+internal val DarkOutline = Color(0xFF899390)
+internal val DarkOutlineVariant = Color(0xFF3F4945)
+internal val DarkSurfaceContainerLowest = Color(0xFF0A0F0D)
+internal val DarkSurfaceContainerLow = Color(0xFF171D1B)
+internal val DarkSurfaceContainer = Color(0xFF1B2220)
+internal val DarkSurfaceContainerHigh = Color(0xFF262C2A)
+internal val DarkSurfaceContainerHighest = Color(0xFF313735)
+internal val DarkInverseSurface = Color(0xFFDFE4E0)
+internal val DarkInverseOnSurface = Color(0xFF2E312F)
+internal val DarkInversePrimary = Color(0xFF0B7A6B)
 
+// ── Logo / brand spots only (never large areas or text) ─────────────────────
+object BrandColors {
+    val ShieldTeal = Color(0xFF0B7A6B)
+    val ShieldTealLight = Color(0xFF3DBE9B)
+    val CapsuleTeal = Color(0xFF1A8F82)
+    val LeafGreen = Color(0xFF3F7D3A)
+    val Lime = Color(0xFF8BC53F)
+    val Cream = Color(0xFFFBF9F1)
+}
 
-//── Primary Palette ──────────────────────────────────────────────────────────
-val ClayPrimary        = Color(0xFF6C63FF) // Electric Violet
-val ClayPrimaryLight   = Color(0xFF9D97FF)
-val ClayPrimaryDark    = Color(0xFF4B44CC)
-
-val ClaySecondary      = Color(0xFF48CAE4) // Sky Cyan
-val ClaySecondaryLight = Color(0xFF80DFEF)
-
-val ClayAccent         = Color(0xFFFF6584) // Coral Pink
-val ClayAccentLight    = Color(0xFFFFADBD)
-
-val ClaySuccess        = Color(0xFF10B981) // Emerald
-val ClayWarning        = Color(0xFFF59E0B) // Amber
-val ClayError          = Color(0xFFEF4444) // Red
-
-// ── Text Colors (CRITICAL — must be high-contrast in ALL TextField states) ───
-val ClayTextPrimary    = Color(0xFF1E293B) // Deep Charcoal — primary input text
-val ClayTextSecondary  = Color(0xFF64748B) // Slate — placeholder / label
-val ClayTextOnDark     = Color(0xFFFFFFFF) // Text on gradient surfaces
-val ClayTextMuted      = Color(0xFF94A3B8) // Disabled / hint
-
-// ── Surface & Background Colors ──────────────────────────────────────────────
-val ClayCardBg         = Color(0xFFFAF9FF) // Lavender white — clay card base
-val ClayFieldBg        = Color(0xFFF0EEFF) // Soft lavender — input container
-val ClayScreenBg       = Color(0xFFF5F3FF) // App-wide background
-val ClayBorder         = Color(0xFFD0C8FF) // Unfocused input border
-val ClayBorderFocused  = ClayPrimary       // Focused input border
-
-// ── Status Badge Colors ───────────────────────────────────────────────────────
-val ClayBadgeApproved  = ClaySuccess
-val ClayBadgePending   = ClayWarning
-val ClayBadgeBlocked   = ClayError
-val ClayBadgeInStock   = ClaySuccess
-val ClayBadgeLowStock  = ClayWarning
-val ClayBadgeOutStock  = ClayError
-
-val ClayStateApproved  = ClaySuccess
-val ClayStatePending   = ClayWarning
-val ClayStateBlocked   = ClayAccent
-val StateApproved      = ClaySuccess
-val StatePending       = ClayWarning
-val StateBlocked       = ClayAccent
-
-// ── Gradients ─────────────────────────────────────────────────────────────────
-val ClayPrimaryGradient = Brush.horizontalGradient(
-    colors = listOf(ClayPrimary, ClaySecondary)
-)
-val ClayButtonGradient = Brush.horizontalGradient(
-    colors = listOf(Color(0xFF6C63FF), Color(0xFF48CAE4))
-)
-val ClayHeaderGradient = Brush.verticalGradient(
-    colors = listOf(ClayPrimary, ClaySecondaryLight)
-)
-val ClayHomeGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF6C63FF), Color(0xFF48CAE4))
-)
-val ClayProductGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF0EA5E9), Color(0xFF6C63FF))
-)
-val ClayOrderGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF10B981), Color(0xFF48CAE4))
-)
-val ClayHistoryGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFFFF6584), Color(0xFF6C63FF))
-)
-
-// ── Shape Radii ───────────────────────────────────────────────────────────────
-val ClayRadiusSmall  = 12.dp
-val ClayRadiusMedium = 20.dp
-val ClayRadiusLarge  = 28.dp
-val ClayRadiusPill   = 50.dp
-
-// ── Elevation ─────────────────────────────────────────────────────────────────
-val ClayElevationCard   = 20.dp
-val ClayElevationButton = 12.dp
-val ClayElevationSmall  = 6.dp
-
-// ── Donut Chart Colors ────────────────────────────────────────────────────────
-val ClayChartColors = listOf(
-    Color(0xFF6C63FF),
-    Color(0xFF48CAE4),
-    Color(0xFFFF6584),
-    Color(0xFF10B981),
-    Color(0xFFF59E0B),
-    Color(0xFF8B5CF6)
-)
+// ── Status (pending has no scheme role) ─────────────────────────────────────
+internal val PendingContainerLight = Color(0xFFFFDEA8)
+internal val OnPendingContainerLight = Color(0xFF3D2A00)
+internal val PendingContainerDark = Color(0xFF5C4000)
+internal val OnPendingContainerDark = Color(0xFFFFDEA8)

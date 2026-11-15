@@ -109,5 +109,9 @@ dependencies {
 
     implementation(libs.androidx.security.crypto)
     implementation(libs.ucrop)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+    implementation(libs.mlkit.barcode.scanning)
     implementation(libs.dotenv.kotlin)
 }
