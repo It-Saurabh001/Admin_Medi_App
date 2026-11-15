@@ -23,12 +23,14 @@ import com.saurabh.mediadminapp.data.v1.core.V1Gson
 import com.saurabh.mediadminapp.data.v1.core.safeApiCall
 import com.saurabh.mediadminapp.data.v1.core.safeApiCallPaged
 import com.saurabh.mediadminapp.data.v1.dto.AdminCreateRequest
+import com.saurabh.mediadminapp.data.v1.dto.AdminRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.AdminUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.AppConfig
 import com.saurabh.mediadminapp.data.v1.dto.BatchCreateRequest
 import com.saurabh.mediadminapp.data.v1.dto.BatchUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.CancelOrderRequest
 import com.saurabh.mediadminapp.data.v1.dto.DeviceRegisterRequest
+import com.saurabh.mediadminapp.data.v1.dto.EmailOtpRequest
 import com.saurabh.mediadminapp.data.v1.dto.LoginRequest
 import com.saurabh.mediadminapp.data.v1.dto.LogoutData
 import com.saurabh.mediadminapp.data.v1.dto.LogoutRequest
@@ -102,6 +104,14 @@ class Repository @Inject constructor(
         }) { authApi.verifyOtp(VerifyOtpRequest(accountId, otp, ADMIN)) }
 
     /** POST auth/password-reset/request. */
+    /** POST auth/verify-otp {email, otp}: signup email verification (no tokens issued). */
+    fun verifyAdminEmail(email: String, otp: String) =
+        v1Flow { authApi.verifyEmailOtp(EmailOtpRequest(email, otp, ADMIN)) }
+
+    /** POST auth/resend-otp (60 s cooldown -> RATE_LIMITED). */
+    fun resendAdminEmailOtp(email: String) =
+        v1Flow { authApi.resendEmailOtp(EmailOtpRequest(email, null, ADMIN)) }
+
     fun requestAdminPasswordReset(email: String) =
         v1Flow { authApi.passwordResetRequest(PasswordResetRequest(email, ADMIN)) }
 
@@ -140,8 +150,17 @@ class Repository @Inject constructor(
     }
 
     /** GET admins (paged). Admin. */
-    fun getAllAdmins(q: String? = null, role: String? = null, page: PageRequest = PageRequest()) =
-        v1Paged { adminsApi.listAdmins(q, role, page.toQueryMap()) }
+    fun getAllAdmins(q: String? = null, role: String? = null, page: PageRequest = PageRequest(), isApproved: Boolean? = null) =
+        v1Paged { adminsApi.listAdmins(q, role, page.toQueryMap(), isApproved) }
+
+    /** POST admins/register (public; multipart when image != null). */
+    fun registerAdmin(request: AdminRegisterRequest, image: ImagePart? = null) = v1Flow {
+        if (image == null) adminsApi.registerAdmin(request)
+        else adminsApi.registerAdminMultipart(request.parts(), image.toPart())
+    }
+
+    /** POST admins/{admin_id}/approve. Admin. Idempotent. */
+    fun approveAdmin(adminId: String) = v1Flow { adminsApi.approveAdmin(adminId) }
 
     /** NEW. GET admins/{admin_id}. Admin. */
     fun getAdmin(adminId: String) = v1Flow { adminsApi.getAdmin(adminId) }
@@ -441,6 +460,11 @@ class Repository @Inject constructor(
 
     private fun AdminCreateRequest.parts() =
         textParts("name" to name, "email" to email, "password" to password, "phone_number" to phoneNumber)
+
+    private fun AdminRegisterRequest.parts() = textParts(
+        "name" to name, "email" to email, "password" to password,
+        "phone_number" to phoneNumber, "signup_code" to signupCode
+    )
 
     private fun AdminUpdateRequest.parts() = textParts(
         "name" to name, "email" to email, "phone_number" to phoneNumber, "password" to password,

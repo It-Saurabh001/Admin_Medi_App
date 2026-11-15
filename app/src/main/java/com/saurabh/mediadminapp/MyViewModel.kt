@@ -7,6 +7,8 @@ import com.saurabh.mediadminapp.data.v1.core.AppEvent
 import com.saurabh.mediadminapp.data.v1.core.AppEvents
 import com.saurabh.mediadminapp.data.v1.core.IdempotencyKeyProvider
 import com.saurabh.mediadminapp.data.v1.core.PageRequest
+import com.saurabh.mediadminapp.data.v1.dto.StockPurchaseRequest
+import com.saurabh.mediadminapp.data.v1.repository.ProductFilter
 import com.saurabh.mediadminapp.data.v1.core.Pagination
 import com.saurabh.mediadminapp.data.v1.core.UiState
 import com.saurabh.mediadminapp.data.v1.core.loadMore
@@ -334,6 +336,14 @@ class MyViewModel @Inject constructor(
     private fun resetAllStatesOnLogout() {
         _salesReportState.value = SalesReportState()
         _topProductsState.value = TopProductsState()
+        _productFilter.value = ProductFilter()
+        _registerAdminState.value = RegisterAdminState()
+        _adminActionIds.value = emptySet()
+        clearStockPurchaseState()
+        clearBatchAction()
+        _batchDetail.value = UiState.Empty
+        _productBatches.value = UiState.Empty
+        _barcodeLookup.value = BarcodeLookupState.Idle
         _isAdminLoggedIn.value = false
         _loggedInAdminId.value = null
         _createAdminState.value = CreateAdminState()
@@ -413,6 +423,33 @@ class MyViewModel @Inject constructor(
         }
     }
 
+    private val _emailVerifyState = MutableStateFlow(EmailVerifyState())
+    val emailVerifyState: StateFlow<EmailVerifyState> = _emailVerifyState.asStateFlow()
+
+    fun verifyAdminEmail(email: String, otp: String) {
+        if (_emailVerifyState.value.isLoading) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.verifyAdminEmail(email, otp).collectInto(
+                onLoading = { _emailVerifyState.value = EmailVerifyState(isLoading = true) },
+                onError = { m, e -> _emailVerifyState.value = EmailVerifyState(error = m ?: "Verification failed", appError = e) },
+                onSuccess = { _emailVerifyState.value = EmailVerifyState(verified = true) }
+            )
+        }
+    }
+
+    fun resendAdminEmailOtp(email: String) {
+        if (_emailVerifyState.value.isLoading) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.resendAdminEmailOtp(email).collectInto(
+                onLoading = { _emailVerifyState.value = EmailVerifyState(isLoading = true) },
+                onError = { m, e -> _emailVerifyState.value = EmailVerifyState(error = m ?: "Could not resend code", appError = e) },
+                onSuccess = { _emailVerifyState.value = EmailVerifyState(resent = true) }
+            )
+        }
+    }
+
+    fun clearEmailVerifyState() { _emailVerifyState.value = EmailVerifyState() }
+
     /** Email last used for requestPasswordReset (prefills ResetPassword). */
     fun lastResetEmail(): String? = resetEmail
 
@@ -444,14 +481,84 @@ class MyViewModel @Inject constructor(
     // ===========================
     // ADMINS
     // ===========================
+    /** Public admin signup (Login -> Create account). */
+    private val _registerAdminState = MutableStateFlow(RegisterAdminState())
+    val registerAdminState: StateFlow<RegisterAdminState> = _registerAdminState.asStateFlow()
+
+    /** app-config `admin_signup`; null = old server or config not loaded (treat as enabled, no code). */
+    fun adminSignupConfig(): com.saurabh.mediadminapp.data.v1.dto.AppConfigAdminSignup? = repository.cachedAppConfig()?.adminSignup
+
+    fun registerAdmin(
+        name: String,
+        email: String,
+        password: String,
+        phoneNumber: String? = null,
+        signupCode: String? = null,
+        image: ImagePart? = null
+    ) {
+        if (_registerAdminState.value.isLoading) return
+        val request = com.saurabh.mediadminapp.data.v1.dto.AdminRegisterRequest(
+            name = name.trim(), email = email.trim(), password = password,
+            phoneNumber = phoneNumber?.trim()?.ifBlank { null }, signupCode = signupCode?.trim()?.ifBlank { null }
+        )
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.registerAdmin(request, image).collectInto(
+                onLoading = { _registerAdminState.value = RegisterAdminState(isLoading = true) },
+                onError = { m, e -> _registerAdminState.value = RegisterAdminState(error = m ?: "Sign up failed", appError = e) },
+                onSuccess = { _registerAdminState.value = RegisterAdminState(success = it) }
+            )
+        }
+    }
+
+    fun clearRegisterAdminState() { _registerAdminState.value = RegisterAdminState() }
+
+    /** Admin ids with an approve/delete request in flight (row spinners, double-tap guard). */
+    private val _adminActionIds = MutableStateFlow<Set<String>>(emptySet())
+    val adminActionIds: StateFlow<Set<String>> = _adminActionIds.asStateFlow()
+
+    fun approveAdmin(adminId: String) {
+        if (adminId in _adminActionIds.value) return
+        _adminActionIds.update { it + adminId }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.approveAdmin(adminId).collectInto(
+                onError = { m, _ -> _adminActionIds.update { it - adminId }; snackbar(m ?: "Approve failed") },
+                onSuccess = { a ->
+                    _getAllAdminState.update { st ->
+                        st.copy(success = st.success?.let { d -> d.copy(items = d.items.map { if (it.adminId == a.adminId) a else it }) })
+                    }
+                    _adminActionIds.update { it - adminId }
+                    snackbar("${a.name} approved")
+                }
+            )
+        }
+    }
+
+    /** DELETE admins/{id}: rejects a pending signup or removes an admin. Owner 403, last approved admin 409. */
+    fun deleteAdmin(adminId: String) {
+        if (adminId in _adminActionIds.value) return
+        _adminActionIds.update { it + adminId }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteAdmin(adminId).collectInto(
+                onError = { m, _ -> _adminActionIds.update { it - adminId }; snackbar(m ?: "Delete failed") },
+                onSuccess = {
+                    _getAllAdminState.update { st ->
+                        st.copy(success = st.success?.let { d -> d.copy(items = d.items.filterNot { it.adminId == adminId }) })
+                    }
+                    _adminActionIds.update { it - adminId }
+                    snackbar("Admin removed")
+                }
+            )
+        }
+    }
+
     fun getAllAdmin(force: Boolean = false) {
         val s = _getAllAdminState.value
         if (!force && s.success != null && !s.isLoading && s.error == null) return
         adminsPage = PageRequest(limit = 100)
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAllAdmins(page = adminsPage).collectInto(
-                onLoading = { _getAllAdminState.value = GetAllAdminState(isLoading = true) },
-                onError = { m, _ -> _getAllAdminState.value = GetAllAdminState(error = m) },
+                onLoading = { _getAllAdminState.update { it.copy(isLoading = true, error = null, isLoadingMore = false) } },
+                onError = { m, _ -> _getAllAdminState.update { it.copy(isLoading = false, isLoadingMore = false, error = m ?: "Could not load") } },
                 onSuccess = { d ->
                     _getAllAdminState.value = GetAllAdminState(
                         success = d, pagination = d.pagination, endReached = adminsPage.isLast(d.pagination)
@@ -611,8 +718,8 @@ class MyViewModel @Inject constructor(
         salesPage = PageRequest()
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAllSellHistory(page = salesPage).collectInto(
-                onLoading = { _getSellHistory.value = GetSellHistoryState(isLoading = true) },
-                onError = { m, _ -> _getSellHistory.value = GetSellHistoryState(error = m) },
+                onLoading = { _getSellHistory.update { it.copy(isLoading = true, error = null, isLoadingMore = false) } },
+                onError = { m, _ -> _getSellHistory.update { it.copy(isLoading = false, isLoadingMore = false, error = m ?: "Could not load") } },
                 onSuccess = { d ->
                     _getSellHistory.value = GetSellHistoryState(
                         success = d, pagination = d.pagination, endReached = salesPage.isLast(d.pagination)
@@ -650,8 +757,8 @@ class MyViewModel @Inject constructor(
         usersPage = PageRequest()
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAllUsers(page = usersPage).collectInto(
-                onLoading = { _getAllUserState.value = GetAllUserState(isLoading = true) },
-                onError = { m, _ -> _getAllUserState.value = GetAllUserState(error = m) },
+                onLoading = { _getAllUserState.update { it.copy(isLoading = true, error = null, isLoadingMore = false) } },
+                onError = { m, _ -> _getAllUserState.update { it.copy(isLoading = false, isLoadingMore = false, error = m ?: "Could not load") } },
                 onSuccess = { d ->
                     _getAllUserState.value = GetAllUserState(
                         success = d, pagination = d.pagination, endReached = usersPage.isLast(d.pagination)
@@ -785,8 +892,8 @@ class MyViewModel @Inject constructor(
         ordersPage = PageRequest()
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAllOrders(page = ordersPage).collectInto(
-                onLoading = { _getAllOrderState.value = GetAllOrdersState(isLoading = true) },
-                onError = { m, _ -> _getAllOrderState.value = GetAllOrdersState(error = m) },
+                onLoading = { _getAllOrderState.update { it.copy(isLoading = true, error = null, isLoadingMore = false) } },
+                onError = { m, _ -> _getAllOrderState.update { it.copy(isLoading = false, isLoadingMore = false, error = m ?: "Could not load") } },
                 onSuccess = { d ->
                     _getAllOrderState.value = GetAllOrdersState(
                         success = d, pagination = d.pagination, endReached = ordersPage.isLast(d.pagination)
@@ -821,8 +928,8 @@ class MyViewModel @Inject constructor(
         lastUserOrdersId = userId
         viewModelScope.launch(Dispatchers.IO) {
             repository.getUserOrders(userId, page = PageRequest(limit = 100)).collectInto(
-                onLoading = { _getUsersOrdersState.value = GetUsersOrderState(isLoading = true) },
-                onError = { m, _ -> _getUsersOrdersState.value = GetUsersOrderState(error = m) },
+                onLoading = { _getUsersOrdersState.update { it.copy(isLoading = true, error = null) } },
+                onError = { m, _ -> _getUsersOrdersState.update { it.copy(isLoading = false, error = m ?: "Could not load") } },
                 onSuccess = { _getUsersOrdersState.value = GetUsersOrderState(success = it) }
             )
         }
@@ -834,8 +941,8 @@ class MyViewModel @Inject constructor(
         lastOrderId = orderId
         viewModelScope.launch(Dispatchers.IO) {
             repository.getOrdersById(orderId).collectInto(
-                onLoading = { _getOrderByIdState.value = GetOrderByIdState(isLoading = true) },
-                onError = { m, _ -> _getOrderByIdState.value = GetOrderByIdState(error = m) },
+                onLoading = { _getOrderByIdState.update { it.copy(isLoading = true, error = null) } },
+                onError = { m, _ -> _getOrderByIdState.update { it.copy(isLoading = false, error = m ?: "Could not load") } },
                 onSuccess = { _getOrderByIdState.value = GetOrderByIdState(success = it) }
             )
         }
@@ -989,17 +1096,37 @@ class MyViewModel @Inject constructor(
     // ===========================
     // PRODUCTS
     // ===========================
+    /** ProductList filters (q, category, schedule_type, in_stock, is_active) and sort. */
+    private val _productFilter = MutableStateFlow(ProductFilter())
+    val productFilter: StateFlow<ProductFilter> = _productFilter.asStateFlow()
+    private val _productSort = MutableStateFlow(PageRequest(sort = "name", order = "asc"))
+    val productSort: StateFlow<PageRequest> = _productSort.asStateFlow()
+    private var productsJob: kotlinx.coroutines.Job? = null
+
+    /** Replace filter and/or sort (`sort`: name|price|mrp|stock|created_at|updated_at) and reload page 1. */
+    fun setProductFilter(filter: ProductFilter = _productFilter.value, sort: String? = _productSort.value.sort, order: String? = _productSort.value.order) {
+        val newSort = PageRequest(sort = sort, order = order)
+        if (filter == _productFilter.value && newSort == _productSort.value) return
+        _productFilter.value = filter
+        _productSort.value = newSort
+        getAllProduct(force = true)
+    }
+
     fun getAllProduct(force: Boolean = false) {
         val s = _getAllProduct.value
         if (!force && s.success != null && !s.isLoading && s.error == null) return
-        productsPage = PageRequest()
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.getAllProduct(page = productsPage).collectInto(
-                onLoading = { _getAllProduct.value = GetAllProductState(isLoading = true) },
-                onError = { m, _ -> _getAllProduct.value = GetAllProductState(error = m) },
+        productsPage = _productSort.value.copy(offset = 0)
+        val filter = _productFilter.value
+        val page = productsPage
+        productsJob?.cancel()
+        productsJob = viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllProduct(filter = filter, page = page).collectInto(
+                // Keep the old list visible while a filter/refresh reloads.
+                onLoading = { _getAllProduct.update { it.copy(isLoading = true, error = null, isLoadingMore = false) } },
+                onError = { m, _ -> _getAllProduct.update { it.copy(isLoading = false, error = m ?: "Could not load products") } },
                 onSuccess = { d ->
                     _getAllProduct.value = GetAllProductState(
-                        success = d, pagination = d.pagination, endReached = productsPage.isLast(d.pagination)
+                        success = d, pagination = d.pagination, endReached = page.isLast(d.pagination)
                     )
                 }
             )
@@ -1012,10 +1139,12 @@ class MyViewModel @Inject constructor(
         val next = s.pagination?.let { productsPage.loadMore(it) }
         if (next == null) { _getAllProduct.update { it.copy(endReached = true) }; return }
         _getAllProduct.update { it.copy(isLoadingMore = true) }
+        val filter = _productFilter.value
         viewModelScope.launch(Dispatchers.IO) {
-            repository.getAllProduct(page = next).collectInto(
+            repository.getAllProduct(filter = filter, page = next).collectInto(
                 onError = { m, _ -> _getAllProduct.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
                 onSuccess = { d ->
+                    if (_productFilter.value != filter) return@collectInto
                     productsPage = next
                     _getAllProduct.update {
                         it.copy(success = it.success.append(d), pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
@@ -1025,37 +1154,193 @@ class MyViewModel @Inject constructor(
         }
     }
 
+    /** GET product-categories (first 100, by name) for ProductList filter chips. */
+    private val _productCategories = MutableStateFlow<UiState<List<com.saurabh.mediadminapp.data.v1.dto.ProductCategory>>>(UiState.Empty)
+    val productCategories: StateFlow<UiState<List<com.saurabh.mediadminapp.data.v1.dto.ProductCategory>>> = _productCategories.asStateFlow()
+
+    fun loadProductCategories(force: Boolean = false) {
+        if (!force && _productCategories.value is UiState.Success) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getProductCategories(PageRequest(limit = 100, sort = "name", order = "asc")).collectInto(
+                onLoading = { _productCategories.value = UiState.Loading },
+                onError = { m, e -> _productCategories.value = UiState.Error(e ?: AppError.Unknown(Exception(m))) },
+                onSuccess = { d -> _productCategories.value = if (d.items.isEmpty()) UiState.Empty else UiState.Success(d.items) }
+            )
+        }
+    }
+
+    /** GET products/by-barcode/{barcode} for BarcodeScanner. */
+    private val _barcodeLookup = MutableStateFlow<BarcodeLookupState>(BarcodeLookupState.Idle)
+    val barcodeLookup: StateFlow<BarcodeLookupState> = _barcodeLookup.asStateFlow()
+    private var barcodeJob: kotlinx.coroutines.Job? = null
+
+    fun lookupBarcode(barcode: String) {
+        val code = barcode.trim()
+        if (code.isEmpty() || _barcodeLookup.value is BarcodeLookupState.Loading) return
+        barcodeJob?.cancel()
+        barcodeJob = viewModelScope.launch(Dispatchers.IO) {
+            repository.getProductByBarcode(code).collectInto(
+                onLoading = { _barcodeLookup.value = BarcodeLookupState.Loading(code) },
+                onError = { m, e ->
+                    _barcodeLookup.value = if ((e as? AppError.Api)?.httpStatus == 404) BarcodeLookupState.NotFound(code)
+                    else BarcodeLookupState.Failed(code, m ?: "Lookup failed", e)
+                },
+                onSuccess = { p -> _barcodeLookup.value = BarcodeLookupState.Found(code, p) }
+            )
+        }
+    }
+
+    fun clearBarcodeLookup() { barcodeJob?.cancel(); _barcodeLookup.value = BarcodeLookupState.Idle }
+
     /** Stock is not set here (v1 products start at 0; stock comes from purchases/batches). */
     fun addProduct(
-        name: String,
-        price: Double,
-        category: String,
-        image: ImagePart? = null
+        request: ProductCreateRequest,
+        image: ImagePart? = null,
+        openingStock: OpeningStock? = null
     ) {
         if (_addProductState.value.isLoading) return
-        val request = ProductCreateRequest(name = name, price = price, category = category.ifBlank { null })
         viewModelScope.launch(Dispatchers.IO) {
             repository.getAddProduct(request, image).collectInto(
                 onLoading = { _addProductState.value = AddProductState(isLoading = true) },
                 onError = { m, e -> _addProductState.value = AddProductState(error = m, appError = e) },
-                onSuccess = {
-                    _addProductState.value = AddProductState(success = it)
+                onSuccess = { created ->
+                    if (openingStock != null) {
+                        // Product exists now; a failed stock step must not hide that.
+                        val req = StockPurchaseRequest(
+                            batchNo = openingStock.batchNo, expiryDate = openingStock.expiryDate, quantity = openingStock.quantity,
+                            purchasePrice = openingStock.purchasePrice, mrp = openingStock.mrp
+                        )
+                        repository.purchaseStock(created.productId, req, idempotencyKeyProvider.newKey()).collectInto(
+                            onError = { m, _ -> snackbar("Product saved, but stock was not added: ${m ?: "error"}. Add it from the product page.") },
+                            onSuccess = { snackbar("Product added with ${openingStock.quantity} in stock") }
+                        )
+                    }
+                    _addProductState.value = AddProductState(success = created)
                     getAllProduct(force = true)
                 }
             )
         }
     }
 
-    /** Stock is not editable here (v1: stock adjust endpoint). */
+    // ---- Receive stock (POST products/{id}/stock/purchase) ----
+    private val _stockPurchaseState = MutableStateFlow(StockPurchaseState())
+    val stockPurchaseState: StateFlow<StockPurchaseState> = _stockPurchaseState.asStateFlow()
+    /** One key per attempt, reused on retry, dropped on success/clear (no double receive on double tap). */
+    private var purchaseKey: String? = null
+
+    fun purchaseStock(productId: String, request: StockPurchaseRequest) {
+        if (_stockPurchaseState.value.isLoading) return
+        val key = purchaseKey ?: idempotencyKeyProvider.newKey().also { purchaseKey = it }
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.purchaseStock(productId, request, key).collectInto(
+                onLoading = { _stockPurchaseState.value = StockPurchaseState(isLoading = true) },
+                onError = { m, e -> _stockPurchaseState.value = StockPurchaseState(error = m ?: "Could not add stock", appError = e) },
+                onSuccess = { r ->
+                    purchaseKey = null
+                    _stockPurchaseState.value = StockPurchaseState(success = r)
+                    snackbar("Added ${request.quantity} to stock")
+                    loadProductBatches(productId, force = true)
+                    getSpecificProduct(productId, force = true)
+                    getAllProduct(force = true)
+                }
+            )
+        }
+    }
+
+    fun clearStockPurchaseState() { purchaseKey = null; _stockPurchaseState.value = StockPurchaseState() }
+
+    /** Batches of one product (edit-product stock section). */
+    private val _productBatches = MutableStateFlow<UiState<List<com.saurabh.mediadminapp.data.v1.dto.Batch>>>(UiState.Empty)
+    val productBatches: StateFlow<UiState<List<com.saurabh.mediadminapp.data.v1.dto.Batch>>> = _productBatches.asStateFlow()
+
+    fun loadProductBatches(productId: String, force: Boolean = false) {
+        val cur = _productBatches.value
+        if (!force && cur is UiState.Success && cur.data.firstOrNull()?.productId == productId) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getBatches(productId, includeExpired = true, page = PageRequest(limit = 100)).collectInto(
+                onLoading = { if (_productBatches.value !is UiState.Success) _productBatches.value = UiState.Loading },
+                onError = { m, e -> _productBatches.value = UiState.Error(e ?: AppError.Unknown(Exception(m))) },
+                onSuccess = { d -> _productBatches.value = if (d.items.isEmpty()) UiState.Empty else UiState.Success(d.items) }
+            )
+        }
+    }
+
+    /** One batch (BatchDetail). Keeps the previous value while reloading. */
+    private val _batchDetail = MutableStateFlow<UiState<com.saurabh.mediadminapp.data.v1.dto.Batch>>(UiState.Empty)
+    val batchDetail: StateFlow<UiState<com.saurabh.mediadminapp.data.v1.dto.Batch>> = _batchDetail.asStateFlow()
+    private val _batchAction = MutableStateFlow(BatchActionState())
+    val batchAction: StateFlow<BatchActionState> = _batchAction.asStateFlow()
+
+    fun getBatch(batchId: String, force: Boolean = false) {
+        val cur = _batchDetail.value
+        if (!force && cur is UiState.Success && cur.data.batchId == batchId) return
+        if (cur is UiState.Success && cur.data.batchId != batchId) _batchDetail.value = UiState.Empty
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getBatch(batchId).collectInto(
+                onLoading = { if (_batchDetail.value !is UiState.Success) _batchDetail.value = UiState.Loading },
+                onError = { m, e -> if (_batchDetail.value !is UiState.Success) _batchDetail.value = UiState.Error(e ?: AppError.Unknown(Exception(m))) else snackbar(m ?: "Refresh failed") },
+                onSuccess = { _batchDetail.value = UiState.Success(it) }
+            )
+        }
+    }
+
+    private fun afterBatchChange(b: com.saurabh.mediadminapp.data.v1.dto.Batch) {
+        _batchDetail.value = UiState.Success(b)
+        loadProductBatches(b.productId, force = true)
+        getSpecificProduct(b.productId, force = true)
+        getAllProduct(force = true)
+    }
+
+    /** PATCH batch metadata (not quantity). */
+    fun updateBatch(batchId: String, request: com.saurabh.mediadminapp.data.v1.dto.BatchUpdateRequest) {
+        if (_batchAction.value.isLoading) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateBatch(batchId, request).collectInto(
+                onLoading = { _batchAction.value = BatchActionState(isLoading = true) },
+                onError = { m, e -> _batchAction.value = BatchActionState(error = m ?: "Update failed", appError = e) },
+                onSuccess = { b -> _batchAction.value = BatchActionState(success = b); afterBatchChange(b); snackbar("Batch updated") }
+            )
+        }
+    }
+
+    /** Writes off the whole remaining quantity (EXPIRED_WRITEOFF). */
+    fun writeOffBatch(batchId: String, note: String?) {
+        if (_batchAction.value.isLoading) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.writeOffBatch(batchId, note?.trim()?.ifBlank { null }).collectInto(
+                onLoading = { _batchAction.value = BatchActionState(isLoading = true) },
+                onError = { m, e -> _batchAction.value = BatchActionState(error = m ?: "Write-off failed", appError = e) },
+                onSuccess = { r -> _batchAction.value = BatchActionState(success = r.batch, wroteOff = true); afterBatchChange(r.batch); snackbar("Batch written off") }
+            )
+        }
+    }
+
+    fun clearBatchAction() { _batchAction.value = BatchActionState() }
+
+    /** POST stock/adjust: signed [changeQty] on one batch (never below zero server-side). Shares stockPurchaseState. */
+    fun adjustStock(productId: String, batchId: String, changeQty: Int, reason: String) {
+        if (_stockPurchaseState.value.isLoading || changeQty == 0) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.adjustStock(productId, com.saurabh.mediadminapp.data.v1.dto.StockAdjustRequest(batchId, changeQty, reason.trim())).collectInto(
+                onLoading = { _stockPurchaseState.value = StockPurchaseState(isLoading = true) },
+                onError = { m, e -> _stockPurchaseState.value = StockPurchaseState(error = m ?: "Could not adjust stock", appError = e) },
+                onSuccess = { r ->
+                    _stockPurchaseState.value = StockPurchaseState(success = r)
+                    loadProductBatches(productId, force = true)
+                    getSpecificProduct(productId, force = true)
+                    getAllProduct(force = true)
+                }
+            )
+        }
+    }
+
+    /** PATCH: send only changed fields in [request] (null = unchanged). */
     fun updateProduct(
         productId: String,
-        name: String? = null,
-        price: Double? = null,
-        category: String? = null,
+        request: ProductUpdateRequest,
         image: ImagePart? = null
     ) {
         if (_updateProductState.value.isLoading) return
-        val request = ProductUpdateRequest(name = name, price = price, category = category)
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateProduct(productId, request, image).collectInto(
                 onLoading = { _updateProductState.value = UpdateProductState(isLoading = true) },
@@ -1120,8 +1405,8 @@ class MyViewModel @Inject constructor(
         lastProductId = productId
         viewModelScope.launch(Dispatchers.IO) {
             repository.getSpecificProduct(productId).collectInto(
-                onLoading = { _getSpecificProductState.value = GetSpecificProductState(isLoading = true) },
-                onError = { m, _ -> _getSpecificProductState.value = GetSpecificProductState(error = m) },
+                onLoading = { _getSpecificProductState.update { it.copy(isLoading = true, error = null) } },
+                onError = { m, _ -> _getSpecificProductState.update { it.copy(isLoading = false, error = m ?: "Could not load") } },
                 onSuccess = { _getSpecificProductState.value = GetSpecificProductState(success = it) }
             )
         }

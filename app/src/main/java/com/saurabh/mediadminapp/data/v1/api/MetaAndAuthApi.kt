@@ -6,6 +6,8 @@ import com.saurabh.mediadminapp.data.v1.core.HealthReadyResponse
 import com.saurabh.mediadminapp.data.v1.core.HealthResponse
 import com.saurabh.mediadminapp.data.v1.dto.ApiIndex
 import com.saurabh.mediadminapp.data.v1.dto.AppConfig
+import com.saurabh.mediadminapp.data.v1.dto.EmailOtpRequest
+import com.saurabh.mediadminapp.data.v1.dto.EmailVerifyData
 import com.saurabh.mediadminapp.data.v1.dto.LoginData
 import com.saurabh.mediadminapp.data.v1.dto.LoginRequest
 import com.saurabh.mediadminapp.data.v1.dto.LogoutData
@@ -51,6 +53,12 @@ interface AuthApi {
 
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body body: VerifyOtpRequest): Response<ApiEnvelope<TokenData>>
+
+    @POST("auth/verify-otp")
+    suspend fun verifyEmailOtp(@Body body: EmailOtpRequest): Response<ApiEnvelope<EmailVerifyData>>
+
+    @POST("auth/resend-otp")
+    suspend fun resendEmailOtp(@Body body: EmailOtpRequest): Response<ApiEnvelope<PasswordResetRequestData>>
 
     @POST("auth/logout")
     suspend fun logout(@Body body: LogoutRequest): Response<ApiEnvelope<LogoutData>>

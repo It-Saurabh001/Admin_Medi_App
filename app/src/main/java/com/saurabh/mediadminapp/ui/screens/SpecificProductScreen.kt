@@ -29,6 +29,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import com.saurabh.mediadminapp.ui.components.fieldError
+import com.saurabh.mediadminapp.ui.components.ReceiveStockSheet
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,8 +63,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navController: NavController) {
-    val state by viewModel.getSpecificProductState.collectAsState()
-    val delete by viewModel.deleteProductState.collectAsState()
+    val state by viewModel.getSpecificProductState.collectAsStateWithLifecycle()
+    val delete by viewModel.deleteProductState.collectAsStateWithLifecycle()
 
     LaunchedEffect(productId) {
         viewModel.clearDeleteProductState()
@@ -87,8 +92,12 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
             )
         }
     ) { inner ->
-        Box(Modifier.padding(inner).fillMaxSize()) {
-            val product = state.success
+        val product = state.success
+        PullToRefreshBox(
+            isRefreshing = state.isLoading && product != null,
+            onRefresh = { viewModel.getSpecificProduct(productId, force = true) },
+            modifier = Modifier.padding(inner).fillMaxSize()
+        ) {
             when {
                 state.isLoading && product == null -> LoadingState()
                 state.error != null && product == null ->
@@ -97,7 +106,8 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
                     p = product,
                     onEdit = { navController.navigate(Routes.UpdateProductRoutes.invoke(product.productId)) },
                     onDeactivate = { viewModel.deleteProduct(product.productId) },
-                    onReactivate = { viewModel.reactivateProduct(product.productId) }
+                    onReactivate = { viewModel.reactivateProduct(product.productId) },
+                    onBatches = { navController.navigate(Routes.BatchListRoutes.invoke(product.productId)) { launchSingleTop = true } }
                 )
                 else -> LoadingState()
             }
@@ -106,7 +116,7 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
 }
 
 @Composable
-private fun ProductDetail(p: Product, onEdit: () -> Unit, onDeactivate: () -> Unit, onReactivate: () -> Unit) {
+private fun ProductDetail(p: Product, onEdit: () -> Unit, onDeactivate: () -> Unit, onReactivate: () -> Unit, onBatches: () -> Unit) {
     val money = NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build())
     var zoom by remember { mutableStateOf(false) }
     var confirm by remember { mutableStateOf(false) }
@@ -157,6 +167,7 @@ private fun ProductDetail(p: Product, onEdit: () -> Unit, onDeactivate: () -> Un
         InfoRow("In stock", "${p.stock} ${p.unit}".trim())
         InfoRow("Sellable", p.sellableStock.toString())
         InfoRow("Reorder level", p.reorderLevel.toString())
+        TextButton(onClick = onBatches, modifier = Modifier.padding(horizontal = 8.dp).height(48.dp)) { Text("View batches") }
 
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             FilledTonalButton(onClick = onEdit, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text("Edit") }

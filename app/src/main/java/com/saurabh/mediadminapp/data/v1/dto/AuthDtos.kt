@@ -23,6 +23,18 @@ data class VerifyOtpRequest(
     @SerializedName("account_type") val accountType: String = "user"
 )
 
+/** POST auth/verify-otp (signup email verification) and auth/resend-otp. */
+data class EmailOtpRequest(
+    val email: String,
+    val otp: String? = null,
+    @SerializedName("account_type") val accountType: String = "admin"
+)
+
+data class EmailVerifyData(
+    @SerializedName("account_id") val accountId: String? = null,
+    @SerializedName("email_verified") val emailVerified: Boolean = false
+)
+
 data class TokenData(
     @SerializedName("access_token") val accessToken: String,
     @SerializedName("refresh_token") val refreshToken: String,

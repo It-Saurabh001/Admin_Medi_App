@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -68,6 +69,10 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
                 navController.navigate(Routes.AccountBlockedRoutes.route) { launchSingleTop = true }
             ErrorCode.ACCOUNT_NOT_APPROVED ->
                 formError = "This admin account is awaiting approval."
+            ErrorCode.EMAIL_NOT_VERIFIED -> {
+                viewModel.resendAdminEmailOtp(email.trim())
+                navController.navigate(Routes.VerifyEmailRoutes(email.trim())) { launchSingleTop = true }
+            }
             ErrorCode.RATE_LIMITED ->
                 formError = "Too many attempts. Please wait a moment and try again."
             else -> {
@@ -166,6 +171,17 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
             AuthPrimaryButton(text = "Sign in", isLoading = state.isLoading, onClick = ::submit)
+            // Shown unless app-config says admin signup is disabled.
+            if (viewModel.adminSignupConfig()?.enabled != false) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(8.dp))
+                AuthFooterLink(
+                    prompt = "New admin?",
+                    action = "Create account",
+                    onClick = { navController.navigate(Routes.AdminRegisterRoutes.route) { launchSingleTop = true } }
+                )
+            }
         }
     }
 }

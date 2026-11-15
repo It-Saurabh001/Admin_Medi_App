@@ -21,12 +21,18 @@ All `XState` keep `isLoading: Boolean`, `success: T?`, `error: String?`. `+appEr
 | `createAdminState` | `StateFlow<CreateAdminState>` | `dto.Admin` +appError |
 | `loginAdminState` | `StateFlow<LoginAdminState>` | `dto.LoginData` +appError |
 | `getAllAdminState` | `StateFlow<GetAllAdminState>` | `PagedData<dto.Admin>` +list (first page limit 100) |
+| `registerAdminState` | `StateFlow<RegisterAdminState>` | `dto.Admin` (isApproved/isOwner) +appError (AdminUiStates.kt) |
+| `adminActionIds` | `StateFlow<Set<String>>` | admin ids with approve/delete in flight |
 | `specificAdminState` | `StateFlow<AdminState>` | `dto.Admin` (not written by any function yet) |
 | `verifyOtpState` | `StateFlow<VerifyOtpState>` | `dto.TokenData` +appError |
 | `passwordResetState` | `StateFlow<PasswordResetState>` | `dto.PasswordResetRequestData` +appError |
 | `passwordResetOtpState` | `StateFlow<PasswordResetOtpState>` | `Unit` (non-null = success) +appError |
 | `getAllUserState` | `StateFlow<GetAllUserState>` | `PagedData<dto.User>` +list |
 | `getAllProduct` | `StateFlow<GetAllProductState>` | `PagedData<dto.Product>` +list |
+| `productFilter` | `StateFlow<ProductFilter>` | q, category, scheduleType, isActive, inStock |
+| `productSort` | `StateFlow<PageRequest>` | sort/order only |
+| `productCategories` | `StateFlow<UiState<List<dto.ProductCategory>>>` | - |
+| `barcodeLookup` | `StateFlow<BarcodeLookupState>` | Idle/Loading/Found(product)/NotFound/Failed (ProductUiStates.kt) |
 | `addProductState` | `StateFlow<AddProductState>` | `dto.Product` +appError |
 | `updateProductState` | `StateFlow<UpdateProductState>` | `dto.Product` +appError |
 | `deleteProductState` | `StateFlow<DeleteProductState>` | `dto.Product` (deactivated) |
@@ -48,6 +54,8 @@ All `XState` keep `isLoading: Boolean`, `success: T?`, `error: String?`. `+appEr
 | `getOrderByIdState` | `StateFlow<GetOrderByIdState>` | `dto.Order` (incl. `sales`) |
 | `invoiceState` | `StateFlow<UiState<dto.Invoice>>` | initial `UiState.Empty` |
 | `dashboardSummaryState` | `StateFlow<UiState<dto.DashboardSummary>>` | initial `UiState.Empty` |
+| `salesReportState` | `StateFlow<SalesReportState>` | query, rows, summary, pagination, endReached, loaded, error/appError |
+| `topProductsState` | `StateFlow<TopProductsState>` | query, rows, pagination, endReached, loaded, error/appError |
 | `uiEvent` | `Flow<UiEvent>` | `UiEvent.ShowSnackbar(message)` one-shot |
 
 ## 3. Functions
@@ -58,6 +66,11 @@ All `XState` keep `isLoading: Boolean`, `success: T?`, `error: String?`. `+appEr
 | `setAdminLoggedOut()` | UPDATED | all reset | `repository.logout()` (device unregister + token revoke), always clears | - |
 | `getAppConfig()` | NEW | upgradeRequiredVersion | called in init; compares min_app_version with `BuildConfig.VERSION_NAME` | - |
 | `createAdmin(name, email, password, phoneNumber, image: ImagePart? = null)` | UPDATED | createAdminState | blank phone sent as null | isLoading |
+| `registerAdmin(name, email, password, phoneNumber?, signupCode?, image?)` | NEW | registerAdminState | public POST /admins/register | isLoading |
+| `clearRegisterAdminState()` | NEW | registerAdminState | - | - |
+| `adminSignupConfig(): dto.AppConfigAdminSignup?` | NEW | - | app-config admin_signup (null = old server) | - |
+| `approveAdmin(adminId)` | NEW | getAllAdminState (in-place), adminActionIds | snackbar | per-id guard |
+| `deleteAdmin(adminId)` | NEW | getAllAdminState (remove), adminActionIds | reject pending / remove; owner 403, last approved 409 -> snackbar | per-id guard |
 | `loginAdmin(email, password)` | UPDATED | loginAdminState | - | isLoading |
 | `verifyAdminOtp(accountId, otp)` | UPDATED | verifyOtpState | session saved by repository; role != admin -> logout + error "Admin account required"; else setAdminLoggedIn() | isLoading |
 | `requestPasswordReset(email)` | UPDATED | passwordResetState | remembers email | isLoading |
@@ -86,8 +99,20 @@ All `XState` keep `isLoading: Boolean`, `success: T?`, `error: String?`. `+appEr
 | `verifyPrescription(orderId, verified = true)` | NEW | verifyPrescriptionState[orderId]; row replaced | snackbar | in-flight per order |
 | `getInvoice(orderId)` | NEW | invoiceState | - | - |
 | `getDashboardSummary()` | NEW | dashboardSummaryState | - | - |
+| `loadSalesReport(query: ReportQuery? = null, force = false)` | NEW | salesReportState (ReportsState.kt) | cached per query; cancels in-flight | isLoading/loaded |
+| `loadMoreSalesReport()` | NEW | salesReportState | guarded; drops page if query changed | isLoadingMore |
+| `loadTopProducts(query: ReportQuery? = null, force = false)` | NEW | topProductsState | default sort quantity desc | isLoading/loaded |
+| `loadMoreTopProducts()` | NEW | topProductsState | guarded | isLoadingMore |
 | `getAllProduct(force = false)` | UPDATED | getAllProduct | resets page | cached unless force |
-| `loadMoreProducts()` | NEW | getAllProduct (append) | - | busy / endReached |
+| `loadMoreProducts()` | UPDATED | getAllProduct (append) | uses productFilter; drops page if filter changed | busy / endReached |
+| `setProductFilter(filter = current, sort = current, order = current)` | NEW | productFilter, productSort, getAllProduct | reloads page 1 (keeps old list while loading; cancels in-flight) | - |
+| `purchaseStock(productId, StockPurchaseRequest)`, `clearStockPurchaseState()` | NEW | stockPurchaseState (StockUiStates.kt) | one Idempotency-Key per attempt; refreshes product + list; snackbar | isLoading |
+| `addProduct(..., openingStock: OpeningStock? = null)` | UPDATED | addProductState | after create, receives first batch; failure -> snackbar, product still saved | isLoading |
+| `getBatch(batchId, force)`, `updateBatch(batchId, BatchUpdateRequest)`, `writeOffBatch(batchId, note?)`, `clearBatchAction()` | NEW | batchDetail (`UiState<dto.Batch>`), batchAction (BatchActionState: success, wroteOff) | refresh batches, product, list; snackbar | isLoading |
+| `loadProductBatches(productId, force = false)` | NEW | productBatches (`UiState<List<dto.Batch>>`, limit 100, includes expired) | reloaded after purchase/adjust | - |
+| `adjustStock(productId, batchId, changeQty, reason)` | NEW | stockPurchaseState (shared with purchaseStock) | signed delta on one batch; refreshes batches, product, list | isLoading |
+| `loadProductCategories(force = false)` | NEW | productCategories | first 100 by name | - |
+| `lookupBarcode(barcode)`, `clearBarcodeLookup()` | NEW | barcodeLookup | 404 -> NotFound | Loading guard |
 | `addProduct(name, price: Double, category, image: ImagePart? = null)` | UPDATED | addProductState | refreshes products | isLoading |
 | `updateProduct(productId, name? = null, price: Double? = null, category? = null, image: ImagePart? = null)` | UPDATED | updateProductState | refreshes products; invalidates detail cache | isLoading |
 | `deleteProduct(productId)` | UPDATED | getAllProduct (optimistic remove/rollback), deleteProductState | deactivate; snackbar | - |

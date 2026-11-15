@@ -4,6 +4,7 @@ import com.saurabh.mediadminapp.data.v1.core.ApiEnvelope
 import com.saurabh.mediadminapp.data.v1.core.PagedEnvelope
 import com.saurabh.mediadminapp.data.v1.dto.Admin
 import com.saurabh.mediadminapp.data.v1.dto.AdminCreateRequest
+import com.saurabh.mediadminapp.data.v1.dto.AdminRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.AdminUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.Device
 import com.saurabh.mediadminapp.data.v1.dto.DeviceRegisterRequest
@@ -84,8 +85,23 @@ interface AdminsApi {
     suspend fun listAdmins(
         @Query("q") q: String? = null,
         @Query("role") role: String? = null,
-        @QueryMap page: Map<String, String> = emptyMap()
+        @QueryMap page: Map<String, String> = emptyMap(),
+        @Query("is_approved") isApproved: Boolean? = null
     ): Response<PagedEnvelope<Admin>>
+
+    /** Public admin signup; first admin = approved owner, later ones unapproved. */
+    @POST("admins/register")
+    suspend fun registerAdmin(@Body body: AdminRegisterRequest): Response<ApiEnvelope<Admin>>
+
+    @Multipart
+    @POST("admins/register")
+    suspend fun registerAdminMultipart(
+        @PartMap fields: Map<String, @JvmSuppressWildcards RequestBody>,
+        @Part image: MultipartBody.Part? = null
+    ): Response<ApiEnvelope<Admin>>
+
+    @POST("admins/{admin_id}/approve")
+    suspend fun approveAdmin(@Path("admin_id") adminId: String): Response<ApiEnvelope<Admin>>
 
     @POST("admins")
     suspend fun createAdmin(@Body body: AdminCreateRequest): Response<ApiEnvelope<Admin>>
@@ -114,7 +130,7 @@ interface AdminsApi {
         @Part image: MultipartBody.Part? = null
     ): Response<ApiEnvelope<Admin>>
 
-    /** Soft delete; last active admin -> 409 CONFLICT. */
+    /** Soft delete; owner -> 403, last approved admin -> 409 CONFLICT. */
     @DELETE("admins/{admin_id}")
     suspend fun deleteAdmin(@Path("admin_id") adminId: String): Response<ApiEnvelope<Admin>>
 }

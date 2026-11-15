@@ -14,7 +14,14 @@ data class AppConfig(
     val otp: AppConfigOtp,
     val pagination: AppConfigPagination,
     @SerializedName("server_time") val serverTime: Instant?,
-    val uploads: AppConfigUploads
+    val uploads: AppConfigUploads,
+    /** null on servers before admin signup. */
+    @SerializedName("admin_signup") val adminSignup: AppConfigAdminSignup? = null
+)
+
+data class AppConfigAdminSignup(
+    val enabled: Boolean,
+    @SerializedName("code_required") val codeRequired: Boolean
 )
 
 data class AppConfigEnums(

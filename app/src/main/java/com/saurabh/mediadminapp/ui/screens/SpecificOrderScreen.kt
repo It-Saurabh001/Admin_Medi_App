@@ -126,12 +126,16 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
                         colors = transparentTopBarColors
                     )
                 }
-                Box(modifier = Modifier.weight(1f)) {
+                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                    isRefreshing = response.value.isLoading && response.value.success != null,
+                    onRefresh = { viewModel.getOrderById(orderId, force = true) },
+                    modifier = Modifier.weight(1f)
+                ) {
                     when {
-                        response.value.isLoading -> {
+                        response.value.isLoading && response.value.success == null -> {
                             ClayLoadingScreen(modifier = Modifier)
                         }
-                        response.value.error != null -> {
+                        response.value.error != null && response.value.success == null -> {
                             ClayErrorScreen(
                                 errorMessage = response.value.error.toString(),
                                 modifier = Modifier,

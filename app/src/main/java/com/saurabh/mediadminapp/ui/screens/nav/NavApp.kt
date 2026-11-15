@@ -1,5 +1,24 @@
 package com.saurabh.mediadminapp.ui.screens.nav
 
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
+import androidx.compose.material.icons.outlined.QrCodeScanner
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -30,6 +49,7 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.MoreHoriz
@@ -77,6 +97,15 @@ import androidx.navigation.toRoute
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.data.v1.dto.Admin
 import com.saurabh.mediadminapp.ui.screens.AboutScreen
+import com.saurabh.mediadminapp.ui.screens.AdminListScreen
+import com.saurabh.mediadminapp.ui.screens.StockAdjustScreen
+import com.saurabh.mediadminapp.ui.screens.StockPurchaseScreen
+import com.saurabh.mediadminapp.ui.screens.BatchDetailScreen
+import com.saurabh.mediadminapp.ui.screens.BatchListScreen
+import com.saurabh.mediadminapp.ui.screens.OrderListScreen
+import com.saurabh.mediadminapp.ui.screens.SalesHistoryScreen
+import com.saurabh.mediadminapp.ui.screens.AdminSignUpScreen
+import com.saurabh.mediadminapp.ui.screens.BarcodeScannerScreen
 import com.saurabh.mediadminapp.ui.screens.ReportsScreen
 import com.saurabh.mediadminapp.ui.screens.TopProductsScreen
 import com.saurabh.mediadminapp.ui.screens.AccountBlockedScreen
@@ -87,6 +116,7 @@ import com.saurabh.mediadminapp.ui.screens.AddProductScreen
 import com.saurabh.mediadminapp.ui.screens.HistoryScreen
 import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.OtpScreen
+import com.saurabh.mediadminapp.ui.screens.EmailVerifyScreen
 import com.saurabh.mediadminapp.ui.screens.ProductScreen
 import com.saurabh.mediadminapp.ui.screens.ProfileScreen
 import com.saurabh.mediadminapp.ui.screens.SettingsScreen
@@ -135,7 +165,9 @@ fun NavApp(viewModel: MyViewModel) {
 
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
-    var showMoreSheet by rememberSaveable { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val drawerScope = rememberCoroutineScope()
+    val drawerOpen = drawerState.targetValue == DrawerValue.Open
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
@@ -155,7 +187,9 @@ fun NavApp(viewModel: MyViewModel) {
             currentRoute.contains("SplashRoutes", ignoreCase = true) -> true
             currentRoute.contains("SignInRoutes", ignoreCase = true) -> true
             currentRoute.contains("SignUpRoutes", ignoreCase = true) -> true
+            currentRoute.contains("AdminRegisterRoutes", ignoreCase = true) -> true
             currentRoute.contains("VerifyOtpRoutes", ignoreCase = true) -> true
+            currentRoute.contains("VerifyEmailRoutes", ignoreCase = true) -> true
             currentRoute.contains("ForgotPasswordRoutes", ignoreCase = true) -> true
             currentRoute.contains("ResetPasswordRoutes", ignoreCase = true) -> true
             currentRoute.contains("AccountBlockedRoutes", ignoreCase = true) -> true
@@ -190,7 +224,7 @@ fun NavApp(viewModel: MyViewModel) {
     LaunchedEffect(currentRoute) {
         scrollBehavior.state.heightOffset = 0f
         scrollBehavior.state.contentOffset = 0f
-        showMoreSheet = false
+        drawerState.close()
     }
 
     // 6. Consolidated session & navigation guard
@@ -205,7 +239,7 @@ fun NavApp(viewModel: MyViewModel) {
                 }
             }
         } else {
-            showMoreSheet = false
+            drawerState.snapTo(DrawerValue.Closed)
             if (!isAuthRoute && currentRoute != null) {
                 navController.navigate(Routes.SignInRoutes.route) {
                     popUpTo(0) { inclusive = true }
@@ -215,16 +249,16 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    // Screens' menu buttons open the More sheet (replaces the old drawer).
+    // Screens' menu buttons and the More tab open the navigation drawer.
     val openDrawer: () -> Unit = remember(isTopLevelRoute) {
-        { if (isTopLevelRoute) showMoreSheet = true }
+        { if (isTopLevelRoute) drawerScope.launch { drawerState.open() } }
     }
 
     val windowInfo = rememberWindowSize()
     val tabRoutes = listOf(Routes.HomeRoutes.route, Routes.ProductRoutes.route, Routes.OrdersRoutes.route, Routes.HistoryRoutes.route)
     val onTabSelected: (Int) -> Unit = { index ->
         if (index == MORE_TAB) {
-            showMoreSheet = true
+            drawerScope.launch { drawerState.open() }
         } else {
             val targetRoute = tabRoutes.getOrElse(index) { Routes.HomeRoutes.route }
             when {
@@ -246,6 +280,24 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = isTopLevelRoute || drawerOpen,
+        drawerContent = {
+            AppDrawerSheet(
+                admin = admin,
+                currentRoute = currentRoute,
+                onNavigate = { route ->
+                    drawerScope.launch { drawerState.close() }
+                    navController.navigate(route) { launchSingleTop = true }
+                },
+                onLogout = {
+                    drawerScope.launch { drawerState.close() }
+                    viewModel.setAdminLoggedOut()
+                }
+            )
+        }
+    ) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
@@ -257,7 +309,7 @@ fun NavApp(viewModel: MyViewModel) {
         bottomBar = {
             if (isTopLevelRoute && windowInfo.isCompact) {
                 AppNavigationBar(
-                    selected = if (showMoreSheet) MORE_TAB else selectedTab,
+                    selected = if (drawerOpen) MORE_TAB else selectedTab,
                     onItemSelected = onTabSelected
                 )
             }
@@ -277,7 +329,7 @@ fun NavApp(viewModel: MyViewModel) {
         ) {
         if (isTopLevelRoute && !windowInfo.isCompact) {
             AppNavigationRail(
-                selected = if (showMoreSheet) MORE_TAB else selectedTab,
+                selected = if (drawerOpen) MORE_TAB else selectedTab,
                 onItemSelected = onTabSelected
             )
         }
@@ -299,6 +351,7 @@ fun NavApp(viewModel: MyViewModel) {
             composable(Routes.SignUpRoutes.route) {
                 SignUp(viewModel, navController)
             }
+            composable(Routes.AdminRegisterRoutes.route) { AdminSignUpScreen(viewModel, navController) }
             composable(Routes.ForgotPasswordRoutes.route) {
                 ForgotPasswordScreen(viewModel, navController)
             }
@@ -314,6 +367,9 @@ fun NavApp(viewModel: MyViewModel) {
             composable<Routes.VerifyOtpRoutes> { backStackEntry ->
                 val verifyOtpRoutes: Routes.VerifyOtpRoutes = backStackEntry.toRoute()
                 OtpScreen(verifyOtpRoutes.userId ?: "", viewModel, navController)
+            }
+            composable<Routes.VerifyEmailRoutes> { backStackEntry ->
+                EmailVerifyScreen(backStackEntry.toRoute<Routes.VerifyEmailRoutes>().email, viewModel, navController)
             }
 
             composable(Routes.HomeRoutes.route) {
@@ -355,7 +411,7 @@ fun NavApp(viewModel: MyViewModel) {
 
             navigation(startDestination = Routes.OrdersRoutes.route, route = "OrdersRoutes") {
                 composable(Routes.OrdersRoutes.route) {
-                    OrderDetailsScreen(
+                    OrderListScreen(
                         viewModel,
                         navController,
                         onMenuClick = openDrawer,
@@ -372,7 +428,7 @@ fun NavApp(viewModel: MyViewModel) {
             }
 
             composable(Routes.HistoryRoutes.route) {
-                HistoryScreen(
+                SalesHistoryScreen(
                     viewModel,
                     navController,
                     onMenuClick = openDrawer,
@@ -384,6 +440,36 @@ fun NavApp(viewModel: MyViewModel) {
             composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
             composable(Routes.ReportsRoutes.route) { ReportsScreen(viewModel, navController) }
             composable(Routes.TopProductsRoutes.route) { TopProductsScreen(viewModel, navController) }
+            composable(Routes.BarcodeScannerRoutes.route) { BarcodeScannerScreen(viewModel, navController) }
+            composable(Routes.AdminListRoutes.route) { AdminListScreen(viewModel, navController) }
+            composable(
+                Routes.BatchListRoutes.route,
+                arguments = listOf(navArgument("productId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("productId") ?: return@composable
+                BatchListScreen(id, viewModel, navController)
+            }
+            composable(
+                Routes.BatchDetailRoutes.route,
+                arguments = listOf(navArgument("batchId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("batchId") ?: return@composable
+                BatchDetailScreen(id, viewModel, navController)
+            }
+            composable(
+                Routes.StockPurchaseRoutes.route,
+                arguments = listOf(navArgument("productId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("productId") ?: return@composable
+                StockPurchaseScreen(id, viewModel, navController)
+            }
+            composable(
+                Routes.StockAdjustRoutes.route,
+                arguments = listOf(navArgument("productId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("productId") ?: return@composable
+                StockAdjustScreen(id, viewModel, navController)
+            }
 
             navigation(
                 startDestination = Routes.UserDetailsRoutes.route,
@@ -408,28 +494,7 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    if (showMoreSheet) {
-        MoreSheet(
-            admin = admin,
-            onDismiss = { showMoreSheet = false },
-            onProfileClick = {
-                showMoreSheet = false
-                navController.navigate(Routes.ProfileRoutes.route) { launchSingleTop = true }
-            },
-            onSettingsClick = {
-                showMoreSheet = false
-                navController.navigate(Routes.SettingsRoutes.route) { launchSingleTop = true }
-            },
-            onAboutClick = {
-                showMoreSheet = false
-                navController.navigate(Routes.AboutRoutes.route) { launchSingleTop = true }
-            },
-            onLogoutClick = {
-                showMoreSheet = false
-                viewModel.setAdminLoggedOut()
-            }
-        )
-    }
+    } // ModalNavigationDrawer
 }
 
 private const val MORE_TAB = 4
@@ -511,92 +576,64 @@ private fun AppNavigationRail(selected: Int, onItemSelected: (Int) -> Unit) {
 // =============================================================================
 // More sheet (replaces the navigation drawer; same destinations, no route change)
 // =============================================================================
-@OptIn(ExperimentalMaterial3Api::class)
+private data class DrawerEntry(val label: String, val icon: ImageVector, val route: String)
+
 @Composable
-private fun MoreSheet(
+private fun AppDrawerSheet(
     admin: Admin?,
-    onDismiss: () -> Unit,
-    onProfileClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    onAboutClick: () -> Unit,
-    onLogoutClick: () -> Unit
+    currentRoute: String?,
+    onNavigate: (String) -> Unit,
+    onLogout: () -> Unit,
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        Column(modifier = Modifier.navigationBarsPadding()) {
-            ListItem(
-                headlineContent = {
-                    Text(
-                        text = admin?.name ?: "Admin",
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                supportingContent = admin?.email?.let { email ->
-                    {
-                        Text(
-                            text = email,
-                            style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+    val manage = listOf(
+        DrawerEntry("Reports", Icons.Outlined.Insights, Routes.ReportsRoutes.route),
+        DrawerEntry("Top products", Icons.AutoMirrored.Outlined.TrendingUp, Routes.TopProductsRoutes.route),
+        DrawerEntry("Scan barcode", Icons.Outlined.QrCodeScanner, Routes.BarcodeScannerRoutes.route),
+        DrawerEntry("Admins", Icons.Outlined.AdminPanelSettings, Routes.AdminListRoutes.route),
+    )
+    val account = listOf(
+        DrawerEntry("Profile", Icons.Outlined.Person, Routes.ProfileRoutes.route),
+        DrawerEntry("Settings", Icons.Outlined.Settings, Routes.SettingsRoutes.route),
+        DrawerEntry("About", Icons.Outlined.Info, Routes.AboutRoutes.route),
+    )
+    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding()) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(56.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text((admin?.name?.firstOrNull() ?: 'A').uppercase(), style = MaterialTheme.typography.titleLarge)
                     }
-                },
-                leadingContent = { Icon(Icons.Outlined.Person, contentDescription = null) },
-                colors = ListItemDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-                )
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(admin?.name ?: "Admin", style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                admin?.email?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            }
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            Text("Manage", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 4.dp))
+            manage.forEach { e -> DrawerRow(e, currentRoute == e.route) { onNavigate(e.route) } }
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            Text("Account", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp, top = 8.dp, bottom = 4.dp))
+            account.forEach { e -> DrawerRow(e, currentRoute == e.route) { onNavigate(e.route) } }
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            NavigationDrawerItem(
+                label = { Text("Log out", color = MaterialTheme.colorScheme.error) },
+                icon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+                selected = false,
+                onClick = onLogout,
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            MoreItem("Profile", Icons.Outlined.Person, onProfileClick)
-            MoreItem("Settings", Icons.Outlined.Settings, onSettingsClick)
-            MoreItem("About", Icons.Outlined.Info, onAboutClick)
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            MoreItem("Logout", Icons.AutoMirrored.Outlined.Logout, onLogoutClick, isError = true)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-private fun MoreItem(
-    label: String,
-    icon: ImageVector,
-    onClick: () -> Unit,
-    isError: Boolean = false
-) {
-    val iconColor =
-        if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-    val textColor =
-        if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-    ListItem(
-        headlineContent = {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        },
-        leadingContent = { Icon(icon, contentDescription = null) },
-        colors = ListItemDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            headlineColor = textColor,
-            leadingIconColor = iconColor
-        ),
-        modifier = Modifier.clickable(onClick = onClick)
+private fun DrawerRow(e: DrawerEntry, selected: Boolean, onClick: () -> Unit) {
+    NavigationDrawerItem(
+        label = { Text(e.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        icon = { Icon(e.icon, contentDescription = null) },
+        selected = selected,
+        onClick = onClick,
+        modifier = Modifier.padding(horizontal = 12.dp)
     )
 }
-
-data class BottomNavigationItem(val name: String, val icon: ImageVector)

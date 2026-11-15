@@ -8,35 +8,36 @@ Nav style: string routes (`Routes.X.route`, `@Serializable` objects); only `Veri
 | # | screen | file | route | VM fns/states | design | status | notes |
 |---|---|---|---|---|---|---|---|
 | 1 | Splash | ui/screens/SplashScreen.kt | SplashRoutes | getAppConfig, upgradeRequiredVersion, isAdminLoggedIn, appConfigError | - | DONE | config fail w/o cache -> error + Retry; device: none |
-| 2 | Login | ui/screens/SignIn.kt | SignInRoutes | loginAdmin, loginAdminState, clearLoginState | - | DONE | sign-up link + Clay helpers removed; client validation, IME Done submits, BLOCKED->AccountBlocked, NOT_APPROVED/RATE_LIMITED msgs |
+| 2 | Login | ui/screens/SignIn.kt | SignInRoutes | loginAdmin, loginAdminState, clearLoginState | - | DONE | Clay helpers removed; 'Create account' -> AdminSignUp; client validation, IME Done submits, BLOCKED->AccountBlocked, NOT_APPROVED/RATE_LIMITED msgs |
+| 2a | AdminSignUp | ui/screens/AdminSignUpScreen.kt | AdminRegisterRoutes (auth route) | registerAdmin, registerAdminState, clearRegisterAdminState, adminSignupConfig | - | DONE | POST /admins/register; link on Login unless app-config admin_signup.enabled=false; signup-code field when code_required or 403; owner/approved -> Login msg, else 'Awaiting approval'; device: none |
 | 3 | Otp | ui/screens/OtpScreen.kt | VerifyOtpRoutes(userId) | verifyAdminOtp, verifyOtpState, cachedAppConfig().otp | - | DONE | boxes (1 hidden field), TTL/len/attempts from app-config (300/6/5 fallback), paste, haptics, auto-verify; resend/RATE_LIMITED/5 fails -> Login; device: clipboard+haptics |
 | 4 | ForgotPassword | ui/screens/PasswordResetScreens.kt | ForgotPasswordRoutes | requestPasswordReset, passwordResetState | - | DONE | email format check, IME Done submits, RATE_LIMITED msg, field disabled while loading; device: none |
 | 5 | ResetPassword | ui/screens/PasswordResetScreens.kt | ResetPasswordRoutes | resetPasswordOtp(email,otp,pw), passwordResetOtpState, lastResetEmail | - | DONE | email field (prefilled), pw 8-128, IME Done submits, RATE_LIMITED msg + 'Request a new code' -> back; device: none |
 | 6 | UpgradeRequired | ui/screens/AccountStatusScreens.kt | UpgradeRequiredRoutes | upgradeRequiredVersion | - | DONE | back disabled; market:// -> https fallback -> toast; device: ACTION_VIEW |
 | 7 | AccountBlocked | ui/screens/AccountStatusScreens.kt | AccountBlockedRoutes | setAdminLoggedOut | - | DONE | Log out + back both logout -> SignIn popUpTo(0); device: none |
 | 8 | Home | ui/screens/nav/dashboard.kt (DashboardScreen) | HomeRoutes | getDashboardSummary, dashboardSummaryState | - | DONE | AppScreenScaffold+StatCard grid (2 sections, 9 counters), skeleton, keeps last data on refresh/error, tab-style nav; stock tiles -> Products until InventoryAlerts, pending tile has no status filter yet; device: none |
-| 9 | Reports | - | - | (VM missing; repo salesReport) | - | TODO | MISSING |
-| 10 | TopProducts | - | - | (VM missing; repo topProducts) | - | TODO | MISSING |
-| 11 | ProductList | ui/screens/ProductScreen.kt | ProductRoutes | getAllProduct, loadMoreProducts | - | TODO | EXISTS (Part 2) |
-| 12 | BarcodeScanner | - | - | (VM missing; repo by-barcode?) | - | TODO | MISSING; deps added |
-| 13 | ProductDetail | ui/screens/SpecificProductScreen.kt | SpecificProductRoutes | getSpecificProduct, deleteProduct, reactivateProduct | - | TODO | EXISTS (Part 2) |
-| 14 | AddEditProduct | ui/screens/AddProductScreen.kt + UpdateProductScreen.kt | AddProductRoutes / UpdateProductRoutes | addProduct, updateProduct | - | TODO | EXISTS; VM sends only name/price/category/image |
-| 15 | BatchList | - | - | VM missing | - | TODO | MISSING |
-| 16 | BatchDetail | - | - | VM missing | - | TODO | MISSING |
-| 17 | StockPurchase | - | - | VM missing | - | TODO | MISSING |
-| 18 | StockAdjust | - | - | VM missing | - | TODO | MISSING |
+| 9 | Reports | ui/screens/ReportsScreen.kt | ReportsRoutes | loadSalesReport(query?, force), loadMoreSalesReport, salesReportState | - | DONE | range presets 7/30/90 + DateRangePicker, day/product, sort+order, summary StatCards, paged rows w/ share bar; EXPANDED = filter pane + list; entry: Dashboard top-bar Insights; device: none |
+| 10 | TopProducts | ui/screens/TopProductsScreen.kt | TopProductsRoutes | loadTopProducts(query?, force), loadMoreTopProducts, topProductsState | - | DONE | shares ReportFilters; ranked rows + Coil thumb, tap -> ProductDetail; DTO fields unverified; entry: Reports top-bar; device: none |
+| 11 | ProductList | ui/screens/ProductScreen.kt | ProductRoutes | getAllProduct, loadMoreProducts, productFilter/setProductFilter, productSort, productCategories/loadProductCategories | - | DONE | server-side search (400 ms debounce) + filters (in_stock, is_active tri-state, schedule, category w/ counts), sort menu; adaptive grid 1/2/3 cols (320dp cells), pull-to-refresh, load-more, FAB hides on scroll; scanner action; device: none |
+| 12 | BarcodeScanner | ui/screens/BarcodeScannerScreen.kt | BarcodeScannerRoutes | lookupBarcode, clearBarcodeLookup, barcodeLookup | - | DONE | CameraX+ML Kit (lifecycle unbind, torch, haptic, 2.5 s same-code debounce), manual entry; Found -> ProductDetail (pops scanner), 404 -> Add product w/ savedStateHandle `prefill_barcode`; portrait stacked / landscape+EXPANDED side panel; device: CAMERA (asked on entry, rationale, settings) |
+| 13 | ProductDetail | ui/screens/SpecificProductScreen.kt | SpecificProductRoutes | getSpecificProduct, deleteProduct, reactivateProduct | - | DONE | PTR; Add stock button removed (stock is added on Add product or the future StockPurchase screen) |
+| 14 | AddEditProduct | ui/screens/ProductForm.kt (shared), AddProductScreen.kt, UpdateProductScreen.kt | AddProductRoutes / UpdateProductRoutes | addProduct(ProductCreateRequest, image, openingStock?), updateProduct(id, ProductUpdateRequest, image), cachedAppConfig().enums | - | DONE | all 19 fields; dropdowns from app-config enums (dosage, unit, schedule); Rx auto from schedule; edit sends only changed fields (cleared optional text stays unchanged); camera/gallery+uCrop; Add has optional opening stock + scanner barcode prefill; Edit has Stock section (pick batch -> new qty + reason -> stock/adjust, or receive a new batch -> stock/purchase), runs before the product PATCH; device: camera app via FileProvider |
+| 15 | BatchList | ui/screens/BatchListScreen.kt | BatchListRoutes(productId) | loadProductBatches, productBatches | - | DONE | expired red / near-expiry (<=90 d) tertiary, filters, PTR, FAB Receive stock, Adjust action; entry: ProductDetail 'View batches'; device: none |
+| 16 | BatchDetail | ui/screens/BatchDetailScreen.kt | BatchDetailRoutes(batchId) | getBatch, batchDetail, updateBatch, writeOffBatch, batchAction, clearBatchAction | - | DONE | edit metadata (batch_no+expiry always sent, others if changed), DateField, write-off w/ note + ConfirmDialog, 'Adjust quantity' -> StockAdjust preselected; device: none |
+| 17 | StockPurchase | ui/screens/StockPurchaseScreen.kt | StockPurchaseRoutes(productId) | purchaseStock, stockPurchaseState | - | DONE | StockEntryFields + supplier name + invoice no; Idempotency-Key kept on retry; device: none |
+| 18 | StockAdjust | ui/screens/StockAdjustScreen.kt | StockAdjustRoutes(productId) | adjustStock, productBatches | - | DONE | batch dropdown (preselect via savedStateHandle `adjust_batch_id`), add/remove segmented, result preview, no below-zero, quick reasons; device: none |
 | 19 | StockMovements | - | - | VM missing | - | TODO | MISSING |
-| 20 | OrderList | ui/screens/NewOrder.kt (+ OrderDetailsScreen.kt) | OrdersRoutes / EachUserOrderRoutes | getAllOrders, loadMoreOrders | - | TODO | RENAME (Clay) |
+| 20 | OrderList | ui/screens/OrderListScreen.kt | OrdersRoutes / EachUserOrderRoutes | getAllOrders, loadMoreOrders | - | DONE | M3 list: search, status chips, PagedLazyColumn (PTR, load-more); old NewOrder.kt/OrderDetailsScreen.kt now unused |
 | 21 | OrderDetail | ui/screens/SpecificOrderScreen.kt | SpecificOrderRoutes | getOrderById, isApproveOrder, recordSell, returnOrder, deleteOrder, verifyPrescription | - | TODO | EXISTS (Clay) |
 | 22 | PrescriptionViewer | - | - | verifyPrescription | - | TODO | MISSING |
 | 23 | Invoice | - | - | getInvoice, invoiceState | - | TODO | MISSING |
 | 24 | InventoryAlerts | - | - | VM missing | - | TODO | MISSING; nav tab slot pending |
-| 25 | MoreMenu | nav/NavApp.kt (MoreSheet) | - | - | - | TODO | sheet today; screen needed |
-| 26 | SalesHistory | ui/screens/HistroyScreen.kt | HistoryRoutes | getAllSellHistory, loadMoreSellHistory | - | TODO | RENAME (Clay) |
+| 25 | MoreMenu | nav/NavApp.kt (AppDrawerSheet) | - | setAdminLoggedOut | - | DONE | ModalNavigationDrawer replaces the More sheet: header (admin), Manage (Reports, Top products, Scan, Admins), Account (Profile, Settings, About), Log out; opened by menu button, More tab, edge swipe on tab roots |
+| 26 | SalesHistory | ui/screens/SalesHistoryScreen.kt | HistoryRoutes | getAllSellHistory, loadMoreSellHistory | - | DONE | grouped by day with sticky headers, PTR, load-more; old HistroyScreen.kt unused |
 | 27 | UserList | ui/screens/HomeScreen.kt (UserListScreen1) | none (was HomeRoutes) | getAllUsers, loadMoreUsers | - | TODO | RENAME; unrouted since Part 2 |
 | 28 | UserDetail | ui/screens/UserDetailsScreen.kt | UserDetailsRoutes | isApprovedUser, unblockUser, deleteUser, getUsersOrders | - | TODO | EXISTS (Clay) |
 | 29 | UserEdit | ui/screens/UpdateUserDetailsScreen.kt | UpdateUserDetailsRoutes | updateUser | - | TODO | EXISTS (Clay) |
-| 30 | AdminList | - | - | getAllAdmin, loadMoreAdmins | - | TODO | MISSING |
+| 30 | AdminList | ui/screens/AdminListScreen.kt | AdminListRoutes | getAllAdmin, loadMoreAdmins, approveAdmin, deleteAdmin, adminActionIds, loggedInAdminId | - | DONE | pending signups (Approve / Reject via ConfirmDialog) + admins; Owner/Pending/Disabled badges; owner & self not removable; entry: More sheet 'Admins'; device: none |
 | 31 | AdminDetailEdit | ui/screens/SignUp.kt (create only) | SignUpRoutes | createAdmin, updateAdmin (delete VM missing) | - | TODO | RENAME; move out of auth graph |
 | 32 | SupplierList | - | - | VM missing | - | TODO | MISSING |
 | 33 | SupplierDetailEdit | - | - | VM missing | - | TODO | MISSING |
@@ -53,7 +54,7 @@ Nav style: string routes (`Routes.X.route`, `@Serializable` objects); only `Veri
 - `TwoPane(showDetail, list, detail, modifier, emptyDetail)` (Row 42/58 on EXPANDED; single pane otherwise; caller hoists selection with rememberSaveable)
 
 ## Navigation decisions
-- NavApp shell: COMPACT bottom NavigationBar, MEDIUM/EXPANDED NavigationRail (tab roots only). Tabs today: Dashboard, Products, Orders, History, More(sheet). Inventory tab replaces History when InventoryAlerts exists; History moves into MoreMenu.
+- NavApp shell: COMPACT bottom NavigationBar, MEDIUM/EXPANDED NavigationRail (tab roots only). Tabs today: Dashboard, Products, Orders, History, More (opens navigation drawer). Inventory tab replaces History when InventoryAlerts exists; History moves into MoreMenu.
 - Tab switch: `popUpTo(Home){saveState}; launchSingleTop; restoreState`; re-tap inside a tab pops to its root; BackHandler on Products/Orders/History roots -> Dashboard; back on Dashboard exits.
 - Scaffold bottom padding applied to the NavHost and consumed (`consumeWindowInsets`) so the nav bar never covers the last item.
 - Transitions: enter fade+slide 250 ms, exit fade 200 ms (pop mirrored).
@@ -81,6 +82,9 @@ Nav style: string routes (`Routes.X.route`, `@Serializable` objects); only `Veri
   - `ImageSourceSheet(onDismiss, onCamera, onGallery, onRemove? = null, title = "Add image")` (camera row hidden without camera)
 - ui/screens/AuthCommon.kt (internal): `AppError?.fieldError(key)`, `AuthFormColumn`, `SupportingText`, `PasswordField(..., imeAction, onDone?)`, `AuthHeader`, `AuthFooterLink`, `AuthFormError`, `AuthPrimaryButton`, `AUTH_MESSAGE_KEY`
 - ui/screens/AddProductScreen.kt (internal): `ProductFormScaffold(...)`
+- ui/components/FormParts.kt: `DateField(label, iso, onIsoChange, enabled, error)`, `SaveBar(text, loading, onClick, enabled)`, `LocalDate?.showDate()`
+- ui/components/StockEntry.kt: `rememberStockDraft()`, `StockEntryFields(draft, enabled)`, `ReceiveStockSheet(productName, isLoading, error, serverFields, success, onSubmit, onDismiss)`; ui/components/ListParts.kt: `ThumbImage(url, fallback, size)`, `Instant?.dayLabel()/dateTimeLabel()`
+- ui/screens/ReportsScreen.kt (internal): `ReportFilters(query: ReportQuery, onQueryChange, showGroupBy, sortOptions: List<Pair<key,label>>)`, `rememberInrFormat()`
 
 ## Device access
 | feature | screen | mechanism | permission | why |
@@ -101,7 +105,9 @@ Nav style: string routes (`Routes.X.route`, `@Serializable` objects); only `Veri
 - Device registration BLOCKED: add `app/google-services.json` + Firebase messaging to enable `POST /devices`; POST_NOTIFICATIONS not declared until then.
 
 ## Open issues
-- Reports, TopProducts, BarcodeScanner, Batch*, Stock*, InventoryAlerts, Suppliers, AuditLog, AdminList/Delete need VM fns (repo methods to verify per screen).
-- AddEditProduct full form needs VM params (dosage form, schedule, unit, Rx, etc.).
+- Stock*, InventoryAlerts, Suppliers, AuditLog, AdminList/Delete need VM fns (repo methods to verify per screen).
 - UserList has no route since Part 2 (HomeRoutes = Dashboard).
 - Dashboard tiles: repoint stock tiles to InventoryAlerts and pass a pending filter to OrderList once those screens exist.
+
+- PTR rule: VM list/detail loaders keep old data while reloading (`update{copy(isLoading=true)}`); screens pass `isRefreshing = isLoading && data != null`. Done for admins, history, users, orders, order-by-id, product-by-id, products.
+- Still old Clay styling: SpecificOrderScreen, UserDetails, UpdateUser, Profile, Settings, About, HomeScreen(users, unrouted), SignUp.kt (dead). Restyle needs Stitch exports in docs/design/.

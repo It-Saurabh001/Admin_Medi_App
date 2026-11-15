@@ -11,7 +11,19 @@ data class Admin(
     @SerializedName("image_url") val imageUrl: String?,
     val role: String, // admin | disabled | deleted
     @SerializedName("is_active") val isActive: Boolean,
-    @SerializedName("created_at") val createdAt: Instant?
+    @SerializedName("created_at") val createdAt: Instant?,
+    /** null on servers before admin signup; treat null as approved. */
+    @SerializedName("is_approved") val isApproved: Boolean? = null,
+    @SerializedName("is_owner") val isOwner: Boolean? = null
+)
+
+/** POST admins/register (public). Server rejects role/is_approved/is_owner here. */
+data class AdminRegisterRequest(
+    val name: String,
+    val email: String,
+    val password: String,
+    @SerializedName("phone_number") val phoneNumber: String? = null,
+    @SerializedName("signup_code") val signupCode: String? = null
 )
 
 data class AdminCreateRequest(

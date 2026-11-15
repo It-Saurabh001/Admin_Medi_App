@@ -83,6 +83,24 @@ sealed class Routes{
         operator fun invoke() = route
     }
 
+    @Serializable
+    object AdminListRoutes {
+        const val route = "AdminListRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object AdminRegisterRoutes {
+        const val route = "AdminRegisterRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object BarcodeScannerRoutes {
+        const val route = "BarcodeScannerRoutes"
+        operator fun invoke() = route
+    }
+
 
 
     @Serializable
@@ -140,6 +158,38 @@ sealed class Routes{
     }
 
 @Serializable
+class BatchListRoutes(val productId: String){
+    companion object {
+        const val route = "batchListRoutes/{productId}"
+        operator fun invoke(productId: String) = "batchListRoutes/$productId"
+    }
+}
+
+@Serializable
+class BatchDetailRoutes(val batchId: String){
+    companion object {
+        const val route = "batchDetailRoutes/{batchId}"
+        operator fun invoke(batchId: String) = "batchDetailRoutes/$batchId"
+    }
+}
+
+@Serializable
+class StockPurchaseRoutes(val productId: String){
+    companion object {
+        const val route = "stockPurchaseRoutes/{productId}"
+        operator fun invoke(productId: String) = "stockPurchaseRoutes/$productId"
+    }
+}
+
+@Serializable
+class StockAdjustRoutes(val productId: String, val batchId: String? = null){
+    companion object {
+        const val route = "stockAdjustRoutes/{productId}"
+        operator fun invoke(productId: String) = "stockAdjustRoutes/$productId"
+    }
+}
+
+@Serializable
 class SpecificProductRoutes(val productId: String){
     companion object {
         const val route = "specificProductRoutes/{productId}"
@@ -178,6 +228,9 @@ class SpecificOrderRoutes(val orderId: String){
 }
     @Serializable
     data class VerifyOtpRoutes(val userId: String?)
+
+    @Serializable
+    data class VerifyEmailRoutes(val email: String)
 
 
 

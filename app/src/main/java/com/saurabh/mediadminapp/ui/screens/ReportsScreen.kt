@@ -87,6 +87,7 @@ internal fun rememberInrFormat(): NumberFormat = remember {
 }
 
 /** Sales report: date range, group by day/product, sort; summary + paged rows. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsScreen(viewModel: MyViewModel, navController: NavController) {
     val state by viewModel.salesReportState.collectAsStateWithLifecycle()
