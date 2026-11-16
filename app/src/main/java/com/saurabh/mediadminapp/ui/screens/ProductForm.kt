@@ -1,11 +1,13 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import android.app.Activity
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AddAPhoto
@@ -205,15 +209,7 @@ fun ProductFormScreen(
         title = title,
         onBack = onBack,
         bottomBar = {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                Button(
-                    onClick = onSave, enabled = !isLoading,
-                    modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp)
-                ) {
-                    if (isLoading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                    else Text(saveText)
-                }
-            }
+            com.saurabh.mediadminapp.ui.components.SaveBar(text = saveText, loading = isLoading, onClick = onSave)
         }
     ) { inner ->
         FormScaffold(Modifier.padding(inner)) {
@@ -227,22 +223,20 @@ fun ProductFormScreen(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         val model: Any? = image.uri ?: existingImageUrl?.takeIf { it.isNotBlank() }
-                        if (model != null) Image(rememberAsyncImagePainter(model), "Product image", Modifier.fillMaxWidth().height(120.dp), contentScale = ContentScale.Crop)
+                        if (model != null) Image(rememberAsyncImagePainter(model), "Product image", Modifier.size(120.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.surface).padding(4.dp), contentScale = ContentScale.Fit)
                         else Icon(Icons.Outlined.AddAPhoto, contentDescription = null, modifier = Modifier.size(32.dp))
                     }
                 }
-                OutlinedButton(onClick = image.open, enabled = !isLoading, modifier = Modifier.padding(top = 8.dp).height(48.dp)) {
-                    Text(if (image.uri == null && existingImageUrl.isNullOrBlank()) "Add image" else "Change image")
-                }
+                com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton(text = if (image.uri == null && existingImageUrl.isNullOrBlank()) "Add image" else "Change image", onClick = image.open, enabled = !isLoading, modifier = Modifier.padding(top = 8.dp))
             }
 
             SectionHeader("Basic details")
-            Field(draft, "name", "Product name *", !isLoading)
+            Field(draft, "name", "Product name *", !isLoading, words = true)
             Field(draft, "category", "Category", !isLoading)
             Field(draft, "generic", "Generic name", !isLoading)
-            Field(draft, "brand", "Brand name", !isLoading)
-            Field(draft, "manufacturer", "Manufacturer", !isLoading)
-            Field(draft, "barcode", "Barcode", !isLoading)
+            Field(draft, "brand", "Brand name", !isLoading, words = true)
+            Field(draft, "manufacturer", "Manufacturer", !isLoading, words = true)
+            Field(draft, "barcode", "Barcode", !isLoading, KeyboardType.Ascii, caps = true)
 
             SectionHeader("Pricing")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -253,7 +247,7 @@ fun ProductFormScreen(
                 Field(draft, "purchase", "Purchase price (₹)", !isLoading, KeyboardType.Decimal, Modifier.weight(1f))
                 Field(draft, "gst", "GST %", !isLoading, KeyboardType.Decimal, Modifier.weight(1f))
             }
-            Field(draft, "hsn", "HSN code", !isLoading)
+            Field(draft, "hsn", "HSN code", !isLoading, KeyboardType.Ascii, caps = true)
 
             SectionHeader("Packaging")
             Dropdown(draft, "dosage", "Dosage form", enums?.dosageForms.orEmpty(), !isLoading)
@@ -285,12 +279,18 @@ fun ProductFormScreen(
 private fun Field(
     draft: ProductDraft, key: String, label: String, enabled: Boolean,
     keyboard: KeyboardType = KeyboardType.Text, modifier: Modifier = Modifier.fillMaxWidth(),
+    caps: Boolean = false, words: Boolean = false,
 ) {
-    OutlinedTextField(
+    GsTextField(
         value = draft[key], onValueChange = { draft[key] = it },
         label = { Text(label, maxLines = 1) }, singleLine = true, enabled = enabled,
         isError = draft.errors[key] != null, supportingText = draft.errors[key]?.let { { Text(it) } },
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = ImeAction.Next),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = keyboard,
+            capitalization = when { caps -> androidx.compose.ui.text.input.KeyboardCapitalization.Characters; words -> androidx.compose.ui.text.input.KeyboardCapitalization.Words; else -> androidx.compose.ui.text.input.KeyboardCapitalization.Sentences },
+            autoCorrectEnabled = !caps,
+            imeAction = ImeAction.Next,
+        ),
         modifier = modifier
     )
 }
@@ -307,7 +307,7 @@ private fun Dropdown(
     // A saved value outside the list (older data) stays selectable.
     val all = if (draft[key].isNotBlank() && draft[key] !in options) options + draft[key] else options
     ExposedDropdownMenuBox(expanded = expanded && enabled, onExpandedChange = { expanded = it }, modifier = Modifier.fillMaxWidth()) {
-        OutlinedTextField(
+        GsTextField(
             value = draft[key], onValueChange = {}, readOnly = true, enabled = enabled,
             label = { Text(label, maxLines = 1) }, singleLine = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },

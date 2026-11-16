@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -56,21 +57,7 @@ private fun AuthDetailScaffold(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
-        topBar = {
-            TopAppBar(
-                title = { Text(title, style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
+        topBar = { AuthTopBar(title, onBack) }
     ) { innerPadding -> content(Modifier.padding(innerPadding)) }
 }
 
@@ -86,20 +73,33 @@ fun ForgotPasswordScreen(viewModel: MyViewModel, navController: NavHostControlle
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    fun toast(text: String) = android.widget.Toast.makeText(context, text, android.widget.Toast.LENGTH_LONG).show()
+
+    // Move to the code screen ONLY on a real success; every failure stays here with a toast + inline message.
     LaunchedEffect(state.success, state.error) {
         if (!submitted) return@LaunchedEffect
         if (state.success != null) {
             submitted = false
+            toast("Reset code sent to ${email.trim()}. It expires in ${state.success!!.otpExpiresIn / 60} min.")
             navController.navigate(Routes.ResetPasswordRoutes.route) { launchSingleTop = true }
         } else if (state.error != null) {
             submitted = false
+            val api = state.appError as? AppError.Api
             emailError = state.appError.fieldError("email")
-            formError = when {
-                emailError != null -> null
-                (state.appError as? AppError.Api)?.code == ErrorCode.RATE_LIMITED ->
-                    "Too many requests. Please wait a moment and try again."
-                else -> state.error
+            val message = when {
+                // Server: no admin account with this email (needs backend 404 NOT_FOUND, see handoff).
+                api?.code == ErrorCode.NOT_FOUND -> "No admin account found for this email."
+                    .also { emailError = it }
+                api?.code == ErrorCode.EMAIL_DELIVERY_FAILED -> "We couldn't send the reset email. Please try again later."
+                api?.code == ErrorCode.RATE_LIMITED -> "Too many requests. Please wait a moment and try again."
+                api?.code == ErrorCode.ACCOUNT_BLOCKED -> "This admin account is blocked. Contact the owner."
+                emailError != null -> emailError!!
+                state.appError is AppError.Network || state.appError is AppError.Timeout -> "No internet connection or the server is slow. Try again."
+                else -> state.error ?: "Could not send the reset code."
             }
+            formError = if (emailError != null) null else message
+            toast(message)
         }
     }
 
@@ -125,7 +125,7 @@ fun ForgotPasswordScreen(viewModel: MyViewModel, navController: NavHostControlle
                 subtitle = "Enter your admin email. If it is registered, we will send a 6-digit reset code."
             )
             Spacer(modifier = Modifier.height(32.dp))
-            OutlinedTextField(
+            GsTextField(
                 value = email,
                 onValueChange = { email = it; emailError = null; formError = null },
                 label = { Text("Email") },
@@ -217,7 +217,7 @@ fun ResetPasswordScreen(viewModel: MyViewModel, navController: NavHostController
                 subtitle = "Enter the code from your email and a new password."
             )
             Spacer(modifier = Modifier.height(32.dp))
-            OutlinedTextField(
+            GsTextField(
                 value = email,
                 onValueChange = { email = it; emailError = null; formError = null },
                 label = { Text("Email") },
@@ -230,7 +230,7 @@ fun ResetPasswordScreen(viewModel: MyViewModel, navController: NavHostController
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
+            GsTextField(
                 value = otp,
                 onValueChange = { input ->
                     val cleaned = input.filter { it.isDigit() }
@@ -266,13 +266,11 @@ fun ResetPasswordScreen(viewModel: MyViewModel, navController: NavHostController
             Spacer(modifier = Modifier.height(16.dp))
             AuthPrimaryButton(text = "Reset password", isLoading = state.isLoading, onClick = ::submit)
             Spacer(modifier = Modifier.height(8.dp))
-            TextButton(
+            com.saurabh.mediadminapp.ui.components.LinkButton(
+                text = "Request a new code",
                 onClick = { navController.navigateUp() },
                 enabled = !state.isLoading,
-                modifier = Modifier.heightIn(min = 48.dp)
-            ) {
-                Text("Request a new code", style = MaterialTheme.typography.labelLarge)
-            }
+            )
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import android.util.Patterns
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
@@ -87,8 +88,10 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
     LaunchedEffect(state.error) {
         val msg = state.error ?: return@LaunchedEffect
         val api = state.appError as? AppError.Api
-        if (api?.code == ErrorCode.EMAIL_DELIVERY_FAILED && email.isNotBlank()) {
-            navController.navigate(Routes.VerifyEmailRoutes(email.trim())) { launchSingleTop = true }
+        if (api?.code == ErrorCode.EMAIL_DELIVERY_FAILED) {
+            // Server rolled the signup back; the same email can be used again.
+            formError = "Could not send the verification email. Please try again later."
+            viewModel.clearRegisterAdminState()
             return@LaunchedEffect
         }
         val fields = api?.fields.orEmpty()
@@ -130,17 +133,7 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
-        topBar = {
-            TopAppBar(
-                title = { Text("Create account", style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
-            )
-        }
+        topBar = { AuthTopBar("Create account") { navController.navigateUp() } }
     ) { inner ->
         val created = state.success
         if (created != null) {
@@ -201,9 +194,7 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
             AuthFormError(formError)
             Spacer(Modifier.height(16.dp))
             AuthPrimaryButton(text = "Create account", isLoading = state.isLoading, onClick = ::submit)
-            TextButton(onClick = { backToLogin() }, enabled = !state.isLoading, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text("Already have an account? Sign in", style = MaterialTheme.typography.labelLarge)
-            }
+            AuthFooterLink(prompt = "Already have an account?", action = "Sign in", onClick = { if (!state.isLoading) backToLogin() })
         }
     }
 }
@@ -219,7 +210,7 @@ private fun SignUpField(
     enabled: Boolean,
     imeAction: ImeAction = ImeAction.Next,
 ) {
-    OutlinedTextField(
+    GsTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },

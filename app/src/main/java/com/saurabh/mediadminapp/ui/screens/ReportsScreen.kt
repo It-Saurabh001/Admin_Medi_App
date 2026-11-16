@@ -1,6 +1,8 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsFilterChip
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -99,9 +101,9 @@ fun ReportsScreen(viewModel: MyViewModel, navController: NavController) {
         title = "Sales report",
         onBack = { navController.navigateUp() },
         actions = {
-            IconButton(onClick = { navController.navigate(Routes.TopProductsRoutes.route) { launchSingleTop = true } }) {
-                Icon(Icons.AutoMirrored.Outlined.TrendingUp, contentDescription = "Top products")
-            }
+            com.saurabh.mediadminapp.ui.components.TileIconButton(
+                Icons.AutoMirrored.Outlined.TrendingUp, "Top products", { navController.navigate(Routes.TopProductsRoutes.route) { launchSingleTop = true } }
+            )
         }
     ) { inner ->
         val retry = { viewModel.loadSalesReport(force = true) }
@@ -201,14 +203,19 @@ private fun SalesRowItem(row: SalesReportRow, byProduct: Boolean, money: NumberF
                     },
                     maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
-                LinearProgressIndicator(progress = { share.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+                LinearProgressIndicator(
+                    progress = { share.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = if (com.saurabh.mediadminapp.ui.theme.GS.White == MaterialTheme.colorScheme.surface) com.saurabh.mediadminapp.ui.theme.GS.Green200 else MaterialTheme.colorScheme.surfaceVariant,
+                )
             }
         },
         trailingContent = {
             Text(money.format(row.revenue ?: 0.0), style = MaterialTheme.typography.titleSmall, maxLines = 1)
         },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium)
+            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
     )
 }
 
@@ -233,14 +240,14 @@ internal fun ReportFilters(
         )
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(PRESET_DAYS, key = { it }) { d ->
-                FilterChip(
+                GsFilterChip(
                     selected = presetDays == d,
                     onClick = { onQueryChange(query.copy(from = today.minusDays(d), to = today)) },
                     label = { Text("$d days") }
                 )
             }
             item(key = "custom") {
-                FilterChip(
+                GsFilterChip(
                     selected = presetDays !in PRESET_DAYS,
                     onClick = { showPicker = true },
                     label = { Text("Custom") },
@@ -262,7 +269,7 @@ internal fun ReportFilters(
         Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
             LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(sortOptions, key = { it.first }) { (key, label) ->
-                    FilterChip(
+                    GsFilterChip(
                         selected = (query.sort ?: sortOptions.first().first) == key,
                         onClick = { onQueryChange(query.copy(sort = key)) },
                         label = { Text(label) }
@@ -301,9 +308,9 @@ internal fun ReportFilters(
                         if (start != null && end != null) onQueryChange(query.copy(from = start, to = end))
                         showPicker = false
                     }
-                ) { Text("Apply") }
+                ) { Text("Apply", style = MaterialTheme.typography.labelLarge) }
             },
-            dismissButton = { TextButton(onClick = { showPicker = false }) { Text("Cancel") } }
+            dismissButton = { com.saurabh.mediadminapp.ui.components.NeutralTextButton("Cancel", { showPicker = false }) }
         ) {
             DateRangePicker(state = pickerState, modifier = Modifier.weight(1f))
         }

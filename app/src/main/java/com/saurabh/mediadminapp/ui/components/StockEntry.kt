@@ -122,19 +122,19 @@ fun StockEntryFields(draft: StockDraft, enabled: Boolean, lastImeDone: Boolean =
     var showPicker by rememberSaveable { mutableStateOf(false) }
     val fm = Modifier.fillMaxWidth()
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(
+        GsTextField(
             value = draft.qty, onValueChange = { draft.qty = it.filter(Char::isDigit).take(7); draft.errors = draft.errors - "qty" },
             label = { Text("Quantity received") }, singleLine = true, enabled = enabled,
             isError = draft.errors["qty"] != null, supportingText = draft.errors["qty"]?.let { { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next), modifier = fm
         )
-        OutlinedTextField(
+        GsTextField(
             value = draft.batchNo, onValueChange = { draft.batchNo = it; draft.errors = draft.errors - "batch" },
             label = { Text("Batch number") }, singleLine = true, enabled = enabled,
             isError = draft.errors["batch"] != null, supportingText = draft.errors["batch"]?.let { { Text(it) } },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next), modifier = fm
+            keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii, capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters, autoCorrectEnabled = false, imeAction = ImeAction.Next), modifier = fm
         )
-        OutlinedTextField(
+        GsTextField(
             value = draft.expiryDate?.format(EXPIRY_FMT).orEmpty(), onValueChange = {}, readOnly = true,
             label = { Text("Expiry date") }, singleLine = true, enabled = enabled,
             trailingIcon = { IconButton(onClick = { showPicker = true }, enabled = enabled) { Icon(Icons.Outlined.CalendarMonth, contentDescription = "Pick expiry date") } },
@@ -142,13 +142,13 @@ fun StockEntryFields(draft: StockDraft, enabled: Boolean, lastImeDone: Boolean =
             modifier = fm
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
+            GsTextField(
                 value = draft.price, onValueChange = { draft.price = it; draft.errors = draft.errors - "price" },
                 label = { Text("Purchase price") }, singleLine = true, enabled = enabled,
                 isError = draft.errors["price"] != null, supportingText = draft.errors["price"]?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next), modifier = Modifier.weight(1f)
             )
-            OutlinedTextField(
+            GsTextField(
                 value = draft.mrp, onValueChange = { draft.mrp = it; draft.errors = draft.errors - "mrp" },
                 label = { Text("MRP") }, singleLine = true, enabled = enabled,
                 isError = draft.errors["mrp"] != null, supportingText = draft.errors["mrp"]?.let { { Text(it) } },
@@ -204,14 +204,12 @@ fun ReceiveStockSheet(
             Text(productName, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             StockEntryFields(draft, enabled = !isLoading)
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-            Button(
+            ShadeButton(
+                text = "Add to stock",
                 onClick = { if (draft.validate()) onSubmit(draft.toRequest()) },
-                enabled = !isLoading,
+                isLoading = isLoading,
                 modifier = Modifier.fillMaxWidth()
-            ) {
-                if (isLoading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-                else Text("Add to stock")
-            }
+            )
         }
     }
 }

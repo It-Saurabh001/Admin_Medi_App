@@ -46,6 +46,7 @@ import com.saurabh.mediadminapp.TopProductsState
 import com.saurabh.mediadminapp.data.v1.dto.TopProduct
 import com.saurabh.mediadminapp.ui.adaptive.rememberWindowSize
 import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
+import com.saurabh.mediadminapp.ui.components.shadeRow
 import com.saurabh.mediadminapp.ui.components.EmptyState
 import com.saurabh.mediadminapp.ui.components.ErrorState
 import com.saurabh.mediadminapp.ui.components.PagedLazyColumn
@@ -138,36 +139,13 @@ private fun TopProductItem(rank: Int, p: TopProduct, money: NumberFormat, onOpen
                     modifier = Modifier.width(36.dp),
                     maxLines = 1
                 )
-                ProductThumb(p.imageUrl)
+                com.saurabh.mediadminapp.ui.components.MedicineImage(p.imageUrl, size = 48.dp)
             }
         },
         headlineContent = { Text(p.productName ?: "Unknown product", maxLines = 2, overflow = TextOverflow.Ellipsis) },
         supportingContent = { Text("${p.quantity ?: 0} units sold", maxLines = 1, overflow = TextOverflow.Ellipsis) },
         trailingContent = { Text(money.format(p.revenue ?: 0.0), style = MaterialTheme.typography.titleSmall, maxLines = 1) },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .then(if (id != null) Modifier.clickable { onOpen(id) } else Modifier)
-    )
-}
-
-@Composable
-private fun ProductThumb(url: String?) {
-    val shape = MaterialTheme.shapes.small
-    val placeholder = @Composable {
-        Box(
-            Modifier.size(44.dp).clip(shape).background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Outlined.Medication, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-    }
-    if (url.isNullOrBlank()) { placeholder(); return }
-    SubcomposeAsyncImage(
-        model = url,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.size(44.dp).clip(shape),
-        loading = { placeholder() },
-        error = { placeholder() }
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.fillMaxWidth().shadeRow(onClick = { if (id != null) onOpen(id) })
     )
 }

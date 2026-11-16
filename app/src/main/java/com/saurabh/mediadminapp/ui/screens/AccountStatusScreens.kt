@@ -35,7 +35,7 @@ import com.saurabh.mediadminapp.ui.screens.nav.Routes
 @Composable
 private fun StatusMessageScreen(
     icon: ImageVector,
-    iconTint: androidx.compose.ui.graphics.Color,
+    tone: com.saurabh.mediadminapp.ui.components.Tone,
     title: String,
     message: String,
     actionText: String,
@@ -46,12 +46,21 @@ private fun StatusMessageScreen(
         contentColor = MaterialTheme.colorScheme.onBackground
     ) { innerPadding ->
         AuthFormColumn(modifier = Modifier.padding(innerPadding)) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(64.dp)
-            )
+            // Icon tile in the message family: Info = Teal 100/600, Danger = Red 100/600 (guide §3-5).
+            val G = com.saurabh.mediadminapp.ui.theme.GS
+            val light = G.White == MaterialTheme.colorScheme.surface
+            val (bg, fg) = when {
+                !light -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+                tone == com.saurabh.mediadminapp.ui.components.Tone.Danger -> G.Red100 to G.Red600
+                tone == com.saurabh.mediadminapp.ui.components.Tone.Warning -> G.Amber100 to G.Amber600
+                tone == com.saurabh.mediadminapp.ui.components.Tone.Info -> G.Teal100 to G.Teal600
+                else -> G.Green100 to G.Green600
+            }
+            androidx.compose.material3.Surface(shape = MaterialTheme.shapes.extraLarge, color = bg, contentColor = fg, modifier = Modifier.size(88.dp)) {
+                androidx.compose.foundation.layout.Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(44.dp))
+                }
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = title,
@@ -82,7 +91,7 @@ fun UpgradeRequiredScreen(viewModel: MyViewModel) {
     val versionLine = minVersion?.takeIf { it != "latest" }?.let { " Minimum supported version: $it." } ?: ""
     StatusMessageScreen(
         icon = Icons.Outlined.SystemUpdate,
-        iconTint = MaterialTheme.colorScheme.primary,
+        tone = com.saurabh.mediadminapp.ui.components.Tone.Info,
         title = "Update required",
         message = "This version of MediAdmin is no longer supported. Please update to continue.$versionLine",
         actionText = "Update",
@@ -118,7 +127,7 @@ fun AccountBlockedScreen(viewModel: MyViewModel, navController: NavHostControlle
     BackHandler(enabled = true) { logout() }
     StatusMessageScreen(
         icon = Icons.Outlined.Block,
-        iconTint = MaterialTheme.colorScheme.error,
+        tone = com.saurabh.mediadminapp.ui.components.Tone.Danger,
         title = "Account blocked",
         message = "Your admin account is blocked or disabled. Contact the pharmacy owner to restore access.",
         actionText = "Log out",

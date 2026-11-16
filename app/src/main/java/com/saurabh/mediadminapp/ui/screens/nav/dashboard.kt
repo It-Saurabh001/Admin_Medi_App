@@ -50,16 +50,20 @@ import com.saurabh.mediadminapp.ui.components.ErrorState
 import com.saurabh.mediadminapp.ui.components.SectionHeader
 import com.saurabh.mediadminapp.ui.components.SkeletonList
 import com.saurabh.mediadminapp.ui.components.StatCard
+import com.saurabh.mediadminapp.ui.components.HeroCard
+import com.saurabh.mediadminapp.ui.components.TileIconButton
+import com.saurabh.mediadminapp.ui.components.Tone
 import java.text.NumberFormat
 import java.util.Locale
 
+/** [tone] carries colour meaning only when the count needs attention (Part 5: Amber = attention, Red = danger). */
 private data class DashTile(
     val key: String,
     val label: String,
     val value: String,
     val icon: ImageVector,
     val route: String,
-    val highlight: Boolean = false,
+    val tone: Tone? = null,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -76,9 +80,12 @@ fun DashboardScreen(
     LaunchedEffect(state) { (state as? UiState.Success)?.let { lastData = it.data } }
     LaunchedEffect(Unit) { viewModel.getDashboardSummary() }
 
-    // Card taps open tab roots with tab semantics (saved state, single top).
+    // Card taps open tab roots with tab semantics (saved state, single top);
+    // inventory alert tiles are a normal forward navigation to a detail screen.
     val openTab: (String) -> Unit = { route ->
-        navController.navigate(route) {
+        if (route.startsWith("inventoryAlertsRoutes")) {
+            navController.navigate(route) { launchSingleTop = true }
+        } else navController.navigate(route) {
             launchSingleTop = true
             restoreState = true
             popUpTo(Routes.HomeRoutes.route) { saveState = true }
@@ -87,13 +94,9 @@ fun DashboardScreen(
 
     AppScreenScaffold(
         title = "Dashboard",
-        navigationIcon = {
-            IconButton(onClick = onMenuClick) { Icon(Icons.Outlined.Menu, contentDescription = "Menu") }
-        },
+        navigationIcon = { TileIconButton(Icons.Outlined.Menu, "Menu", onMenuClick, Modifier.padding(start = 4.dp)) },
         actions = {
-            IconButton(onClick = { navController.navigate(Routes.ReportsRoutes.route) { launchSingleTop = true } }) {
-                Icon(Icons.Outlined.Insights, contentDescription = "Sales report")
-            }
+            TileIconButton(Icons.Outlined.Insights, "Sales report", { navController.navigate(Routes.ReportsRoutes.route) { launchSingleTop = true } })
         },
         scrollBehavior = scrollBehavior,
     ) { inner ->
@@ -127,20 +130,24 @@ private fun DashboardGrid(d: DashboardSummary, refreshError: String?, onOpen: (S
         NumberFormat.getCurrencyInstance(Locale.Builder().setLanguage("en").setRegion("IN").build())
             .apply { maximumFractionDigits = 2 }
     }
-    // InventoryAlerts screen not built yet: stock tiles open Products for now.
-    val inventoryRoute = Routes.ProductRoutes.route
+    // Stock tiles deep-link into the matching Inventory alerts tab.
+    fun alerts(tab: String) = Routes.InventoryAlertsRoutes.invoke(tab)
+    // Today's sales sit in the Hero card; tiles below keep one colour meaning each.
     val orders = listOf(
-        DashTile("pending", "Pending orders", d.pendingOrders.toString(), Icons.Outlined.PendingActions, Routes.OrdersRoutes.route, highlight = d.pendingOrders > 0),
-        DashTile("approved", "Approved orders", d.approvedOrders.toString(), Icons.Outlined.CheckCircle, Routes.OrdersRoutes.route),
-        DashTile("salesTotal", "Today sales", money.format(d.todaySalesTotal), Icons.Outlined.CurrencyRupee, Routes.HistoryRoutes.route),
-        DashTile("salesCount", "Sales today", d.todaySalesCount.toString(), Icons.Outlined.Inventory2, Routes.HistoryRoutes.route),
+        DashTile("pending", "Pending orders", d.pendingOrders.toString(), Icons.Outlined.PendingActions, Routes.OrdersRoutes.route,
+            tone = if (d.pendingOrders > 0) Tone.Warning else null),
+        DashTile("approved", "Approved orders", d.approvedOrders.toString(), Icons.Outlined.CheckCircle, Routes.OrdersRoutes.route, tone = Tone.Info),
     )
     val stock = listOf(
         DashTile("products", "Products", d.products.toString(), Icons.Outlined.Medication, Routes.ProductRoutes.route),
-        DashTile("low", "Low stock", d.lowStock.toString(), Icons.Outlined.WarningAmber, inventoryRoute, highlight = d.lowStock > 0),
-        DashTile("out", "Out of stock", d.outOfStock.toString(), Icons.Outlined.RemoveShoppingCart, inventoryRoute, highlight = d.outOfStock > 0),
-        DashTile("near", "Near expiry (${d.nearExpiryDays} d)", d.nearExpiryBatches.toString(), Icons.Outlined.HourglassTop, inventoryRoute, highlight = d.nearExpiryBatches > 0),
-        DashTile("expired", "Expired batches", d.expiredBatches.toString(), Icons.Outlined.EventBusy, inventoryRoute, highlight = d.expiredBatches > 0),
+        DashTile("low", "Low stock", d.lowStock.toString(), Icons.Outlined.WarningAmber, alerts("LOW_STOCK"),
+            tone = if (d.lowStock > 0) Tone.Warning else null),
+        DashTile("out", "Out of stock", d.outOfStock.toString(), Icons.Outlined.RemoveShoppingCart, alerts("OUT_OF_STOCK"),
+            tone = if (d.outOfStock > 0) Tone.Danger else null),
+        DashTile("near", "Near expiry (${d.nearExpiryDays} d)", d.nearExpiryBatches.toString(), Icons.Outlined.HourglassTop, alerts("NEAR_EXPIRY"),
+            tone = if (d.nearExpiryBatches > 0) Tone.Warning else null),
+        DashTile("expired", "Expired batches", d.expiredBatches.toString(), Icons.Outlined.EventBusy, alerts("EXPIRED"),
+            tone = if (d.expiredBatches > 0) Tone.Danger else null),
     )
 
     AdaptiveContent {
@@ -173,17 +180,26 @@ private fun DashboardGrid(d: DashboardSummary, refreshError: String?, onOpen: (S
                     )
                 }
             }
+            item(key = "hero", span = { GridItemSpan(maxLineSpan) }, contentType = "hero") {
+                HeroCard(
+                    title = "Today's sales",
+                    value = money.format(d.todaySalesTotal),
+                    subtitle = "${d.todaySalesCount} ${if (d.todaySalesCount == 1) "sale" else "sales"} today",
+                    icon = Icons.Outlined.CurrencyRupee,
+                    onClick = { onOpen(Routes.HistoryRoutes.route) },
+                )
+            }
             item(key = "hOrders", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
-                SectionHeader("Orders & sales")
+                SectionHeader("Orders", Modifier.padding(horizontal = 0.dp))
             }
             items(orders, key = { it.key }, contentType = { "stat" }) { t ->
-                StatCard(t.label, t.value, t.icon, onClick = { onOpen(t.route) }, modifier = Modifier.fillMaxWidth(), highlight = t.highlight)
+                StatCard(t.label, t.value, t.icon, onClick = { onOpen(t.route) }, modifier = Modifier.fillMaxWidth(), tone = t.tone)
             }
             item(key = "hStock", span = { GridItemSpan(maxLineSpan) }, contentType = "header") {
-                SectionHeader("Inventory")
+                SectionHeader("Inventory", Modifier.padding(horizontal = 0.dp))
             }
             items(stock, key = { it.key }, contentType = { "stat" }) { t ->
-                StatCard(t.label, t.value, t.icon, onClick = { onOpen(t.route) }, modifier = Modifier.fillMaxWidth(), highlight = t.highlight)
+                StatCard(t.label, t.value, t.icon, onClick = { onOpen(t.route) }, modifier = Modifier.fillMaxWidth(), tone = t.tone)
             }
         }
     }

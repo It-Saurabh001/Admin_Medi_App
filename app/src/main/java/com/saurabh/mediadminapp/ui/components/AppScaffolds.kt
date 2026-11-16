@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,8 +60,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
+import com.saurabh.mediadminapp.ui.theme.isLight
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -104,18 +108,15 @@ fun AppScreenScaffold(
                     navigationIcon = {
                         when {
                             navigationIcon != null -> navigationIcon()
-                            onBack != null -> IconButton(onClick = onBack) {
-                                Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                            }
+                            // U9: detail screens show the back arrow in an Icon-fill tile with family press shades.
+                            onBack != null -> TileIconButton(Icons.AutoMirrored.Outlined.ArrowBack, "Back", onBack, Modifier.padding(start = 4.dp))
                         }
                     },
                     actions = actions,
                     scrollBehavior = scrollBehavior,
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.background,
-                        scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                    colors = com.saurabh.mediadminapp.ui.theme.GsUi.topBarColors()
                 )
+                androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 ConnectivityBanner()
             }
         },
@@ -178,7 +179,7 @@ fun SkeletonList(rows: Int = 6, modifier: Modifier = Modifier) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth().height(72.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 72.dp)
             ) {}
         }
     }
@@ -236,7 +237,8 @@ fun FormScaffold(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    AdaptiveContent(modifier = modifier, maxWidth = AdaptiveWidths.Form) {
+    // Part 3 §3: tap on empty space clears focus + hides the keyboard.
+    AdaptiveContent(modifier = modifier.clearFocusOnTap(), maxWidth = AdaptiveWidths.Form) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -259,7 +261,12 @@ fun FieldError(text: String?) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
 }
 
-/** Dashboard counter tile. [highlight] uses primaryContainer (one per screen). */
+/**
+ * Counter tile (standalone card, U13: family press shade + 0.97 scale, no ripple).
+ * [tone] gives the colour meaning (guide Part 5): null/Success = green icon tile on White card,
+ * Warning = Amber 50 card + Amber 100/600 tile, Danger = Red 50 card + Red 100/600 tile, Info = Teal 100/600 tile.
+ * [highlight] is kept for callers that only need "success" emphasis.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatCard(
@@ -269,26 +276,87 @@ fun StatCard(
     onClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
     highlight: Boolean = false,
+    tone: Tone? = if (highlight) Tone.Success else null,
 ) {
-    val container = if (highlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
-    val contentColor = if (highlight) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
+    val G = com.saurabh.mediadminapp.ui.theme.GS
+    val S = com.saurabh.mediadminapp.ui.theme.Shades
+    val light = MaterialTheme.isLight
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    // Card surface: alert tones use their 50 card shade (50 -> 100 -> 200); others are White rows (White -> Green 50 -> 100).
+    val cardShade = when (tone) {
+        Tone.Warning -> com.saurabh.mediadminapp.ui.theme.GsUi.familyShade(S.AmberCard)
+        Tone.Danger -> com.saurabh.mediadminapp.ui.theme.GsUi.familyShade(S.RedCard)
+        else -> com.saurabh.mediadminapp.ui.theme.GsUi.rowShade()
+    }
+    val (tileBg, tileFg, valueColor) = when {
+        !light -> Triple(MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, MaterialTheme.colorScheme.onSurface)
+        tone == Tone.Warning -> Triple(G.Amber100, G.Amber600, G.Amber600)
+        tone == Tone.Danger -> Triple(G.Red100, G.Red600, G.Red600)
+        tone == Tone.Info -> Triple(G.Teal100, G.Teal600, G.Ink)
+        tone == Tone.Success -> Triple(G.Green100, G.Green600, G.Green600)
+        else -> Triple(G.Green100, G.Green600, G.Ink)
+    }
+    val scale by source.pressScale(enabled = onClick != null)
+    val container by source.shadeColor(cardShade, "statColor")
+    val contentColor = MaterialTheme.colorScheme.onSurface
     val body: @Composable ColumnScope.() -> Unit = {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(
-                shape = RoundedCornerShape(50),
-                color = if (highlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = if (highlight) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer,
-                modifier = Modifier.size(40.dp)
-            ) { Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) } }
+            Surface(shape = MaterialTheme.shapes.small, color = tileBg, contentColor = tileFg, modifier = Modifier.size(40.dp)) {
+                Box(contentAlignment = Alignment.Center) { Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp)) }
+            }
             Spacer(Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                value, style = MaterialTheme.typography.headlineMedium, color = valueColor,
+                fontWeight = if (tone == Tone.Warning || tone == Tone.Danger) androidx.compose.ui.text.font.FontWeight.Bold else null,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
             Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2, overflow = TextOverflow.Ellipsis,
-                color = if (highlight) contentColor else MaterialTheme.colorScheme.onSurfaceVariant)
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
     val colors = CardDefaults.cardColors(containerColor = container, contentColor = contentColor)
-    if (onClick != null) Card(onClick = onClick, colors = colors, modifier = modifier.fillMaxWidth(), content = body)
-    else Card(colors = colors, modifier = modifier.fillMaxWidth(), content = body)
+    val border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    val m = modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale }
+    if (onClick != null) Card(onClick = onClick, colors = colors, border = border, interactionSource = source, modifier = m, content = body)
+    else Card(colors = colors, border = border, modifier = m, content = body)
+}
+
+/**
+ * Hero / header card: the only gradient allowed (U7): Green 800 -> Green 600 -> Green 400, White text.
+ * Standalone tappable card: 0.97 scale on press, slight dim (no ripple, no colour-family change).
+ */
+@Composable
+fun HeroCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    icon: ImageVector? = null,
+    onClick: (() -> Unit)? = null,
+) {
+    val G = com.saurabh.mediadminapp.ui.theme.GS
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val scale by source.pressScale(enabled = onClick != null)
+    val level by source.pressLevel()
+    val shape = MaterialTheme.shapes.large
+    Box(
+        modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (level == PressLevel.None) 1f else 0.92f }
+            .clip(shape)
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(G.Green800, G.Green600, G.Green400)))
+            .then(if (onClick != null) Modifier.clickable(interactionSource = source, indication = null, onClick = onClick) else Modifier)
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.labelLarge, color = G.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(value, style = MaterialTheme.typography.headlineMedium, color = G.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = G.White, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+            }
+            icon?.let { Icon(it, contentDescription = null, tint = G.White, modifier = Modifier.size(40.dp)) }
+        }
+    }
 }
 
 /** Camera / Gallery / Remove sheet. Camera row hidden when the device has no camera. */
@@ -303,12 +371,12 @@ fun ImageSourceSheet(
 ) {
     val context = LocalContext.current
     val camera = remember(context) { context.hasCamera() }
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surface) {
         Text(
             title, style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }
         )
-        val rowColors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        val rowColors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent)
         if (camera) ListItem(
             headlineContent = { Text("Take photo") },
             leadingContent = { Icon(Icons.Outlined.CameraAlt, null) },
@@ -326,12 +394,22 @@ fun ImageSourceSheet(
                 headlineContent = { Text("Remove image", color = MaterialTheme.colorScheme.error) },
                 leadingContent = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
                 colors = rowColors,
-                modifier = Modifier.clickableRow { onDismiss(); remove() }
+                modifier = Modifier.clickableRow(danger = true) { onDismiss(); remove() }
             )
         }
         Spacer(Modifier.navigationBarsPadding().height(16.dp))
     }
 }
 
-private fun Modifier.clickableRow(onClick: () -> Unit): Modifier =
-    this.heightIn(min = 56.dp).clickable(onClick = onClick)
+/** Sheet row: White -> Green 50 -> Green 100 (danger rows: Red 50 / Red 100), no ripple. */
+@Composable
+private fun Modifier.clickableRow(danger: Boolean = false, onClick: () -> Unit): Modifier {
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val shade = if (danger) com.saurabh.mediadminapp.ui.theme.GsUi.familyShade(
+        com.saurabh.mediadminapp.ui.theme.Shade(com.saurabh.mediadminapp.ui.theme.GS.White, com.saurabh.mediadminapp.ui.theme.GS.Red50, com.saurabh.mediadminapp.ui.theme.GS.Red100)
+    ) else com.saurabh.mediadminapp.ui.theme.GsUi.rowShade()
+    val bg by source.shadeColor(shade, "sheetRow")
+    return this.heightIn(min = 56.dp)
+        .background(bg)
+        .clickable(interactionSource = source, indication = null, onClick = onClick)
+}

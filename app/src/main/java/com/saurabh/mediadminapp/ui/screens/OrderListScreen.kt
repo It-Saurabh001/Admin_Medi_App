@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsFilterChip
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,7 +51,8 @@ import com.saurabh.mediadminapp.ui.components.ErrorState
 import com.saurabh.mediadminapp.ui.components.PagedLazyColumn
 import com.saurabh.mediadminapp.ui.components.SkeletonList
 import com.saurabh.mediadminapp.ui.components.StatusChip
-import com.saurabh.mediadminapp.ui.components.ThumbImage
+import com.saurabh.mediadminapp.ui.components.MedicineImage
+import com.saurabh.mediadminapp.ui.components.shadeRow
 import com.saurabh.mediadminapp.ui.components.dateTimeLabel
 import com.saurabh.mediadminapp.ui.components.label
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
@@ -81,7 +84,7 @@ fun OrderListScreen(
 
     AppScreenScaffold(
         title = "Orders",
-        navigationIcon = { IconButton(onClick = onMenuClick) { Icon(Icons.Outlined.Menu, contentDescription = "Menu") } },
+        navigationIcon = { com.saurabh.mediadminapp.ui.components.TileIconButton(Icons.Outlined.Menu, "Menu", onMenuClick, Modifier.padding(start = 4.dp)) },
         scrollBehavior = scrollBehavior,
     ) { inner ->
         PagedLazyColumn(
@@ -94,7 +97,7 @@ fun OrderListScreen(
             modifier = Modifier.padding(inner).fillMaxSize()
         ) {
             item(key = "search", contentType = "search") {
-                OutlinedTextField(
+                GsTextField(
                     value = query, onValueChange = { query = it },
                     placeholder = { Text("Search product, customer or order id") },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
@@ -110,7 +113,7 @@ fun OrderListScreen(
             item(key = "chips", contentType = "chips") {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(STATUS_FILTERS, key = { it?.name ?: "ALL" }) { s ->
-                        FilterChip(
+                        GsFilterChip(
                             selected = status == s?.name,
                             onClick = { status = s?.name },
                             label = { Text(s?.label() ?: "All") }
@@ -140,7 +143,7 @@ fun OrderListScreen(
 @Composable
 private fun OrderRow(o: Order, onClick: () -> Unit) {
     ListItem(
-        leadingContent = { ThumbImage(o.imageUrl, Icons.Outlined.Medication) },
+        leadingContent = { MedicineImage(o.imageUrl, size = 56.dp) },
         headlineContent = { Text(o.productName.capitalizeEachWord(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -154,7 +157,7 @@ private fun OrderRow(o: Order, onClick: () -> Unit) {
                 StatusChip(o.status)
             }
         },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.fillMaxWidth().shadeRow(onClick)
     )
 }

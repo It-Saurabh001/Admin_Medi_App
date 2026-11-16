@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -144,30 +145,30 @@ private fun BatchEditor(b: Batch, viewModel: MyViewModel, navController: NavCont
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 SectionHeader("Details")
-                OutlinedTextField(
+                GsTextField(
                     value = batchNo, onValueChange = { batchNo = it; errors = errors - "batch" }, enabled = !busy,
                     label = { Text("Batch number") }, singleLine = true, isError = errors["batch"] != null,
                     supportingText = errors["batch"]?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii, capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters, autoCorrectEnabled = false, imeAction = ImeAction.Next)
                 )
                 DateField("Expiry date", expiry, { expiry = it; errors = errors - "expiry" }, !busy, errors["expiry"])
                 DateField("Manufactured (optional)", mfg, { mfg = it }, !busy, null)
                 DateField("Received (optional)", received, { received = it }, !busy, null)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
+                    GsTextField(
                         value = buy, onValueChange = { buy = it; errors = errors - "buy" }, enabled = !busy,
                         label = { Text("Purchase price") }, singleLine = true, isError = errors["buy"] != null,
                         supportingText = errors["buy"]?.let { { Text(it) } }, modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next)
                     )
-                    OutlinedTextField(
+                    GsTextField(
                         value = mrp, onValueChange = { mrp = it; errors = errors - "mrp" }, enabled = !busy,
                         label = { Text("MRP") }, singleLine = true, isError = errors["mrp"] != null,
                         supportingText = errors["mrp"]?.let { { Text(it) } }, modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Next)
                     )
                 }
-                OutlinedTextField(
+                GsTextField(
                     value = supplier, onValueChange = { supplier = it }, enabled = !busy,
                     label = { Text("Supplier") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
@@ -175,22 +176,27 @@ private fun BatchEditor(b: Batch, viewModel: MyViewModel, navController: NavCont
                 formError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
                 SectionHeader("Quantity")
-                OutlinedButton(
+                com.saurabh.mediadminapp.ui.components.LinkButton(
+                    text = "View stock movements for this batch",
+                    onClick = { navController.navigate(Routes.StockMovementsRoutes.invoke(batchId = b.batchId)) { launchSingleTop = true } },
+                )
+                com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton(
+                    text = "Adjust quantity",
                     onClick = {
                         navController.navigate(Routes.StockAdjustRoutes.invoke(b.productId)) { launchSingleTop = true }
                         navController.currentBackStackEntry?.savedStateHandle?.set(ADJUST_BATCH_KEY, b.batchId)
                     },
                     enabled = !busy, modifier = Modifier.fillMaxWidth()
-                ) { Text("Adjust quantity") }
+                )
                 if (b.quantity > 0) {
-                    OutlinedTextField(
+                    GsTextField(
                         value = note, onValueChange = { note = it }, enabled = !busy,
                         label = { Text("Write-off note (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
-                    Button(
-                        onClick = { confirmWriteOff = true }, enabled = !busy, modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError)
-                    ) { Text("Write off ${b.quantity} units") }
+                    com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton(
+                        text = "Write off ${b.quantity} units", onClick = { confirmWriteOff = true }, enabled = !busy,
+                        contentColor = com.saurabh.mediadminapp.ui.theme.GS.Red600, modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
         }

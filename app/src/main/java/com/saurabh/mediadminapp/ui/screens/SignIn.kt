@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import android.util.Patterns
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -135,12 +136,12 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            OutlinedTextField(
+            GsTextField(
                 value = email,
                 onValueChange = { email = it; emailError = null; formError = null },
                 label = { Text("Email") },
                 leadingIcon = { Icon(Icons.Outlined.Email, contentDescription = null) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false, imeAction = ImeAction.Next),
                 singleLine = true,
                 enabled = !state.isLoading,
                 isError = emailError != null,
@@ -158,13 +159,11 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
             )
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(
+                com.saurabh.mediadminapp.ui.components.LinkButton(
+                    text = "Forgot password?",
                     onClick = { navController.navigate(Routes.ForgotPasswordRoutes.route) { launchSingleTop = true } },
                     enabled = !state.isLoading,
-                    modifier = Modifier.heightIn(min = 48.dp)
-                ) {
-                    Text("Forgot password?", style = MaterialTheme.typography.labelLarge)
-                }
+                )
             }
 
             AuthFormError(formError)
@@ -174,7 +173,7 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
             // Shown unless app-config says admin signup is disabled.
             if (viewModel.adminSignupConfig()?.enabled != false) {
                 Spacer(modifier = Modifier.height(16.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Spacer(modifier = Modifier.height(8.dp))
                 AuthFooterLink(
                     prompt = "New admin?",

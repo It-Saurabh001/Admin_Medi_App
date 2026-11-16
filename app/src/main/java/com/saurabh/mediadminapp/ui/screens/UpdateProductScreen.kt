@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -213,7 +214,7 @@ private fun StockEditSection(
         is UiState.Loading -> Text("Loading batches…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         is UiState.Error -> Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Could not load batches.", Modifier.weight(1f), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-            TextButton(onClick = onRetry) { Text("Retry") }
+            com.saurabh.mediadminapp.ui.components.LinkButton("Retry", onRetry)
         }
         is UiState.Empty -> Text("No batches yet. Receive the first batch below.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         else -> {}
@@ -232,7 +233,7 @@ private fun StockEditSection(
     } else if (batchList.isNotEmpty()) {
         var open by remember { mutableStateOf(false) }
         ExposedDropdownMenuBox(expanded = open && enabled, onExpandedChange = { open = it }, modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
+            GsTextField(
                 value = selected?.label().orEmpty(), onValueChange = {}, readOnly = true, enabled = enabled,
                 label = { Text("Batch to correct") }, singleLine = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(open) },
@@ -242,7 +243,7 @@ private fun StockEditSection(
                 batchList.forEach { b -> DropdownMenuItem(text = { Text(b.label()) }, onClick = { onSelect(b); open = false }) }
             }
         }
-        OutlinedTextField(
+        GsTextField(
             value = batchQty, onValueChange = onBatchQty, enabled = enabled,
             label = { Text("Quantity in this batch") }, singleLine = true,
             isError = batchQtyError != null,
@@ -254,7 +255,7 @@ private fun StockEditSection(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next),
             modifier = Modifier.fillMaxWidth()
         )
-        OutlinedTextField(
+        GsTextField(
             value = reason, onValueChange = onReason, enabled = enabled,
             label = { Text("Reason for change") }, singleLine = true,
             isError = reasonError != null, supportingText = reasonError?.let { { Text(it) } },

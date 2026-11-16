@@ -232,6 +232,89 @@ class SpecificOrderRoutes(val orderId: String){
     @Serializable
     data class VerifyEmailRoutes(val email: String)
 
+    // ── Part 10 (additive; existing routes unchanged) ──
+
+    /** Customers list (UserListScreen). Entry: drawer "Customers". */
+    @Serializable
+    object UsersRoutes {
+        const val route = "UsersRoutes"
+        operator fun invoke() = route
+    }
+
+    /** Invoice of a sold / returned order. Entry: Order details top bar. */
+    @Serializable
+    class InvoiceRoutes(val orderId: String) {
+        companion object {
+            const val route = "invoiceRoutes/{orderId}"
+            operator fun invoke(orderId: String) = "invoiceRoutes/$orderId"
+        }
+    }
+
+    /** Prescription viewer + verify. Entry: Order details prescription card. */
+    @Serializable
+    class PrescriptionRoutes(val orderId: String) {
+        companion object {
+            const val route = "prescriptionRoutes/{orderId}"
+            operator fun invoke(orderId: String) = "prescriptionRoutes/$orderId"
+        }
+    }
+
+    // ── Part 11 (additive) ──
+
+    /** Inventory alerts; [tab] = InventoryAlertType.name. Entry: drawer, Dashboard stock tiles. */
+    @Serializable
+    class InventoryAlertsRoutes(val tab: String) {
+        companion object {
+            const val route = "inventoryAlertsRoutes/{tab}"
+            operator fun invoke(tab: String = "LOW_STOCK") = "inventoryAlertsRoutes/$tab"
+        }
+    }
+
+    /** Stock ledger, optionally scoped to a product or batch. Entry: drawer, Product details, Batch details. */
+    @Serializable
+    class StockMovementsRoutes(val productId: String? = null, val batchId: String? = null) {
+        companion object {
+            const val route = "stockMovementsRoutes?productId={productId}&batchId={batchId}"
+            operator fun invoke(productId: String? = null, batchId: String? = null) = buildString {
+                append("stockMovementsRoutes")
+                val args = listOfNotNull(productId?.let { "productId=$it" }, batchId?.let { "batchId=$it" })
+                if (args.isNotEmpty()) append("?").append(args.joinToString("&"))
+            }
+        }
+    }
+
+    /** Suppliers list. Entry: drawer. */
+    @Serializable
+    object SuppliersRoutes {
+        const val route = "SuppliersRoutes"
+        operator fun invoke() = route
+    }
+
+    /** Supplier detail/edit, or create with supplierId = "new". */
+    @Serializable
+    class SupplierFormRoutes(val supplierId: String) {
+        companion object {
+            const val route = "supplierFormRoutes/{supplierId}"
+            operator fun invoke(supplierId: String) = "supplierFormRoutes/$supplierId"
+        }
+    }
+
+    /** Audit log. Entry: drawer. */
+    @Serializable
+    object AuditLogRoutes {
+        const val route = "AuditLogRoutes"
+        operator fun invoke() = route
+    }
+
+    /** Admin detail/edit, or create with adminId = "new". Entry: Admins list row / FAB. */
+    @Serializable
+    class AdminFormRoutes(val adminId: String) {
+        companion object {
+            const val route = "adminFormRoutes/{adminId}"
+            operator fun invoke(adminId: String) = "adminFormRoutes/$adminId"
+        }
+    }
+
 
 
 

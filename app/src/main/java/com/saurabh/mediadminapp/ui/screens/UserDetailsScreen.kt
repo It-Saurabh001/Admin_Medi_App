@@ -1,472 +1,215 @@
 package com.saurabh.mediadminapp.ui.screens
 
-import android.widget.Toast
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.outlined.Badge
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LocationOn
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.data.v1.dto.User as UserItem
-import com.saurabh.mediadminapp.ui.screens.components.ClayCard
-import com.saurabh.mediadminapp.ui.screens.components.ClayDangerButton
-import com.saurabh.mediadminapp.ui.screens.components.ClayEmptyState
-import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
-import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
-import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
-import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
-import com.saurabh.mediadminapp.ui.screens.components.ClayStatusBadge
+import com.saurabh.mediadminapp.ui.adaptive.AdaptiveContent
+import com.saurabh.mediadminapp.ui.adaptive.AdaptiveWidths
+import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
+import com.saurabh.mediadminapp.ui.components.ConfirmDialog
+import com.saurabh.mediadminapp.ui.components.DetailCard
+import com.saurabh.mediadminapp.ui.components.EmptyState
+import com.saurabh.mediadminapp.ui.components.ErrorState
+import com.saurabh.mediadminapp.ui.components.InfoTile
+import com.saurabh.mediadminapp.ui.components.LoadingState
+import com.saurabh.mediadminapp.ui.components.PersonAvatar
+import com.saurabh.mediadminapp.ui.components.ShadeButton
+import com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton
+import com.saurabh.mediadminapp.ui.components.Tone
+import com.saurabh.mediadminapp.ui.components.ToneChip
+import com.saurabh.mediadminapp.ui.components.dateTimeLabel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
-import com.saurabh.mediadminapp.ui.theme.ClayAccent
-import com.saurabh.mediadminapp.ui.theme.ClayBorder
-import com.saurabh.mediadminapp.ui.theme.ClayFieldBg
-import com.saurabh.mediadminapp.ui.theme.ClayPrimary
-import com.saurabh.mediadminapp.ui.theme.ClaySecondary
-import com.saurabh.mediadminapp.ui.theme.ClayStateApproved
-import com.saurabh.mediadminapp.ui.theme.ClayStateBlocked
-import com.saurabh.mediadminapp.ui.theme.ClayStatePending
-import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
-import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
-
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.draw.clipToBounds
+import com.saurabh.mediadminapp.ui.theme.GS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: NavController) {
-    val usersState = viewModel.getAllUserState.collectAsState()
-    val deleteState = viewModel.deleteUserState.collectAsState().value
-    val context = LocalContext.current
+    val usersState by viewModel.getAllUserState.collectAsState()
+    val deleteState by viewModel.deleteUserState.collectAsState()
+    val statusStates by viewModel.isApprovedUser.collectAsState()
 
-    LaunchedEffect(key1 = Unit) {
-        viewModel.getAllUsers()
+    val user = usersState.success?.items?.find { it.userId == user_id }
+    val statusBusy = statusStates[user_id]?.isLoading == true
+
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var confirmBlock by rememberSaveable { mutableStateOf(false) }
+
+    // (Re)load when nothing is cached, e.g. after a failed delete reset the list.
+    LaunchedEffect(usersState.success == null) {
+        if (usersState.success == null && !usersState.isLoading) viewModel.getAllUsers()
     }
 
-    LaunchedEffect(key1 = deleteState.success) {
+    LaunchedEffect(deleteState.success) {
         if (deleteState.success != null && !deleteState.isLoading && deleteState.error == null) {
-            Toast.makeText(context, "User deleted", Toast.LENGTH_LONG).show()
             viewModel.resetDeleteUserState()
             navController.navigate(Routes.HomeRoutes()) {
                 popUpTo(Routes.HomeRoutes()) { inclusive = true }
             }
         }
     }
-
-    LaunchedEffect(key1 = deleteState.error) {
-        if (deleteState.error != null && !deleteState.isLoading) {
-            Toast.makeText(context, deleteState.error, Toast.LENGTH_LONG).show()
-            viewModel.resetDeleteUserState()
-        }
+    LaunchedEffect(deleteState.error) {
+        if (deleteState.error != null && !deleteState.isLoading) viewModel.resetDeleteUserState()
     }
 
-    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
-        containerColor = Color.Transparent,
-        scrolledContainerColor = Color.Transparent,
-        titleContentColor = Color.White,
-        navigationIconContentColor = Color.White,
-        actionIconContentColor = Color.White
-    )
-
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary))).statusBarsPadding() // Keeps status bar always colored ClayPrimary while TopAppBar collapses beneath it
-                .clipToBounds()) {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = "User Detail Management",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
-                        )
-                    },
-                    windowInsets = WindowInsets(0, 0, 0, 0),
-
-                    navigationIcon = {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Home"
-                            )
-                        }
-                    },
-                    colors = transparentTopBarColors,
+    AppScreenScaffold(
+        title = "User details",
+        onBack = { navController.popBackStack() },
+        actions = {
+            if (user != null) {
+                com.saurabh.mediadminapp.ui.components.TileIconButton(
+                    Icons.Outlined.Edit, "Edit user", { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.userId)) }
                 )
             }
-            Box(modifier = Modifier.weight(1f)) {
-                ClayGradientBackdrop {
-                    when {
-                        usersState.value.isLoading -> {
-                            ClayLoadingScreen(modifier = Modifier)
-                        }
-                        usersState.value.error != null -> {
-                            ClayErrorScreen(
-                                errorMessage = usersState.value.error.toString(),
-                                modifier = Modifier,
-                                onRetry = { viewModel.getAllUsers() }
-                            )
-                        }
-                        usersState.value.success != null -> {
-                            val users = usersState.value.success?.items
-                            val user = users?.find { it.userId == user_id }
-
-                            if (user != null) {
-                                UserDetailsHub(
-                                    user = user,
-                                    isDeleting = deleteState.isLoading,
-                                    onDeleteClick = { viewModel.deleteUser(user.userId) },
-                                    onUpdateClick = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.userId)) },
-                                    navController = navController,
-                                    modifier = Modifier
-                                )
-                            } else {
-                                ClayEmptyState(
-                                    message = "User not found or has been deleted",
-                                    emoji = "👤",
-                                    modifier = Modifier
-                                )
-                            }
-                        }
+        },
+    ) { padding ->
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            when {
+                usersState.isLoading && usersState.success == null -> LoadingState()
+                usersState.error != null && usersState.success == null -> ErrorState(
+                    message = usersState.error ?: "Could not load users",
+                    onRetry = { viewModel.getAllUsers(force = true) },
+                )
+                user == null -> EmptyState(
+                    title = "User not found",
+                    message = "This user may have been deleted.",
+                )
+                else -> PullToRefreshBox(
+                    isRefreshing = usersState.isLoading,
+                    onRefresh = { viewModel.getAllUsers(force = true) },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    AdaptiveContent(maxWidth = AdaptiveWidths.Form) {
+                        UserDetailsHub(
+                            user = user,
+                            busy = statusBusy,
+                            isDeleting = deleteState.isLoading,
+                            onApprove = { viewModel.isApprovedUser(user.userId, true) },
+                            onUnblock = { viewModel.unblockUser(user.userId) },
+                            onBlock = { confirmBlock = true },
+                            onEdit = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.userId)) },
+                            onDelete = { confirmDelete = true },
+                        )
                     }
                 }
             }
         }
     }
+
+    if (confirmBlock && user != null) {
+        ConfirmDialog(
+            title = "Block user?",
+            message = "${user.name} will no longer be able to place or view orders.",
+            confirmText = "Block",
+            onConfirm = { confirmBlock = false; viewModel.isApprovedUser(user.userId, false) },
+            onDismiss = { confirmBlock = false },
+        )
+    }
+    if (confirmDelete && user != null) {
+        ConfirmDialog(
+            title = "Delete user?",
+            message = "${user.name} will be removed. This cannot be undone.",
+            confirmText = "Delete",
+            onConfirm = { confirmDelete = false; viewModel.deleteUser(user.userId) },
+            onDismiss = { confirmDelete = false },
+        )
+    }
 }
 
-/**
- * Dedicated Detail Screen Architecture for User Profile:
- * Avatar-Centric Identity Hub, Clearance Matrix, Full-Width Specifications,
- * Recessed Inset Clusters, and Primary Admin Controls.
- * Zero Modifier.shadow() — all hardware canvas BlurMaskFilter shadows.
- */
 @Composable
-fun UserDetailsHub(
+private fun UserDetailsHub(
     user: UserItem,
+    busy: Boolean,
     isDeleting: Boolean,
-    onDeleteClick: () -> Unit,
-    onUpdateClick: () -> Unit,
-    navController: NavController,
-    modifier: Modifier = Modifier
+    onApprove: () -> Unit,
+    onUnblock: () -> Unit,
+    onBlock: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
 ) {
-    val initial = user.name.firstOrNull()?.toString()?.uppercase() ?: "U"
-    val isApproved = user.isApproved
-    val isBlocked = user.isBlocked
-
+    val none = "Not provided"
     LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(18.dp),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp)
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
     ) {
-        // ── 1. AVATAR-CENTRIC IDENTITY HUB ───────────────────────────────
-        item {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                // Hardware BlurMaskFilter Shadow Avatar (Anti-aliased)
-                ClayNetworkImage(
-                    initial = initial,
-                    imageUrl = user.imageUrl,
-                    avatarSize = 116.dp
-                )
-
-                Spacer(modifier = Modifier.height(14.dp))
-
+        item(key = "identity") {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PersonAvatar(url = user.imageUrl, name = user.name, size = 96.dp)
                 Text(
-                    text = user.name,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White
+                    user.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Role Clearance Badges Row
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ClayStatusBadge(
-                        text = if (isApproved) "Verified Member" else "Pending Verification",
-                        color = if (isApproved) ClayStateApproved else ClayStatePending
-                    )
-
-                    if (isBlocked) {
-                        ClayStatusBadge(
-                            text = "Account Blocked",
-                            color = ClayStateBlocked
-                        )
-                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ToneChip(if (user.isApproved) "Approved" else "Pending approval", if (user.isApproved) Tone.Success else Tone.Warning)
+                    if (user.isBlocked) ToneChip("Blocked", Tone.Danger)
                 }
             }
         }
 
-        // ── 3. ROLE CLEARANCE MATRIX & IDENTITY CARD ─────────────────────
-        item {
-            ClayCard(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 28.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .background(ClayPrimary.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = null,
-                                tint = ClayPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Clearance & Access Matrix",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ClayTextPrimary
-                        )
-                    }
-
-                    // 2-Column Matrix Grid
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        ClearanceTile(
-                            modifier = Modifier.weight(1f),
-                            label = "ACCESS CLEARANCE",
-                            value = if (isApproved) "Approved" else "Pending",
-                            tint = if (isApproved) ClayStateApproved else ClayStatePending,
-                            icon = Icons.Default.CheckCircle
-                        )
-                        ClearanceTile(
-                            modifier = Modifier.weight(1f),
-                            label = "SYSTEM STATUS",
-                            value = if (isBlocked) "Blocked" else "Active",
-                            tint = if (isBlocked) ClayStateBlocked else ClayStateApproved,
-                            icon = if (isBlocked) Icons.Default.Block else Icons.Default.CheckCircle
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        ClearanceTile(
-                            modifier = Modifier.weight(1f),
-                            label = "CLIENT ID",
-                            value = user.userId,
-                            tint = ClayPrimary,
-                            icon = Icons.Default.Badge
-                        )
-                        ClearanceTile(
-                            modifier = Modifier.weight(1f),
-                            label = "REGISTERED",
-                            value = user.createdAt.toString() ?: "Active",
-                            tint = ClaySecondary,
-                            icon = Icons.Default.CalendarMonth
-                        )
-                    }
-                }
+        item(key = "account") {
+            DetailCard(title = "Account", icon = Icons.Outlined.Person) {
+                InfoTile("Client ID", user.userId, icon = Icons.Outlined.Badge)
+                InfoTile("Registered", user.createdAt.dateTimeLabel(), icon = Icons.Outlined.CalendarMonth)
             }
         }
 
-        // ── 4. FULL-WIDTH CONTACT & ADDRESS SPECIFICATIONS ────────────────
-        item {
-            ClayCard(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 28.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Contact & Shipping Dossier",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ClayTextPrimary
-                    )
-
-                    RecessedSpecRow(
-                        icon = Icons.Default.Phone,
-                        label = "Telephone Number",
-                        value = (user.phoneNumber ?: "").ifEmpty { "Not Provided" }
-                    )
-                    RecessedSpecRow(
-                        icon = Icons.Default.Email,
-                        label = "Email Address",
-                        value = (user.email ?: "").ifEmpty { "Not Provided" }
-                    )
-                    RecessedSpecRow(
-                        icon = Icons.Default.Home,
-                        label = "Street Address",
-                        value = (user.address ?: "").ifEmpty { "Not Provided" }
-                    )
-                    RecessedSpecRow(
-                        icon = Icons.Default.LocationOn,
-                        label = "Postal Pincode",
-                        value = (user.pinCode ?: "").ifEmpty { "Not Provided" }
-                    )
-                }
+        item(key = "contact") {
+            DetailCard(title = "Contact & address", icon = Icons.Outlined.Phone) {
+                InfoTile("Phone", user.phoneNumber.orEmpty().ifBlank { none }, icon = Icons.Outlined.Phone)
+                InfoTile("Email", user.email.ifBlank { none }, icon = Icons.Outlined.Email)
+                InfoTile("Address", user.address.orEmpty().ifBlank { none }, icon = Icons.Outlined.Home)
+                InfoTile("Pincode", user.pinCode.orEmpty().ifBlank { none }, icon = Icons.Outlined.LocationOn)
             }
         }
 
-        // ── 5. PRIMARY ADMIN CONTROLS ────────────────────────────────────
-        item {
+        item(key = "actions") {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                ClayPrimaryButton(
-                    text = "Edit Profile & Permissions",
-                    icon = Icons.Default.Edit,
-                    onClick = onUpdateClick,
-                    enabled = !isDeleting
-                )
-
-                ClayDangerButton(
-                    text = if (isDeleting) "Processing Deletion..." else "Suspend / Delete User",
-                    icon = Icons.Default.DeleteForever,
-                    onClick = onDeleteClick,
-                    enabled = !isDeleting,
-                    isLoading = isDeleting
-                )
+                when {
+                    user.isBlocked -> ShadeButton("Unblock user", onUnblock, Modifier.fillMaxWidth(), isLoading = busy)
+                    !user.isApproved -> ShadeButton("Approve user", onApprove, Modifier.fillMaxWidth(), isLoading = busy)
+                }
+                ShadeOutlinedButton("Edit profile", onEdit, Modifier.fillMaxWidth(), enabled = !isDeleting, icon = Icons.Outlined.Edit)
+                if (!user.isBlocked) {
+                    ShadeOutlinedButton("Block user", onBlock, Modifier.fillMaxWidth(), enabled = !busy && !isDeleting, contentColor = GS.Red600)
+                }
+                ShadeOutlinedButton("Delete user", onDelete, Modifier.fillMaxWidth(), enabled = !isDeleting, contentColor = GS.Red600)
             }
-        }
-    }
-}
-
-@Composable
-private fun ClearanceTile(
-    modifier: Modifier = Modifier,
-    label: String,
-    value: String,
-    tint: Color,
-    icon: ImageVector
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(ClayFieldBg)
-            .border(1.dp, Color.White, RoundedCornerShape(18.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp)
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = tint,
-                    modifier = Modifier.size(14.dp)
-                )
-                Text(
-                    text = label,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = ClayTextSecondary,
-                    letterSpacing = 0.5.sp
-                )
-            }
-            Text(
-                text = value,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = ClayTextPrimary,
-                maxLines = 1
-            )
-        }
-    }
-}
-
-@Composable
-private fun RecessedSpecRow(
-    icon: ImageVector,
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(ClayFieldBg)
-            .border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = ClayPrimary, modifier = Modifier.size(16.dp))
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, fontSize = 11.sp, color = ClayTextSecondary, fontWeight = FontWeight.Medium)
-            Text(text = value, fontSize = 14.sp, color = ClayTextPrimary, fontWeight = FontWeight.SemiBold)
         }
     }
 }

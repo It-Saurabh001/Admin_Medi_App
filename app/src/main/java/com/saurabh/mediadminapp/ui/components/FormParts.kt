@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.components
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -49,7 +51,7 @@ fun DateField(
 ) {
     var show by rememberSaveable { mutableStateOf(false) }
     val date = runCatching { LocalDate.parse(iso) }.getOrNull()
-    OutlinedTextField(
+    GsTextField(
         value = date?.format(SHOW_FMT).orEmpty(), onValueChange = {}, readOnly = true,
         label = { Text(label, maxLines = 1) }, singleLine = true, enabled = enabled,
         trailingIcon = { IconButton(onClick = { show = true }, enabled = enabled) { Icon(Icons.Outlined.CalendarMonth, contentDescription = "Pick $label") } },
@@ -74,13 +76,10 @@ fun DateField(
 /** Bottom bar with one primary action; shows a spinner while [loading]. */
 @Composable
 fun SaveBar(text: String, loading: Boolean, onClick: () -> Unit, enabled: Boolean = true) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-        Button(
-            onClick = onClick, enabled = enabled && !loading,
-            modifier = Modifier.fillMaxWidth().padding(16.dp).height(48.dp)
-        ) {
-            if (loading) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onPrimary)
-            else Text(text)
-        }
+    Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+        ShadeButton(
+            text = text, onClick = onClick, enabled = enabled, isLoading = loading,
+            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp)
+        )
     }
 }

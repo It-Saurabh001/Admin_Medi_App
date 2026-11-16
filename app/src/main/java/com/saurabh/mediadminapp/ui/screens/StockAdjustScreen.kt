@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -105,7 +106,7 @@ fun StockAdjustScreen(productId: String, viewModel: MyViewModel, navController: 
                 is UiState.Success -> FormScaffold {
                     var open by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(expanded = open, onExpandedChange = { open = it }, modifier = Modifier.fillMaxWidth()) {
-                        OutlinedTextField(
+                        GsTextField(
                             value = batch?.let { "${it.batchNo} · exp ${it.expiryDate.showDate()} · qty ${it.quantity}" }.orEmpty(),
                             onValueChange = {}, readOnly = true, label = { Text("Batch") }, singleLine = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(open) },
@@ -126,7 +127,7 @@ fun StockAdjustScreen(productId: String, viewModel: MyViewModel, navController: 
                             SegmentedButton(selected = adding == v, onClick = { adding = v; errors = errors - "amount" }, shape = SegmentedButtonDefaults.itemShape(i, 2)) { Text(label, maxLines = 1) }
                         }
                     }
-                    OutlinedTextField(
+                    GsTextField(
                         value = amount, onValueChange = { amount = it.filter(Char::isDigit).take(7); errors = errors - "amount" },
                         label = { Text("Quantity") }, singleLine = true, enabled = !stock.isLoading,
                         isError = errors["amount"] != null,
@@ -138,7 +139,7 @@ fun StockAdjustScreen(productId: String, viewModel: MyViewModel, navController: 
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(QUICK_REASONS, key = { it }) { r -> AssistChip(onClick = { reason = r; errors = errors - "reason" }, label = { Text(r) }) }
                     }
-                    OutlinedTextField(
+                    GsTextField(
                         value = reason, onValueChange = { reason = it; errors = errors - "reason" },
                         label = { Text("Reason for adjustment") }, singleLine = true, enabled = !stock.isLoading,
                         isError = errors["reason"] != null, supportingText = errors["reason"]?.let { { Text(it) } },

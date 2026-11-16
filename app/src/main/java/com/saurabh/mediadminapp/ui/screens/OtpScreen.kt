@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.theme.isLight
+import com.saurabh.mediadminapp.ui.components.shadeColor
 import android.os.SystemClock
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +36,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -47,7 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
@@ -64,22 +67,42 @@ import com.saurabh.mediadminapp.data.v1.error.AppError
 import com.saurabh.mediadminapp.data.v1.error.ErrorCode
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val DEFAULT_OTP_LENGTH = 6
 private const val DEFAULT_OTP_TTL_S = 300
 private const val DEFAULT_OTP_MAX_ATTEMPTS = 5
+private const val EMAIL_OTP_LENGTH = 6
+private const val RESEND_COOLDOWN_S = 60
+
+/** Which flow the shared OTP screen serves. */
+sealed interface OtpFlow {
+    /** Admin sign-in second step. */
+    data class SignIn(val adminId: String) : OtpFlow
+
+    /** Sign-up email verification (auth/verify-otp). */
+    data class EmailVerify(val email: String) : OtpFlow
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostController) {
+fun OtpScreen(flow: OtpFlow, viewModel: MyViewModel, navController: NavHostController) {
+    val isEmailFlow = flow is OtpFlow.EmailVerify
+    val adminId = (flow as? OtpFlow.SignIn)?.adminId.orEmpty()
+    val email = (flow as? OtpFlow.EmailVerify)?.email.orEmpty()
     val config = remember { viewModel.cachedAppConfig()?.otp }
-    val otpLength = config?.length?.takeIf { it in 4..8 } ?: DEFAULT_OTP_LENGTH
+    val otpLength = if (isEmailFlow) EMAIL_OTP_LENGTH else config?.length?.takeIf { it in 4..8 }
+        ?: DEFAULT_OTP_LENGTH
     val ttlSeconds = config?.expiresIn?.takeIf { it > 0 } ?: DEFAULT_OTP_TTL_S
     val maxAttempts = config?.maxAttempts?.takeIf { it > 0 } ?: DEFAULT_OTP_MAX_ATTEMPTS
 
     val state by viewModel.verifyOtpState.collectAsStateWithLifecycle()
+    val emailState by viewModel.emailVerifyState.collectAsStateWithLifecycle()
+    val busy = if (isEmailFlow) emailState.isLoading else state.isLoading
     val haptics = LocalHapticFeedback.current
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val pasteScope = androidx.compose.runtime.rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
     val focusRequester = remember { FocusRequester() }
 
@@ -89,7 +112,11 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
     // Deadline survives rotation / process-light recreation.
     val deadline by rememberSaveable { mutableLongStateOf(SystemClock.elapsedRealtime() + ttlSeconds * 1000L) }
     var secondsLeft by remember { mutableIntStateOf(ttlSeconds) }
-    val expired = secondsLeft <= 0
+    val expired = !isEmailFlow && secondsLeft <= 0
+    var info by rememberSaveable { mutableStateOf("We sent a 6-digit code to $email") }
+    var resendAt by rememberSaveable { mutableLongStateOf(SystemClock.elapsedRealtime() + RESEND_COOLDOWN_S * 1000L) }
+    var cooldown by remember { mutableIntStateOf(RESEND_COOLDOWN_S) }
+    if (isEmailFlow) DisposableEffect(Unit) { onDispose { viewModel.clearEmailVerifyState() } }
 
     fun backToLogin(message: String) {
         runCatching {
@@ -102,32 +129,72 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
     }
 
     fun verify() {
-        if (state.isLoading) return
+        if (busy) return
         when {
-            adminId.isBlank() -> backToLogin("Session expired. Sign in again.")
+            !isEmailFlow && adminId.isBlank() -> backToLogin("Session expired. Sign in again.")
             expired -> otpError = "Code expired. Request a new one."
             otp.length != otpLength -> {
                 otpError = "Enter all $otpLength digits"
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
             }
+
             else -> {
                 focusManager.clearFocus()
-                viewModel.verifyAdminOtp(adminId, otp)
+                if (isEmailFlow) viewModel.verifyAdminEmail(
+                    email,
+                    otp
+                ) else viewModel.verifyAdminOtp(adminId, otp)
             }
         }
     }
 
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    LaunchedEffect(deadline) {
+    LaunchedEffect(resendAt, isEmailFlow) {
+        if (!isEmailFlow) return@LaunchedEffect
         while (true) {
-            secondsLeft = ((deadline - SystemClock.elapsedRealtime()) / 1000L).toInt().coerceAtLeast(0)
+            cooldown = ((resendAt - SystemClock.elapsedRealtime()) / 1000L).toInt().coerceAtLeast(0)
+            if (cooldown == 0) break
+            delay(1000L.milliseconds)
+        }
+    }
+
+    LaunchedEffect(emailState) {
+        if (!isEmailFlow) return@LaunchedEffect
+        when {
+            emailState.verified -> backToLogin("Email verified. Sign in with $email.")
+            emailState.resent -> {
+                info = "A new code was sent to $email"
+                otpError = null
+                resendAt = SystemClock.elapsedRealtime() + RESEND_COOLDOWN_S * 1000L
+                viewModel.clearEmailVerifyState()
+            }
+
+            emailState.error != null -> {
+                val api = emailState.appError as? AppError.Api
+                otpError = when (api?.code) {
+                    ErrorCode.RATE_LIMITED -> emailState.error
+                    ErrorCode.EMAIL_DELIVERY_FAILED -> "Could not send the email. Try again shortly."
+                    else -> api?.fields?.get("otp")?.let { "${emailState.error}: $it" }
+                        ?: emailState.error
+                }
+                viewModel.clearEmailVerifyState()
+            }
+        }
+    }
+
+    LaunchedEffect(deadline) {
+        if (isEmailFlow) return@LaunchedEffect
+        while (true) {
+            secondsLeft =
+                ((deadline - SystemClock.elapsedRealtime()) / 1000L).toInt().coerceAtLeast(0)
             if (secondsLeft == 0) break
-            delay(1000L)
+            delay(1000L.milliseconds)
         }
     }
 
     LaunchedEffect(state.error) {
+        if (isEmailFlow) return@LaunchedEffect
         val error = state.error ?: return@LaunchedEffect
         val appError = state.appError
         val code = (appError as? AppError.Api)?.code
@@ -138,7 +205,12 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
             // Non-admin role: the ViewModel already rejected the session.
             appError == null && error == "Admin account required" -> backToLogin(error)
             code == ErrorCode.ACCOUNT_BLOCKED ->
-                navController.navigate(Routes.AccountBlockedRoutes.route) { popUpTo(0) { inclusive = true } }
+                navController.navigate(Routes.AccountBlockedRoutes.route) {
+                    popUpTo(0) {
+                        inclusive = true
+                    }
+                }
+
             code == ErrorCode.ACCOUNT_NOT_APPROVED -> backToLogin("This admin account is awaiting approval.")
             code == ErrorCode.RATE_LIMITED -> backToLogin("Too many attempts. Sign in again.")
             else -> {
@@ -150,10 +222,11 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
     }
 
     LaunchedEffect(state.success) {
+        if (isEmailFlow) return@LaunchedEffect
         val response = state.success ?: return@LaunchedEffect
         if (response.accessToken.isNotBlank()) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-            delay(600L)
+            delay(600L.milliseconds)
             navController.navigate(Routes.HomeRoutes()) {
                 popUpTo(navController.graph.id) { inclusive = true }
                 launchSingleTop = true
@@ -167,25 +240,13 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
-        topBar = {
-            TopAppBar(
-                title = { Text("Verify code", style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.navigateUp() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
+        topBar = { AuthTopBar(if (isEmailFlow) "Verify email" else "Verify code") { navController.navigateUp() } }
     ) { innerPadding ->
         if (state.success != null) {
             Column(
-                modifier = Modifier.padding(innerPadding).fillMaxSize(),
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -212,8 +273,8 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
         ) {
             AuthHeader(
                 icon = Icons.Outlined.MarkEmailRead,
-                title = "Check your email",
-                subtitle = "Enter the $otpLength-digit code we sent to your admin email."
+                title = if (isEmailFlow) "Verify your email" else "Check your email",
+                subtitle = if (isEmailFlow) info else "Enter the $otpLength-digit code we sent to your admin email."
             )
             Spacer(modifier = Modifier.height(32.dp))
 
@@ -221,7 +282,7 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
                 value = otp,
                 length = otpLength,
                 isError = otpError != null,
-                enabled = !state.isLoading && !expired,
+                enabled = !busy && !expired,
                 focusRequester = focusRequester,
                 onValueChange = { input ->
                     val digits = input.filter(Char::isDigit).take(otpLength)
@@ -237,7 +298,10 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
                 onDone = ::verify
             )
             Spacer(modifier = Modifier.height(4.dp))
-            SupportingText(otpError, if (expired) "Code expired" else "${otp.length}/$otpLength digits")
+            SupportingText(
+                otpError,
+                if (expired) "Code expired" else "${otp.length}/$otpLength digits"
+            )
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -245,43 +309,57 @@ fun OtpScreen(adminId: String, viewModel: MyViewModel, navController: NavHostCon
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = if (expired) "Code expired" else "Expires in %d:%02d".format(secondsLeft / 60, secondsLeft % 60),
+                    text = if (isEmailFlow) "" else if (expired) "Code expired" else "Expires in %d:%02d".format(
+                        secondsLeft / 60,
+                        secondsLeft % 60
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (expired) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+                // Paste = text link (Green 600 -> 700 -> 800), no ripple.
+                val pasteSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                val pasteColor by pasteSource.shadeColor(com.saurabh.mediadminapp.ui.theme.Shades.GreenText, "paste")
                 TextButton(
+                    interactionSource = pasteSource,
+                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = pasteColor),
                     onClick = {
-                        clipboard.getText()?.text?.filter(Char::isDigit)?.take(otpLength)
-                            ?.takeIf { it.isNotEmpty() }
-                            ?.let { pasted ->
-                                otp = pasted
-                                otpError = null
-                                if (pasted.length == otpLength) verify()
-                            }
+                        pasteScope.launch {
+                            clipboard.getClipEntry()?.clipData?.takeIf { it.itemCount > 0 }
+                                ?.getItemAt(0)?.text?.toString()
+                                ?.filter(Char::isDigit)?.take(otpLength)
+                                ?.takeIf { it.isNotEmpty() }
+                                ?.let { pasted ->
+                                    otp = pasted
+                                    otpError = null
+                                    if (pasted.length == otpLength) verify()
+                                }
+                        }
                     },
-                    enabled = !state.isLoading && !expired,
+                    enabled = !busy && !expired,
                     modifier = Modifier.heightIn(min = 48.dp)
                 ) {
-                    Icon(Icons.Outlined.ContentPaste, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Outlined.ContentPaste,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
                     Spacer(modifier = Modifier.size(6.dp))
                     Text("Paste", style = MaterialTheme.typography.labelLarge)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            AuthPrimaryButton(text = "Verify", isLoading = state.isLoading, onClick = ::verify)
+            AuthPrimaryButton(text = "Verify", isLoading = busy, onClick = ::verify)
             Spacer(modifier = Modifier.height(8.dp))
             // Resend = sign in again (Login keeps the typed email/password in saved state).
-            TextButton(
-                onClick = { backToLogin("Sign in again to get a new code.") },
-                enabled = !state.isLoading,
-                modifier = Modifier.heightIn(min = 48.dp)
-            ) {
-                Text("Didn't get a code? Send a new one", style = MaterialTheme.typography.labelLarge)
-            }
+            com.saurabh.mediadminapp.ui.components.LinkButton(
+                text = if (isEmailFlow) (if (cooldown > 0) "Resend code in ${cooldown}s" else "Resend code") else "Didn't get a code? Send a new one",
+                onClick = { if (isEmailFlow) viewModel.resendAdminEmailOtp(email) else backToLogin("Sign in again to get a new code.") },
+                enabled = !busy && (!isEmailFlow || cooldown == 0),
+            )
         }
     }
 }
@@ -302,7 +380,10 @@ private fun OtpBoxes(
         onValueChange = onValueChange,
         enabled = enabled,
         singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword, imeAction = ImeAction.Done),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.NumberPassword,
+            imeAction = ImeAction.Done
+        ),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
         modifier = Modifier
             .fillMaxWidth()
@@ -316,19 +397,27 @@ private fun OtpBoxes(
                 repeat(length) { i ->
                     val char = value.getOrNull(i)
                     val focused = enabled && i == value.length.coerceAtMost(length - 1)
-                    val borderColor = when {
-                        isError -> MaterialTheme.colorScheme.error
-                        focused -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.outline
-                    }
+                    // Part 3 §3: Outline 1dp -> focused Green 500 2dp (120 ms), error Red 600 2dp; White input box.
+                    val borderColor by androidx.compose.animation.animateColorAsState(
+                        when {
+                            isError -> MaterialTheme.colorScheme.error
+                            focused -> if (MaterialTheme.isLight) com.saurabh.mediadminapp.ui.theme.GS.Green500 else MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.outline
+                        },
+                        androidx.compose.animation.core.tween(120), label = "otpBorder",
+                    )
                     Surface(
                         shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        color = MaterialTheme.colorScheme.surface,
                         modifier = Modifier
                             .weight(1f)
                             .widthIn(max = 56.dp)
                             .aspectRatio(0.85f)
-                            .border(if (focused || isError) 2.dp else 1.dp, borderColor, MaterialTheme.shapes.medium)
+                            .border(
+                                if (focused || isError) 2.dp else 1.dp,
+                                borderColor,
+                                MaterialTheme.shapes.medium
+                            )
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Text(

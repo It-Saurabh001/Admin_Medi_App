@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.camera.core.Camera
@@ -76,6 +77,8 @@ import com.google.mlkit.vision.common.InputImage
 import com.saurabh.mediadminapp.BarcodeLookupState
 import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.ui.adaptive.rememberWindowSize
+import com.saurabh.mediadminapp.ui.components.ShadeButton
+import com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton
 import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
 import com.saurabh.mediadminapp.ui.device.CAMERA_PERMISSION
 import com.saurabh.mediadminapp.ui.device.PermissionStatus
@@ -176,21 +179,22 @@ fun BarcodeScannerScreen(viewModel: MyViewModel, navController: NavController) {
                 onRetry = { (lookup as? BarcodeLookupState.Failed)?.let { viewModel.clearBarcodeLookup(); viewModel.lookupBarcode(it.barcode) } },
                 onAdd = addWithBarcode
             )
-            OutlinedTextField(
+            GsTextField(
                 value = manual,
                 onValueChange = { manual = it.trim() },
                 label = { Text("Enter barcode manually") },
                 singleLine = true,
                 enabled = !busy,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii, capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters, autoCorrectEnabled = false, imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { if (manual.isNotBlank()) { viewModel.clearBarcodeLookup(); viewModel.lookupBarcode(manual) } }),
                 modifier = Modifier.fillMaxWidth()
             )
-            FilledTonalButton(
+            ShadeOutlinedButton(
+                text = "Look up",
                 onClick = { viewModel.clearBarcodeLookup(); viewModel.lookupBarcode(manual) },
                 enabled = manual.isNotBlank() && !busy,
                 modifier = Modifier.fillMaxWidth()
-            ) { Text("Look up") }
+            )
         }
 
         val sideBySide = window.isExpanded || window.isLandscape
@@ -235,12 +239,12 @@ private fun ResultPanel(
             Text("Looking up ${barcodeOf(lookup)}…", maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         is BarcodeLookupState.NotFound -> ResultCard(Icons.Outlined.SearchOff, "No product with barcode ${lookup.barcode}") {
-            Button(onClick = { onAdd(lookup.barcode) }, modifier = Modifier.weight(1f)) { Text("Add product", maxLines = 1) }
-            OutlinedButton(onClick = onScanAgain, modifier = Modifier.weight(1f)) { Text("Scan again", maxLines = 1) }
+            ShadeOutlinedButton("Scan again", onScanAgain, Modifier.weight(1f))
+            ShadeButton("Add product", { onAdd(lookup.barcode) }, Modifier.weight(1f))
         }
         is BarcodeLookupState.Failed -> ResultCard(Icons.Outlined.SearchOff, lookup.message, isError = true) {
-            Button(onClick = onRetry, modifier = Modifier.weight(1f)) { Text("Retry") }
-            OutlinedButton(onClick = onScanAgain, modifier = Modifier.weight(1f)) { Text("Scan again", maxLines = 1) }
+            ShadeOutlinedButton("Scan again", onScanAgain, Modifier.weight(1f))
+            ShadeButton("Retry", onRetry, Modifier.weight(1f))
         }
     }
 }
@@ -289,8 +293,8 @@ private fun PermissionPrompt(status: PermissionStatus, onRequest: () -> Unit, on
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium
         )
-        if (status == PermissionStatus.PermanentlyDenied) Button(onClick = onSettings) { Text("Open settings") }
-        else Button(onClick = onRequest) { Text("Allow camera") }
+        if (status == PermissionStatus.PermanentlyDenied) com.saurabh.mediadminapp.ui.components.ShadeButton("Open settings", onSettings)
+        else com.saurabh.mediadminapp.ui.components.ShadeButton("Allow camera", onRequest)
     }
 }
 

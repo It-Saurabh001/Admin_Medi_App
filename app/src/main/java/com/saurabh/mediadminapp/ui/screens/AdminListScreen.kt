@@ -1,5 +1,8 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import com.saurabh.mediadminapp.ui.components.shadeRow
+import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -67,7 +70,16 @@ fun AdminListScreen(viewModel: MyViewModel, navController: NavController) {
     val pending = remember(all) { all.orEmpty().filter { it.isApproved == false && it.role != "deleted" } }
     val active = remember(all) { all.orEmpty().filter { it.isApproved != false && it.role != "deleted" } }
 
-    AppScreenScaffold(title = "Admins", onBack = { navController.navigateUp() }) { inner ->
+    val openAdmin: (String) -> Unit = { id -> navController.navigate(Routes.AdminFormRoutes.invoke(id)) { launchSingleTop = true } }
+    AppScreenScaffold(
+        title = "Admins",
+        onBack = { navController.navigateUp() },
+        floatingActionButton = {
+            com.saurabh.mediadminapp.ui.components.GsFab(
+                text = "Add admin", icon = Icons.Outlined.PersonAdd, onClick = { openAdmin(NEW_ADMIN_ID) },
+            )
+        },
+    ) { inner ->
         PagedLazyColumn(
             isRefreshing = state.isLoading && all != null,
             onRefresh = { viewModel.getAllAdmin(force = true) },
@@ -86,16 +98,13 @@ fun AdminListScreen(viewModel: MyViewModel, navController: NavController) {
                     if (pending.isNotEmpty()) {
                         item(key = "hPending", contentType = "header") { SectionHeader("Waiting for approval (${pending.size})") }
                         items(pending, key = { "p_${it.adminId}" }, contentType = { "pending" }) { a ->
-                            AdminRow(a, isMe = false, busy = a.adminId in busyIds) {
+                            AdminRow(a, isMe = false, busy = a.adminId in busyIds, onOpen = { openAdmin(a.adminId) }) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    OutlinedButton(onClick = { confirmDelete = a.adminId }, enabled = a.adminId !in busyIds) {
-                                        Icon(Icons.Outlined.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Text("Reject", modifier = Modifier.padding(start = 4.dp), maxLines = 1)
-                                    }
-                                    Button(onClick = { viewModel.approveAdmin(a.adminId) }, enabled = a.adminId !in busyIds) {
-                                        Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                                        Text("Approve", modifier = Modifier.padding(start = 4.dp), maxLines = 1)
-                                    }
+                                    com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton("Reject", { confirmDelete = a.adminId }, enabled = a.adminId !in busyIds, icon = Icons.Outlined.Close, contentColor = com.saurabh.mediadminapp.ui.theme.GS.Red600)
+                                    com.saurabh.mediadminapp.ui.components.ShadeButton(
+                                        text = "Approve", onClick = { viewModel.approveAdmin(a.adminId) },
+                                        enabled = a.adminId !in busyIds, icon = Icons.Outlined.Check,
+                                    )
                                 }
                             }
                         }
@@ -106,12 +115,10 @@ fun AdminListScreen(viewModel: MyViewModel, navController: NavController) {
                     }
                     items(active, key = { "a_${it.adminId}" }, contentType = { "admin" }) { a ->
                         val isMe = a.adminId == myId
-                        AdminRow(a, isMe = isMe, busy = a.adminId in busyIds) {
+                        AdminRow(a, isMe = isMe, busy = a.adminId in busyIds, onOpen = { openAdmin(a.adminId) }) {
                             // Owner and your own account cannot be removed here.
                             if (a.isOwner != true && !isMe) {
-                                IconButton(onClick = { confirmDelete = a.adminId }, enabled = a.adminId !in busyIds) {
-                                    Icon(Icons.Outlined.DeleteOutline, contentDescription = "Remove ${a.name}", tint = MaterialTheme.colorScheme.error)
-                                }
+                                com.saurabh.mediadminapp.ui.components.LinkButton("Remove", { confirmDelete = a.adminId }, enabled = a.adminId !in busyIds, shade = com.saurabh.mediadminapp.ui.theme.Shades.RedText)
                             }
                         }
                     }
@@ -135,20 +142,21 @@ fun AdminListScreen(viewModel: MyViewModel, navController: NavController) {
 }
 
 @Composable
-private fun AdminRow(a: Admin, isMe: Boolean, busy: Boolean, actions: @Composable () -> Unit) {
-    OutlinedCard(Modifier.fillMaxWidth()) {
+private fun AdminRow(a: Admin, isMe: Boolean, busy: Boolean, onOpen: () -> Unit, actions: @Composable () -> Unit) {
+    // Tappable list row (U13): White -> Green 50 / 100, Outline border, no scale, no ripple.
+    Box(Modifier.fillMaxWidth().shadeRow(onOpen)) {
         Column(Modifier.padding(bottom = 8.dp)) {
             ListItem(
-                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-                leadingContent = { Avatar(a.imageUrl) },
+                colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                leadingContent = { com.saurabh.mediadminapp.ui.components.PersonAvatar(a.imageUrl, a.name, size = 44.dp) },
                 headlineContent = { Text(a.name + if (isMe) " (you)" else "", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 supportingContent = {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(a.email, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            if (a.isOwner == true) Badge("Owner", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-                            if (a.isApproved == false) Badge("Pending", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
-                            if (a.role == "disabled") Badge("Disabled", MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer)
+                            if (a.isOwner == true) com.saurabh.mediadminapp.ui.components.ToneChip("Owner", com.saurabh.mediadminapp.ui.components.Tone.Info)
+                            if (a.isApproved == false) com.saurabh.mediadminapp.ui.components.ToneChip("Pending", com.saurabh.mediadminapp.ui.components.Tone.Warning)
+                            if (a.role == "disabled") com.saurabh.mediadminapp.ui.components.ToneChip("Disabled", com.saurabh.mediadminapp.ui.components.Tone.Danger)
                         }
                     }
                 },
@@ -163,31 +171,4 @@ private fun AdminRow(a: Admin, isMe: Boolean, busy: Boolean, actions: @Composabl
             }
         }
     }
-}
-
-@Composable
-private fun Badge(text: String, bg: androidx.compose.ui.graphics.Color, fg: androidx.compose.ui.graphics.Color) {
-    Text(
-        text,
-        style = MaterialTheme.typography.labelSmall,
-        color = fg,
-        maxLines = 1,
-        modifier = Modifier.clip(MaterialTheme.shapes.small).background(bg).padding(horizontal = 8.dp, vertical = 4.dp)
-    )
-}
-
-@Composable
-private fun Avatar(url: String?) {
-    val placeholder = @Composable {
-        Box(
-            Modifier.size(44.dp).clip(MaterialTheme.shapes.extraLarge).background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Outlined.Person, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-    }
-    if (url.isNullOrBlank()) { placeholder(); return }
-    SubcomposeAsyncImage(
-        model = url, contentDescription = null, contentScale = ContentScale.Crop,
-        modifier = Modifier.size(44.dp).clip(MaterialTheme.shapes.extraLarge),
-        loading = { placeholder() }, error = { placeholder() }
-    )
 }

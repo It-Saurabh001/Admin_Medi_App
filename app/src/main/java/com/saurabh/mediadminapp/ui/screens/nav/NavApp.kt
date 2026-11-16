@@ -1,5 +1,11 @@
 package com.saurabh.mediadminapp.ui.screens.nav
 
+import com.saurabh.mediadminapp.ui.components.shadeColor
+import com.saurabh.mediadminapp.ui.theme.isLight
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.background
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -50,6 +56,10 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.AdminPanelSettings
+import androidx.compose.material.icons.outlined.Groups
+import androidx.compose.material.icons.outlined.LocalShipping
+import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material.icons.outlined.NotificationImportant
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.MoreHoriz
@@ -113,10 +123,9 @@ import com.saurabh.mediadminapp.ui.screens.ForgotPasswordScreen
 import com.saurabh.mediadminapp.ui.screens.ResetPasswordScreen
 import com.saurabh.mediadminapp.ui.screens.UpgradeRequiredScreen
 import com.saurabh.mediadminapp.ui.screens.AddProductScreen
-import com.saurabh.mediadminapp.ui.screens.HistoryScreen
-import com.saurabh.mediadminapp.ui.screens.OrderDetailsScreen
 import com.saurabh.mediadminapp.ui.screens.OtpScreen
-import com.saurabh.mediadminapp.ui.screens.EmailVerifyScreen
+import androidx.compose.animation.core.FastOutSlowInEasing
+import com.saurabh.mediadminapp.ui.screens.OtpFlow
 import com.saurabh.mediadminapp.ui.screens.ProductScreen
 import com.saurabh.mediadminapp.ui.screens.ProfileScreen
 import com.saurabh.mediadminapp.ui.screens.SettingsScreen
@@ -337,10 +346,23 @@ fun NavApp(viewModel: MyViewModel) {
             navController = navController,
             startDestination = initialDestination,
             modifier = Modifier.weight(1f).fillMaxHeight(),
-            enterTransition = { fadeIn(tween(250)) + slideInHorizontally(tween(250)) { it / 12 } },
-            exitTransition = { fadeOut(tween(200)) },
-            popEnterTransition = { fadeIn(tween(250)) },
-            popExitTransition = { fadeOut(tween(200)) + slideOutHorizontally(tween(250)) { it / 12 } }
+            // Part 3 §2: forward = right->left, back = left->right, bottom-nav tabs = crossfade only.
+            enterTransition = {
+                if (isTabSwitch(initialState.destination.route, targetState.destination.route)) fadeIn(tween(200))
+                else slideInHorizontally(tween(300, easing = FastOutSlowInEasing)) { it } + fadeIn(tween(300))
+            },
+            exitTransition = {
+                if (isTabSwitch(initialState.destination.route, targetState.destination.route)) fadeOut(tween(200))
+                else slideOutHorizontally(tween(300, easing = FastOutSlowInEasing)) { -it / 4 } + fadeOut(tween(300), targetAlpha = 0.85f)
+            },
+            popEnterTransition = {
+                if (isTabSwitch(initialState.destination.route, targetState.destination.route)) fadeIn(tween(200))
+                else slideInHorizontally(tween(280, easing = FastOutSlowInEasing)) { -it / 4 } + fadeIn(tween(280))
+            },
+            popExitTransition = {
+                if (isTabSwitch(initialState.destination.route, targetState.destination.route)) fadeOut(tween(200))
+                else slideOutHorizontally(tween(280, easing = FastOutSlowInEasing)) { it } + fadeOut(tween(280))
+            }
         ) {
             composable(Routes.SplashRoutes.route) {
                 SplashScreen(navController, viewModel)
@@ -366,10 +388,10 @@ fun NavApp(viewModel: MyViewModel) {
             }
             composable<Routes.VerifyOtpRoutes> { backStackEntry ->
                 val verifyOtpRoutes: Routes.VerifyOtpRoutes = backStackEntry.toRoute()
-                OtpScreen(verifyOtpRoutes.userId ?: "", viewModel, navController)
+                OtpScreen(OtpFlow.SignIn(verifyOtpRoutes.userId ?: ""), viewModel, navController)
             }
             composable<Routes.VerifyEmailRoutes> { backStackEntry ->
-                EmailVerifyScreen(backStackEntry.toRoute<Routes.VerifyEmailRoutes>().email, viewModel, navController)
+                OtpScreen(OtpFlow.EmailVerify(backStackEntry.toRoute<Routes.VerifyEmailRoutes>().email), viewModel, navController)
             }
 
             composable(Routes.HomeRoutes.route) {
@@ -442,6 +464,56 @@ fun NavApp(viewModel: MyViewModel) {
             composable(Routes.TopProductsRoutes.route) { TopProductsScreen(viewModel, navController) }
             composable(Routes.BarcodeScannerRoutes.route) { BarcodeScannerScreen(viewModel, navController) }
             composable(Routes.AdminListRoutes.route) { AdminListScreen(viewModel, navController) }
+            // Part 11 screens.
+            composable(
+                Routes.InventoryAlertsRoutes.route,
+                arguments = listOf(navArgument("tab") { type = NavType.StringType; defaultValue = "LOW_STOCK" })
+            ) { b ->
+                com.saurabh.mediadminapp.ui.screens.InventoryAlertsScreen(b.arguments?.getString("tab"), viewModel, navController)
+            }
+            composable(
+                Routes.StockMovementsRoutes.route,
+                arguments = listOf(
+                    navArgument("productId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("batchId") { type = NavType.StringType; nullable = true; defaultValue = null },
+                )
+            ) { b ->
+                com.saurabh.mediadminapp.ui.screens.StockMovementsScreen(
+                    b.arguments?.getString("productId"), b.arguments?.getString("batchId"), viewModel, navController
+                )
+            }
+            composable(Routes.SuppliersRoutes.route) { com.saurabh.mediadminapp.ui.screens.SupplierListScreen(viewModel, navController) }
+            composable(
+                Routes.SupplierFormRoutes.route,
+                arguments = listOf(navArgument("supplierId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("supplierId") ?: return@composable
+                com.saurabh.mediadminapp.ui.screens.SupplierFormScreen(id, viewModel, navController)
+            }
+            composable(Routes.AuditLogRoutes.route) { com.saurabh.mediadminapp.ui.screens.AuditLogScreen(viewModel, navController) }
+            // Part 10 screens (forward = right->left, back = left->right via the NavHost transitions).
+            composable(Routes.UsersRoutes.route) { com.saurabh.mediadminapp.ui.screens.UserListScreen(viewModel, navController) }
+            composable(
+                Routes.InvoiceRoutes.route,
+                arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("orderId") ?: return@composable
+                com.saurabh.mediadminapp.ui.screens.InvoiceScreen(id, viewModel, navController)
+            }
+            composable(
+                Routes.PrescriptionRoutes.route,
+                arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("orderId") ?: return@composable
+                com.saurabh.mediadminapp.ui.screens.PrescriptionViewerScreen(id, viewModel, navController)
+            }
+            composable(
+                Routes.AdminFormRoutes.route,
+                arguments = listOf(navArgument("adminId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("adminId") ?: return@composable
+                com.saurabh.mediadminapp.ui.screens.AdminFormScreen(id, viewModel, navController)
+            }
             composable(
                 Routes.BatchListRoutes.route,
                 arguments = listOf(navArgument("productId") { type = NavType.StringType })
@@ -517,44 +589,96 @@ private val topLevelTabs = listOf(
 // =============================================================================
 // M3 NavigationBar (labels always shown, outlined/filled icon pair)
 // =============================================================================
+private val TAB_ROUTE_KEYS = listOf("HomeRoutes", "productRoutes", "OrdersRoutes", "HistoryRoutes")
+
+/** True when both routes are bottom-nav tabs (crossfade, no slide). */
+private fun isTabSwitch(from: String?, to: String?): Boolean =
+    from != null && to != null && TAB_ROUTE_KEYS.any { from.contains(it, ignoreCase = true) } &&
+        TAB_ROUTE_KEYS.any { to.contains(it, ignoreCase = true) }
+
 @Composable
 private fun AppNavigationBar(
     selected: Int,
     onItemSelected: (Int) -> Unit
 ) {
-    NavigationBar(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
-        contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-        topLevelTabs.forEachIndexed { index, tab ->
-            val isSelected = selected == index
-            NavigationBarItem(
-                selected = isSelected,
-                onClick = { onItemSelected(index) },
-                icon = {
-                    Icon(
-                        imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
-                        contentDescription = null
-                    )
-                },
-                label = {
-                    Text(
-                        text = tab.label,
-                        style = MaterialTheme.typography.labelMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                alwaysShowLabel = true
-            )
+    // Guide §9: White bottom bar; Outline divider on top.
+    Column {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+        NavigationBar(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            tonalElevation = 0.dp,
+        ) {
+            topLevelTabs.forEachIndexed { index, tab ->
+                GsNavBarItem(
+                    selected = selected == index,
+                    onClick = { onItemSelected(index) },
+                    selectedIcon = tab.selectedIcon,
+                    unselectedIcon = tab.unselectedIcon,
+                    label = tab.label,
+                )
+            }
         }
+    }
+}
+
+/**
+ * Bottom-nav item with GreenShield touch shades (no ripple):
+ * selected Green 100 -> 200 (press) -> 300 (hold); unselected transparent -> Green 50 -> Green 100.
+ * Filled icon when selected, Outlined otherwise; label always shown (U9).
+ */
+@Composable
+private fun androidx.compose.foundation.layout.RowScope.GsNavBarItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    selectedIcon: ImageVector,
+    unselectedIcon: ImageVector,
+    label: String,
+) {
+    val source = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val cs = MaterialTheme.colorScheme
+    val light = MaterialTheme.isLight
+    val shade = when {
+        selected && light -> com.saurabh.mediadminapp.ui.theme.Shades.GreenChipSelected
+        selected -> com.saurabh.mediadminapp.ui.theme.Shade(cs.secondaryContainer, cs.secondaryContainer, cs.secondaryContainer)
+        light -> com.saurabh.mediadminapp.ui.theme.Shade(androidx.compose.ui.graphics.Color.Transparent, com.saurabh.mediadminapp.ui.theme.GS.Green50, com.saurabh.mediadminapp.ui.theme.GS.Green100)
+        else -> com.saurabh.mediadminapp.ui.theme.Shade(androidx.compose.ui.graphics.Color.Transparent, cs.surfaceContainer, cs.surfaceContainerHigh)
+    }
+    val bg by source.shadeColor(shade, "navItem")
+    val fg = if (selected) cs.onSecondaryContainer else cs.onSurfaceVariant
+    Column(
+        Modifier
+            .weight(1f)
+            .fillMaxHeight()
+            .clickable(
+                interactionSource = source, indication = null,
+                role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick,
+            )
+            .semantics { this.selected = selected },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            Modifier.size(width = 64.dp, height = 32.dp).clip(MaterialTheme.shapes.extraLarge).background(bg),
+            contentAlignment = Alignment.Center,
+        ) {
+            androidx.compose.animation.Crossfade(selected, animationSpec = androidx.compose.animation.core.tween(110), label = "navIcon") { sel ->
+                Icon(if (sel) selectedIcon else unselectedIcon, contentDescription = null, tint = fg)
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            label, style = MaterialTheme.typography.labelMedium, color = fg,
+            fontWeight = if (selected) androidx.compose.ui.text.font.FontWeight.SemiBold else null,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
 @Composable
 private fun AppNavigationRail(selected: Int, onItemSelected: (Int) -> Unit) {
     NavigationRail(
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier.fillMaxHeight()
     ) {
@@ -589,32 +713,33 @@ private fun AppDrawerSheet(
         DrawerEntry("Reports", Icons.Outlined.Insights, Routes.ReportsRoutes.route),
         DrawerEntry("Top products", Icons.AutoMirrored.Outlined.TrendingUp, Routes.TopProductsRoutes.route),
         DrawerEntry("Scan barcode", Icons.Outlined.QrCodeScanner, Routes.BarcodeScannerRoutes.route),
+        DrawerEntry("Inventory alerts", Icons.Outlined.NotificationImportant, Routes.InventoryAlertsRoutes.invoke()),
+        DrawerEntry("Stock movements", Icons.Outlined.SwapVert, Routes.StockMovementsRoutes.invoke()),
+        DrawerEntry("Suppliers", Icons.Outlined.LocalShipping, Routes.SuppliersRoutes.route),
+        DrawerEntry("Customers", Icons.Outlined.Groups, Routes.UsersRoutes.route),
         DrawerEntry("Admins", Icons.Outlined.AdminPanelSettings, Routes.AdminListRoutes.route),
+        DrawerEntry("Audit log", Icons.Outlined.History, Routes.AuditLogRoutes.route),
     )
     val account = listOf(
         DrawerEntry("Profile", Icons.Outlined.Person, Routes.ProfileRoutes.route),
         DrawerEntry("Settings", Icons.Outlined.Settings, Routes.SettingsRoutes.route),
         DrawerEntry("About", Icons.Outlined.Info, Routes.AboutRoutes.route),
     )
-    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(56.dp)) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text((admin?.name?.firstOrNull() ?: 'A').uppercase(), style = MaterialTheme.typography.titleLarge)
-                    }
-                }
+                com.saurabh.mediadminapp.ui.components.PersonAvatar(url = admin?.imageUrl, name = admin?.name ?: "Admin", size = 56.dp)
                 Spacer(Modifier.height(8.dp))
                 Text(admin?.name ?: "Admin", style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 admin?.email?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
             }
-            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp), color = MaterialTheme.colorScheme.outline)
             Text("Manage", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp, top = 16.dp, bottom = 4.dp))
             manage.forEach { e -> DrawerRow(e, currentRoute == e.route) { onNavigate(e.route) } }
-            HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outline)
             Text("Account", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp, top = 8.dp, bottom = 4.dp))
             account.forEach { e -> DrawerRow(e, currentRoute == e.route) { onNavigate(e.route) } }
-            HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outline)
             NavigationDrawerItem(
                 label = { Text("Log out", color = MaterialTheme.colorScheme.error) },
                 icon = { Icon(Icons.AutoMirrored.Outlined.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.error) },

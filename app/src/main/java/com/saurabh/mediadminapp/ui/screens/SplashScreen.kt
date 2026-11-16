@@ -95,12 +95,12 @@ fun SplashScreen(navController: NavController, viewModel: MyViewModel) {
                     modifier = Modifier.widthIn(max = 360.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(onClick = { viewModel.getAppConfig() }) { Text("Retry") }
+                com.saurabh.mediadminapp.ui.components.ShadeButton("Retry", { viewModel.getAppConfig() })
             } else {
                 LinearProgressIndicator(
                     modifier = Modifier.width(120.dp),
                     color = MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceContainerHighest
+                    trackColor = if (com.saurabh.mediadminapp.ui.theme.GS.White == MaterialTheme.colorScheme.surface) com.saurabh.mediadminapp.ui.theme.GS.Green200 else MaterialTheme.colorScheme.surfaceVariant
                 )
             }
         }

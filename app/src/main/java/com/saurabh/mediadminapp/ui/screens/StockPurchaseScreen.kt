@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -78,16 +79,16 @@ fun StockPurchaseScreen(productId: String, viewModel: MyViewModel, navController
                 StockEntryFields(draft, enabled = !state.isLoading, lastImeDone = false)
                 SectionHeader("Supplier (optional)")
                 Column(Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
+                    GsTextField(
                         value = supplier, onValueChange = { supplier = it }, enabled = !state.isLoading,
                         label = { Text("Supplier name") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                     )
-                    OutlinedTextField(
+                    GsTextField(
                         value = invoice, onValueChange = { invoice = it }, enabled = !state.isLoading,
                         label = { Text("Invoice number") }, singleLine = true,
                         modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                        keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Ascii, capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Characters, autoCorrectEnabled = false, imeAction = ImeAction.Done)
                     )
                 }
                 formError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }

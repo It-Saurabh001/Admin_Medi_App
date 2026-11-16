@@ -88,9 +88,7 @@ fun ErrorState(
             color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
-        FilledTonalButton(onClick = onRetry) {
-            Text("Retry", style = MaterialTheme.typography.labelLarge)
-        }
+        ShadeOutlinedButton(text = "Retry", onClick = onRetry)
     }
 }
 
@@ -125,23 +123,17 @@ fun ConfirmDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
         title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
         text = { Text(message, style = MaterialTheme.typography.bodyMedium) },
+        // U11: destructive confirm in Red 600 (press 700 / hold 800); dismiss is a neutral Ink text button.
         confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                colors = if (destructive) {
-                    ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                } else {
-                    ButtonDefaults.textButtonColors()
-                },
-            ) { Text(confirmText, style = MaterialTheme.typography.labelLarge) }
+            LinkButton(
+                text = confirmText, onClick = onConfirm,
+                shade = if (destructive) com.saurabh.mediadminapp.ui.theme.Shades.RedText else com.saurabh.mediadminapp.ui.theme.Shades.GreenText,
+            )
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(dismissText, style = MaterialTheme.typography.labelLarge)
-            }
-        },
+        dismissButton = { NeutralTextButton(dismissText, onDismiss) },
     )
 }
 

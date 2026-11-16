@@ -1,314 +1,214 @@
 package com.saurabh.mediadminapp.ui.screens
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Logout
-import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import com.saurabh.mediadminapp.ui.components.ShadeButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
-import com.saurabh.mediadminapp.ui.screens.components.ClayCard
-import com.saurabh.mediadminapp.ui.screens.components.ClayDangerButton
-import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
-import com.saurabh.mediadminapp.ui.screens.components.ClayStatusBadge
-import com.saurabh.mediadminapp.ui.theme.ClayBadgeApproved
-import com.saurabh.mediadminapp.ui.theme.ClayFieldBg
-import com.saurabh.mediadminapp.ui.theme.ClayPrimary
-import com.saurabh.mediadminapp.ui.theme.ClaySecondary
-import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
-import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
+import com.saurabh.mediadminapp.ui.adaptive.AdaptiveContent
+import com.saurabh.mediadminapp.ui.adaptive.AdaptiveWidths
+import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
+import com.saurabh.mediadminapp.ui.components.ConfirmDialog
+import com.saurabh.mediadminapp.ui.components.DetailCard
+import com.saurabh.mediadminapp.ui.components.EmptyState
+import com.saurabh.mediadminapp.ui.components.ErrorState
+import com.saurabh.mediadminapp.ui.components.InfoTile
+import com.saurabh.mediadminapp.ui.components.LoadingState
+import com.saurabh.mediadminapp.ui.components.PersonAvatar
+import com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton
+import com.saurabh.mediadminapp.ui.components.Tone
+import com.saurabh.mediadminapp.ui.components.ToneChip
+import com.saurabh.mediadminapp.ui.components.dateTimeLabel
+import com.saurabh.mediadminapp.ui.theme.GS
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
-    LaunchedEffect(Unit) {
-        viewModel.getAllAdmin()
-    }
+    LaunchedEffect(Unit) { viewModel.getAllAdmin() }
 
     val adminState by viewModel.getAllAdminState.collectAsState()
     val loggedInAdminId by viewModel.loggedInAdminId.collectAsState()
     val admin = adminState.success?.items?.find { it.adminId == loggedInAdminId }
-    val initial = admin?.name?.firstOrNull()?.toString()?.uppercase() ?: "A"
+    var confirmLogout by rememberSaveable { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf(false) }
 
-    Scaffold(containerColor = Color.Transparent) { innerPadding ->
-        ClayGradientBackdrop {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp)
-            ) {
-                // ── 1. TOP APP BAR ───────────────────────────────────────
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Back",
-                                tint = Color.White
-                            )
-                        }
-                        Text(
-                            text = "Admin Identity",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 4.dp)
-                        )
-                    }
-                }
-
-                // ── 2. HERO AVATAR & CLEARANCE HUB ───────────────────────
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        // Hardware Canvas Blurred Shadow Avatar
-                        ClayNetworkImage(
-                            initial = initial,
-                            imageUrl = admin?.imageUrl,
-                            avatarSize = 116.dp
-                        )
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Text(
-                            text = admin?.name ?: "Administrator",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        // Role Clearance Badge
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(50.dp))
-                                .background(Color.White.copy(alpha = 0.22f))
-                                .border(1.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(50.dp))
-                                .padding(horizontal = 14.dp, vertical = 5.dp)
+    AppScreenScaffold(
+        title = "My profile",
+        onBack = { navController.popBackStack() },
+        actions = {
+            if (admin != null) com.saurabh.mediadminapp.ui.components.TileIconButton(Icons.Outlined.Edit, "Edit profile", { editing = true })
+        },
+    ) { padding ->
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            when {
+                adminState.isLoading && adminState.success == null -> LoadingState()
+                adminState.error != null && adminState.success == null -> ErrorState(
+                    message = adminState.error ?: "Could not load profile",
+                    onRetry = { viewModel.getAllAdmin(force = true) },
+                )
+                admin == null -> EmptyState(
+                    title = "Profile unavailable",
+                    message = "Your admin record was not found.",
+                    action = { ShadeOutlinedButton("Log out", { confirmLogout = true }, contentColor = GS.Red600) },
+                )
+                else -> PullToRefreshBox(
+                    isRefreshing = adminState.isLoading,
+                    onRefresh = { viewModel.getAllAdmin(force = true) },
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    AdaptiveContent(maxWidth = AdaptiveWidths.Form) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.AdminPanelSettings,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = admin?.role?.uppercase() ?: "ROOT OPERATOR",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Color.White,
-                                    letterSpacing = 1.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ── 3. DIAGNOSTIC RADAR BENTO CELL ───────────────────────
-                item {
-                    ClayCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 24.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(ClayBadgeApproved.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center
+                            item(key = "identity") {
+                                Column(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.VerifiedUser,
-                                        contentDescription = null,
-                                        tint = ClayBadgeApproved,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
+                                    PersonAvatar(url = admin.imageUrl, name = admin.name, size = 96.dp)
                                     Text(
-                                        text = "Terminal Authorization",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = ClayTextPrimary
+                                        admin.name, style = MaterialTheme.typography.titleLarge,
+                                        color = MaterialTheme.colorScheme.onBackground,
+                                        textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                     )
-                                    Text(
-                                        text = "Active session validated & encrypted",
-                                        fontSize = 12.sp,
-                                        color = ClayTextSecondary
-                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        ToneChip(if (admin.isOwner == true) "Owner" else admin.role.replaceFirstChar { it.uppercase() }, Tone.Info)
+                                        ToneChip(if (admin.isActive) "Active" else "Disabled", if (admin.isActive) Tone.Success else Tone.Danger)
+                                    }
                                 }
                             }
-
-                            ClayStatusBadge(
-                                text = "ONLINE",
-                                color = ClayBadgeApproved
-                            )
+                            item(key = "details") {
+                                DetailCard(title = "Account details", icon = Icons.Outlined.Person) {
+                                    InfoTile("Email", admin.email.ifBlank { "Not provided" }, icon = Icons.Outlined.Email)
+                                    InfoTile("Phone", admin.phoneNumber.orEmpty().ifBlank { "Not provided" }, icon = Icons.Outlined.Phone)
+                                    InfoTile("Admin ID", admin.adminId, icon = Icons.Outlined.Fingerprint)
+                                    InfoTile("Member since", admin.createdAt.dateTimeLabel(), icon = Icons.Outlined.CalendarMonth)
+                                }
+                            }
+                            item(key = "edit") {
+                                ShadeButton("Edit profile", { editing = true }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Edit)
+                            }
+                            item(key = "logout") {
+                                ShadeOutlinedButton(
+                                    text = "Log out", onClick = { confirmLogout = true },
+                                    icon = Icons.AutoMirrored.Outlined.Logout, contentColor = GS.Red600,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                         }
                     }
-                }
-
-                // ── 4. CREDENTIALS & METADATA BENTO DECK ──────────────────
-                item {
-                    ClayCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 28.dp
-                    ) {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Text(
-                                text = "System Dossier & Credentials",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = ClayTextPrimary
-                            )
-
-                            ProfileSpecItem(
-                                icon = Icons.Default.Email,
-                                label = "Verified Email",
-                                value = admin?.email ?: "admin@medisupply.com"
-                            )
-                            ProfileSpecItem(
-                                icon = Icons.Default.Phone,
-                                label = "Direct Telephone",
-                                value = admin?.phoneNumber ?: "Active Line"
-                            )
-                            ProfileSpecItem(
-                                icon = Icons.Default.Fingerprint,
-                                label = "Admin Master ID",
-                                value = admin?.adminId ?: (loggedInAdminId ?: "ADM-001")
-                            )
-                            ProfileSpecItem(
-                                icon = Icons.Default.CalendarMonth,
-                                label = "Commission Date",
-                                value = admin?.createdAt?.toString() ?: "System Inception"
-                            )
-                        }
-                    }
-                }
-
-                // ── 5. LOGOUT DANGER ACTION ──────────────────────────────
-                item {
-                    ClayDangerButton(
-                        text = "Terminate Session & Logout",
-                        icon = Icons.AutoMirrored.Filled.Logout,
-                        onClick = { viewModel.setAdminLoggedOut() },
-                        modifier = Modifier.fillMaxWidth()
-                    )
                 }
             }
         }
     }
+
+    if (editing && admin != null) {
+        EditAdminDialog(
+            name0 = admin.name, email0 = admin.email, phone0 = admin.phoneNumber.orEmpty(),
+            onSave = { n, e, p ->
+                editing = false
+                viewModel.updateAdmin(
+                    adminId = admin.adminId,
+                    name = n.takeIf { it != admin.name },
+                    email = e.takeIf { it != admin.email },
+                    phoneNumber = p.takeIf { it != admin.phoneNumber.orEmpty() },
+                )
+            },
+            onDismiss = { editing = false },
+        )
+    }
+
+    if (confirmLogout) {
+        ConfirmDialog(
+            title = "Log out?",
+            message = "You will need to sign in again to manage orders and stock.",
+            confirmText = "Log out",
+            onConfirm = { confirmLogout = false; viewModel.setAdminLoggedOut() },
+            onDismiss = { confirmLogout = false },
+        )
+    }
 }
 
+/** Own admin record: name / email / phone (updateAdmin sends only changed fields). */
 @Composable
-private fun ProfileSpecItem(
-    icon: ImageVector,
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(ClayFieldBg)
-            .border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(Color.White),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = ClayPrimary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = label,
-                fontSize = 11.sp,
-                color = ClayTextSecondary,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = value,
-                fontSize = 14.sp,
-                color = ClayTextPrimary,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
+private fun EditAdminDialog(name0: String, email0: String, phone0: String, onSave: (String, String, String) -> Unit, onDismiss: () -> Unit) {
+    var name by rememberSaveable { mutableStateOf(name0) }
+    var email by rememberSaveable { mutableStateOf(email0) }
+    var phone by rememberSaveable { mutableStateOf(phone0) }
+    val nameError = if (name.isBlank()) "Name is required" else null
+    val emailError = if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) "Enter a valid email" else null
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text("Edit profile", style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GsTextField(
+                    value = name, onValueChange = { name = it }, label = { Text("Full name") }, singleLine = true,
+                    isError = nameError != null, supportingText = nameError?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                GsTextField(
+                    value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true,
+                    isError = emailError != null, supportingText = emailError?.let { { Text(it) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                GsTextField(
+                    value = phone, onValueChange = { phone = it }, label = { Text("Phone number") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone, imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            com.saurabh.mediadminapp.ui.components.LinkButton("Save", { onSave(name.trim(), email.trim(), phone.trim()) }, enabled = nameError == null && emailError == null)
+        },
+        dismissButton = { com.saurabh.mediadminapp.ui.components.NeutralTextButton("Cancel", onDismiss) },
+    )
 }

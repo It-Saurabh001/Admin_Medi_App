@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsFilterChip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +41,7 @@ import com.saurabh.mediadminapp.MyViewModel
 import com.saurabh.mediadminapp.data.v1.core.UiState
 import com.saurabh.mediadminapp.data.v1.dto.Batch
 import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
+import com.saurabh.mediadminapp.ui.components.shadeRow
 import com.saurabh.mediadminapp.ui.components.EmptyState
 import com.saurabh.mediadminapp.ui.components.ErrorState
 import com.saurabh.mediadminapp.ui.components.PagedLazyColumn
@@ -67,15 +69,14 @@ fun BatchListScreen(productId: String, viewModel: MyViewModel, navController: Na
         title = title,
         onBack = { navController.navigateUp() },
         actions = {
-            IconButton(onClick = { navController.navigate(Routes.StockAdjustRoutes.invoke(productId)) { launchSingleTop = true } }) {
-                Icon(Icons.Outlined.Tune, contentDescription = "Adjust stock")
-            }
+            com.saurabh.mediadminapp.ui.components.TileIconButton(
+                Icons.Outlined.Tune, "Adjust stock", { navController.navigate(Routes.StockAdjustRoutes.invoke(productId)) { launchSingleTop = true } }
+            )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(
+            com.saurabh.mediadminapp.ui.components.GsFab(
+                text = "Receive stock", icon = Icons.Outlined.Add,
                 onClick = { navController.navigate(Routes.StockPurchaseRoutes.invoke(productId)) { launchSingleTop = true } },
-                icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                text = { Text("Receive stock") }
             )
         }
     ) { inner ->
@@ -104,7 +105,7 @@ fun BatchListScreen(productId: String, viewModel: MyViewModel, navController: Na
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(listOf("Hide expired", "In stock only"), key = { it }) { f ->
                                 val on = if (f == "Hide expired") hideExpired else inStockOnly
-                                FilterChip(selected = on, onClick = { if (f == "Hide expired") hideExpired = !on else inStockOnly = !on }, label = { Text(f) })
+                                GsFilterChip(selected = on, onClick = { if (f == "Hide expired") hideExpired = !on else inStockOnly = !on }, label = { Text(f) })
                             }
                         }
                     }
@@ -122,13 +123,22 @@ fun BatchListScreen(productId: String, viewModel: MyViewModel, navController: Na
 @Composable
 internal fun BatchRow(b: Batch, onClick: () -> Unit) {
     val near = !b.isExpired && (b.daysToExpiry ?: Int.MAX_VALUE) in 0..90
-    val container = when {
-        b.isExpired -> MaterialTheme.colorScheme.errorContainer
-        near -> MaterialTheme.colorScheme.tertiaryContainer
-        else -> MaterialTheme.colorScheme.surfaceContainerLow
+    val shade = when {
+        b.isExpired -> com.saurabh.mediadminapp.ui.theme.Shades.RedCard
+        near -> com.saurabh.mediadminapp.ui.theme.Shades.AmberCard
+        else -> com.saurabh.mediadminapp.ui.theme.Shades.GreenRow
     }
     ListItem(
-        headlineContent = { Text("Batch ${b.batchNo}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        // U14: batch id in a Teal (info) pill; expiry state in its warning / danger pill.
+        overlineContent = { com.saurabh.mediadminapp.ui.components.ToneChip("Batch ${b.batchNo}", com.saurabh.mediadminapp.ui.components.Tone.Info) },
+        headlineContent = {
+            when {
+                b.isExpired -> com.saurabh.mediadminapp.ui.components.ToneChip("Expired", com.saurabh.mediadminapp.ui.components.Tone.Danger)
+                near -> com.saurabh.mediadminapp.ui.components.ToneChip("Near expiry", com.saurabh.mediadminapp.ui.components.Tone.Warning)
+                b.quantity <= 0 -> com.saurabh.mediadminapp.ui.components.ToneChip("Empty", com.saurabh.mediadminapp.ui.components.Tone.Danger)
+                else -> com.saurabh.mediadminapp.ui.components.ToneChip("Available", com.saurabh.mediadminapp.ui.components.Tone.Success)
+            }
+        },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
@@ -153,9 +163,9 @@ internal fun BatchRow(b: Batch, onClick: () -> Unit) {
             }
         },
         colors = ListItemDefaults.colors(
-            containerColor = container,
-            headlineColor = if (b.isExpired) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
+            containerColor = androidx.compose.ui.graphics.Color.Transparent,
+            headlineColor = MaterialTheme.colorScheme.onSurface
         ),
-        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)
+        modifier = Modifier.fillMaxWidth().shadeRow(onClick, shade = shade)
     )
 }

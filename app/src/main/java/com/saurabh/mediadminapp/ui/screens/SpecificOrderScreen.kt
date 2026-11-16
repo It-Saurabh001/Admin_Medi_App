@@ -1,521 +1,449 @@
 package com.saurabh.mediadminapp.ui.screens
 
-import com.saurabh.mediadminapp.data.v1.core.OrderStatus
-
+import androidx.compose.foundation.layout.heightIn
+import com.saurabh.mediadminapp.ui.components.shadeRow
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.automirrored.outlined.AssignmentReturn
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import coil.compose.SubcomposeAsyncImage
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HourglassTop
-import androidx.compose.material.icons.filled.LocalShipping
-import androidx.compose.material.icons.filled.Medication
-import androidx.compose.material.icons.filled.Numbers
-import androidx.compose.material.icons.filled.QrCode
-import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Numbers
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.QrCode
+import androidx.compose.material.icons.outlined.Receipt
+import androidx.compose.material.icons.outlined.Sell
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.saurabh.mediadminapp.MyViewModel
+import com.saurabh.mediadminapp.data.v1.core.OrderStatus
 import com.saurabh.mediadminapp.data.v1.dto.Order
-import com.saurabh.mediadminapp.ui.screens.components.ClayCard
-import com.saurabh.mediadminapp.ui.screens.components.ClayErrorScreen
-import com.saurabh.mediadminapp.ui.screens.components.ClayGradientBackdrop
-import com.saurabh.mediadminapp.ui.screens.components.ClayLoadingScreen
-import com.saurabh.mediadminapp.ui.screens.components.ClayPrimaryButton
-import com.saurabh.mediadminapp.ui.screens.components.ClayStatusBadge
-import com.saurabh.mediadminapp.ui.theme.ClayBadgeApproved
-import com.saurabh.mediadminapp.ui.theme.ClayBadgePending
-import com.saurabh.mediadminapp.ui.theme.ClayBorder
-import com.saurabh.mediadminapp.ui.theme.ClayFieldBg
-import com.saurabh.mediadminapp.ui.theme.ClayOrderGradient
-import com.saurabh.mediadminapp.ui.theme.ClayPrimary
-import com.saurabh.mediadminapp.ui.theme.ClaySecondary
-import com.saurabh.mediadminapp.ui.theme.ClayTextPrimary
-import com.saurabh.mediadminapp.ui.theme.ClayTextSecondary
-import com.saurabh.mediadminapp.utils.utilityFunctions.DismissKeyboardOnTapScreen
+import com.saurabh.mediadminapp.ui.adaptive.AdaptiveContent
+import com.saurabh.mediadminapp.ui.adaptive.AdaptiveWidths
+import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
+import com.saurabh.mediadminapp.ui.components.ConfirmDialog
+import com.saurabh.mediadminapp.ui.components.DetailCard
+import com.saurabh.mediadminapp.ui.components.ErrorState
+import com.saurabh.mediadminapp.ui.components.InfoTile
+import com.saurabh.mediadminapp.ui.components.KeyValueRow
+import com.saurabh.mediadminapp.ui.components.LoadingState
+import com.saurabh.mediadminapp.ui.components.MedicineImage
+import com.saurabh.mediadminapp.ui.components.ShadeButton
+import com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton
+import com.saurabh.mediadminapp.ui.components.StatusChip
+import com.saurabh.mediadminapp.ui.components.Tone
+import com.saurabh.mediadminapp.ui.components.ToneChip
+import com.saurabh.mediadminapp.ui.components.dateTimeLabel
+import com.saurabh.mediadminapp.ui.theme.GS
+import com.saurabh.mediadminapp.ui.theme.Shades
 import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
-import java.text.NumberFormat
-import java.util.Locale
-
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.ui.draw.clipToBounds
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: NavController) {
-    BackHandler {
+    val goBack: () -> Unit = {
         viewModel.clearGetOrderByIdState()
         navController.popBackStack()
     }
+    BackHandler(onBack = goBack)
 
-    val response = viewModel.getOrderByIdState.collectAsState()
+    val state by viewModel.getOrderByIdState.collectAsState()
+    val approveState = viewModel.isApproveOrdder.collectAsState().value[orderId]
+    val sellState = viewModel.getRecordSellHistory.collectAsState().value[orderId]
+    val returnState = viewModel.returnOrderState.collectAsState().value[orderId]
+    val rxState = viewModel.verifyPrescriptionState.collectAsState().value[orderId]
+    val editState = viewModel.updateOrderState.collectAsState().value[orderId]
+    val cancelState by viewModel.deleteOrderState.collectAsState()
+    val order = state.success?.takeIf { it.orderId == orderId }
+    var dialog by rememberSaveable { mutableStateOf<String?>(null) } // reject | cancel | return | edit
 
-    LaunchedEffect(orderId) {
-        viewModel.getOrderById(orderId)
+    LaunchedEffect(orderId) { viewModel.getOrderById(orderId) }
+    // Order actions only patch the list row; reload this order so status / Rx state update here.
+    LaunchedEffect(approveState?.success, sellState?.success, returnState?.success, rxState?.success, editState?.success, cancelState.success) {
+        val any = listOf(approveState?.success, sellState?.success, returnState?.success, rxState?.success, editState?.success, cancelState.success)
+        if (any.any { it != null }) viewModel.getOrderById(orderId, force = true)
     }
+    val busy = listOf(approveState?.isLoading, sellState?.isLoading, returnState?.isLoading, editState?.isLoading).any { it == true } || cancelState.isLoading
 
-    val transparentTopBarColors = TopAppBarDefaults.topAppBarColors(
-        containerColor = Color.Transparent,
-        scrolledContainerColor = Color.Transparent,
-        titleContentColor = Color.White,
-        navigationIconContentColor = Color.White,
-        actionIconContentColor = Color.White
-    )
-
-    DismissKeyboardOnTapScreen {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Column(modifier = Modifier.background(brush = Brush.horizontalGradient(listOf(ClayPrimary, ClayPrimary))).statusBarsPadding() // Keeps status bar always colored ClayPrimary while TopAppBar collapses beneath it
-                    .clipToBounds()) {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                text = "Specific Order",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 16.dp).background(Color.Transparent)
-                            )
-                        },
-                        navigationIcon = {
-                            IconButton(onClick = { navController.popBackStack()
-                            viewModel.clearGetOrderByIdState()}) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "BackToEachOrderScreen"
-                                )
-                            }
-                        },
-                        colors = transparentTopBarColors
-                    )
-                }
-                androidx.compose.material3.pulltorefresh.PullToRefreshBox(
-                    isRefreshing = response.value.isLoading && response.value.success != null,
+    AppScreenScaffold(
+        title = "Order details",
+        onBack = goBack,
+        actions = {
+            if (order?.status == OrderStatus.PENDING) {
+                com.saurabh.mediadminapp.ui.components.TileIconButton(Icons.Outlined.Edit, "Edit patient and doctor", { dialog = "edit" })
+            }
+            // Invoice exists only for sold / returned orders.
+            if (order?.status == OrderStatus.SOLD || order?.status == OrderStatus.RETURNED) {
+                com.saurabh.mediadminapp.ui.components.TileIconButton(
+                    Icons.AutoMirrored.Outlined.ReceiptLong, "Invoice",
+                    { navController.navigate(Routes.InvoiceRoutes.invoke(order.orderId)) { launchSingleTop = true } },
+                )
+            }
+        },
+        bottomBar = {
+            if (order != null) {
+                OrderActionBar(
+                    status = order.status,
+                    busy = busy,
+                    onApprove = { viewModel.isApproveOrder(order.orderId, true) },
+                    onReject = { dialog = "reject" },
+                    onSell = { viewModel.recordSell(order.orderId) },
+                    onCancel = { dialog = "cancel" },
+                    onReturn = { dialog = "return" },
+                )
+            }
+        },
+    ) { padding ->
+        Box(Modifier.padding(padding).fillMaxSize()) {
+            when {
+                order == null && state.error != null -> ErrorState(
+                    message = state.error ?: "Could not load order",
+                    onRetry = { viewModel.getOrderById(orderId, force = true) },
+                )
+                order == null -> LoadingState()
+                else -> PullToRefreshBox(
+                    isRefreshing = state.isLoading,
                     onRefresh = { viewModel.getOrderById(orderId, force = true) },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxSize(),
                 ) {
-                    when {
-                        response.value.isLoading && response.value.success == null -> {
-                            ClayLoadingScreen(modifier = Modifier)
-                        }
-                        response.value.error != null && response.value.success == null -> {
-                            ClayErrorScreen(
-                                errorMessage = response.value.error.toString(),
-                                modifier = Modifier,
-                                onRetry = { viewModel.getOrderById(orderId) }
-                            )
-                        }
-                        response.value.success != null -> {
-                            val order = response.value.success
-                            if (order != null) {
-                                ClayGradientBackdrop(gradient = ClayOrderGradient) {
-                                    SpecificOrderReceiptView(
-                                        order = order,
-                                        navController = navController,
-                                        viewModel = viewModel,
-                                        modifier = Modifier
-                                    )
-                                }
-                            } else {
-                                ClayErrorScreen(
-                                    errorMessage = response.value.success?.message?.takeIf { it.isNotBlank() } ?: "Order not found",
-                                    modifier = Modifier,
-                                    onRetry = { viewModel.getOrderById(orderId) }
-                                )
-                            }
-                        }
+                    AdaptiveContent(maxWidth = AdaptiveWidths.Form) {
+                        OrderBody(
+                            order = order,
+                            verifying = rxState?.isLoading == true,
+                            onVerifyRx = { viewModel.verifyPrescription(order.orderId, true) },
+                            onOpenRx = { navController.navigate(Routes.PrescriptionRoutes.invoke(order.orderId)) { launchSingleTop = true } },
+                        )
                     }
                 }
             }
         }
     }
+
+    if (order != null) when (dialog) {
+        "reject" -> ReasonDialog(
+            title = "Reject order?",
+            message = "Order ${order.orderId} will be rejected.",
+            confirmText = "Reject",
+            onConfirm = { r -> dialog = null; viewModel.isApproveOrder(order.orderId, false, r) },
+            onDismiss = { dialog = null },
+        )
+        "cancel" -> ReasonDialog(
+            title = "Cancel order?",
+            message = "The order stays in the list with status Cancelled.",
+            confirmText = "Cancel order",
+            onConfirm = { r -> dialog = null; viewModel.deleteOrder(order.orderId, r) },
+            onDismiss = { dialog = null },
+        )
+        "return" -> ReasonDialog(
+            title = "Return order?",
+            message = "Sold stock is restocked where possible.",
+            confirmText = "Return",
+            onConfirm = { r -> dialog = null; viewModel.returnOrder(order.orderId, r) },
+            onDismiss = { dialog = null },
+        )
+        "edit" -> EditOrderDialog(
+            order = order,
+            onSave = { patient, doctor -> dialog = null; viewModel.updateOrder(order.orderId, patient, doctor) },
+            onDismiss = { dialog = null },
+        )
+    }
+}
+
+/** Destructive confirm (U11) with an optional reason field; confirm text in Red 600. */
+@Composable
+private fun ReasonDialog(title: String, message: String, confirmText: String, onConfirm: (String?) -> Unit, onDismiss: () -> Unit) {
+    var reason by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(message, style = MaterialTheme.typography.bodyMedium)
+                GsTextField(
+                    value = reason, onValueChange = { reason = it.take(200) },
+                    label = { Text("Reason (optional)") }, minLines = 2, maxLines = 4,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            com.saurabh.mediadminapp.ui.components.LinkButton(confirmText, { onConfirm(reason.trim().ifBlank { null }) }, shade = com.saurabh.mediadminapp.ui.theme.Shades.RedText)
+        },
+        dismissButton = { com.saurabh.mediadminapp.ui.components.NeutralTextButton("Keep", onDismiss) },
+    )
+}
+
+/** Pending orders: edit patient / doctor names (updateOrder). */
+@Composable
+private fun EditOrderDialog(order: Order, onSave: (String?, String?) -> Unit, onDismiss: () -> Unit) {
+    var patient by rememberSaveable { mutableStateOf(order.patientName) }
+    var doctor by rememberSaveable { mutableStateOf(order.doctorName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface,
+        title = { Text("Edit order", style = MaterialTheme.typography.headlineSmall) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                GsTextField(
+                    value = patient, onValueChange = { patient = it }, label = { Text("Patient name") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                GsTextField(
+                    value = doctor, onValueChange = { doctor = it }, label = { Text("Doctor name") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            com.saurabh.mediadminapp.ui.components.LinkButton("Save", {
+                onSave(patient.trim().takeIf { it != order.patientName }, doctor.trim().takeIf { it != order.doctorName })
+            })
+        },
+        dismissButton = { com.saurabh.mediadminapp.ui.components.NeutralTextButton("Cancel", onDismiss) },
+    )
+}
+
+@Composable
+private fun OrderBody(order: Order, verifying: Boolean, onVerifyRx: () -> Unit, onOpenRx: () -> Unit) {
+    val inr = rememberInrFormat()
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+    ) {
+        item(key = "header") {
+            DetailCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            "Order", style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            order.orderId, style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    StatusChip(order.status)
+                }
+                if (order.status == OrderStatus.PENDING || order.status == OrderStatus.APPROVED || order.status == OrderStatus.SOLD) {
+                    ProgressTrack(order.status)
+                }
+                if (order.status == OrderStatus.CANCELLED && order.cancelReason.isNotBlank()) {
+                    InfoTile(label = "Cancel reason", value = order.cancelReason)
+                }
+            }
+        }
+
+        item(key = "product") {
+            DetailCard(title = "Product", icon = Icons.Outlined.Receipt) {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MedicineImage(url = order.imageUrl, size = 64.dp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            order.productName.capitalizeEachWord(), style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            order.category.capitalizeEachWord(), style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        )
+                        if (order.requiresPrescription) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ToneChip("Rx Required", Tone.Info)
+                                ToneChip(
+                                    if (order.prescriptionVerified) "Rx Verified" else "Rx Unverified",
+                                    if (order.prescriptionVerified) Tone.Success else Tone.Warning,
+                                )
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                KeyValueRow("Unit price", inr.format(order.price))
+                KeyValueRow("Quantity", "${order.quantity}")
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+                KeyValueRow("Total", inr.format(order.totalAmount), emphasize = true)
+            }
+        }
+
+        if (order.requiresPrescription || !order.prescriptionUrl.isNullOrBlank()) item(key = "rx") {
+            DetailCard(title = "Prescription", icon = Icons.Outlined.Description) {
+                if (!order.prescriptionUrl.isNullOrBlank()) {
+                    // Teal info row (guide §5): opens the zoomable viewer; row press shade stays Green 50/100.
+                    Row(
+                        Modifier.fillMaxWidth().shadeRow(onOpenRx).heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Box(
+                            Modifier.size(36.dp).clip(MaterialTheme.shapes.small).background(GS.Teal100),
+                            contentAlignment = Alignment.Center,
+                        ) { Icon(Icons.Outlined.Description, contentDescription = null, tint = GS.Teal600, modifier = Modifier.size(20.dp)) }
+                        Column(Modifier.weight(1f)) {
+                            Text("View prescription", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Zoom, open file, verify", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    InfoTile("Prescription", "No prescription uploaded")
+                }
+                if (order.prescriptionVerified) {
+                    ToneChip("Verified", Tone.Success)
+                } else if (order.status == OrderStatus.PENDING || order.status == OrderStatus.APPROVED) {
+                    ShadeOutlinedButton(
+                        text = if (verifying) "Verifying..." else "Mark prescription verified",
+                        onClick = onVerifyRx, enabled = !verifying, icon = Icons.Outlined.Check,
+                        contentColor = GS.Green600, modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+        }
+
+        item(key = "customer") {
+            DetailCard(title = "Customer & order info", icon = Icons.Outlined.Person) {
+                InfoTile("Buyer", order.userName.ifBlank { "Not provided" }, icon = Icons.Outlined.Person)
+                InfoTile("Customer ID", order.userId, icon = Icons.Outlined.Numbers)
+                InfoTile("Product ID", order.productId, icon = Icons.Outlined.QrCode)
+                InfoTile("Ordered on", order.createdAt.dateTimeLabel(), icon = Icons.Outlined.CalendarMonth)
+                if (order.patientName.isNotBlank()) InfoTile("Patient", order.patientName)
+                if (order.doctorName.isNotBlank()) InfoTile("Doctor", order.doctorName)
+                if (order.message.isNotBlank()) InfoTile("Customer note", order.message)
+            }
+        }
+    }
+}
+
+/** Placed -> Approved -> Sold. Done = Green 100/600, upcoming = Field fill/Muted. */
+@Composable
+private fun ProgressTrack(status: OrderStatus) {
+    val approved = status == OrderStatus.APPROVED || status == OrderStatus.SOLD
+    val sold = status == OrderStatus.SOLD
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        TrackStep("Placed", Icons.Outlined.Check, done = true)
+        TrackLine(active = approved, modifier = Modifier.weight(1f))
+        TrackStep("Approved", Icons.Outlined.Check, done = approved)
+        TrackLine(active = sold, modifier = Modifier.weight(1f))
+        TrackStep("Sold", Icons.Outlined.Sell, done = sold)
+    }
+}
+
+@Composable
+private fun TrackStep(label: String, icon: ImageVector, done: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(
+            Modifier.size(32.dp).clip(CircleShape).background(if (done) GS.Green100 else GS.FieldFill),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = if (done) GS.Green600 else GS.Muted, modifier = Modifier.size(16.dp))
+        }
+        Text(
+            label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+            color = if (done) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun TrackLine(active: Boolean, modifier: Modifier = Modifier) {
+    Box(
+        modifier.padding(horizontal = 4.dp).padding(bottom = 18.dp).height(2.dp)
+            .background(if (active) GS.Green600 else GS.Outline)
+    )
 }
 
 /**
- * Dedicated Detail Screen for Specific Order:
- * Features a milestone progress track, visual tactile receipt card,
- * metadata specification cluster, and a floating dispatch approval bar.
+ * One primary action per status: PENDING Approve (+ Reject), APPROVED Mark sold (+ Cancel),
+ * SOLD Return (destructive, red). CANCELLED / RETURNED have no actions.
  */
 @Composable
-fun SpecificOrderReceiptView(
-    order: Order,
-    navController: NavController,
-    viewModel: MyViewModel,
-    modifier: Modifier = Modifier
+private fun OrderActionBar(
+    status: OrderStatus,
+    busy: Boolean,
+    onApprove: () -> Unit,
+    onReject: () -> Unit,
+    onSell: () -> Unit,
+    onCancel: () -> Unit,
+    onReturn: () -> Unit,
 ) {
-    val isApproved = (order.status == OrderStatus.APPROVED || order.status == OrderStatus.SOLD)
-    val statusColor = if (isApproved) ClayBadgeApproved else ClayBadgePending
-    val statusText = if (isApproved) "Approved" else "Pending Review"
-
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp)
-    ) {
-        // ── 1. APP BAR & ORDER IDENTITY ──────────────────────────────────
-//        item {
-//            Row(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(vertical = 8.dp),
-//                verticalAlignment = Alignment.CenterVertically,
-//                horizontalArrangement = Arrangement.SpaceBetween
-//            ) {
-//                Row(verticalAlignment = Alignment.CenterVertically) {
-//                    IconButton(onClick = { navController.popBackStack() }) {
-//                        Icon(
-//                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-//                            contentDescription = "Back",
-//                            tint = Color.White
-//                        )
-//                    }
-//                    Text(
-//                        text = "Order Receipt",
-//                        fontSize = 22.sp,
-//                        fontWeight = FontWeight.ExtraBold,
-//                        color = Color.White,
-//                        modifier = Modifier.padding(start = 4.dp)
-//                    )
-//                }
-//
-//
-//            }
-//        }
-
-        // ── 2. MILESTONE PROGRESS TRACK (Order Lifecycle) ─────────────────
-        item {
-            ClayStatusBadge(
-                text = order.orderId,
-                color = Color.White
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-
-            ClayCard(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 24.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(
-                        text = "Fulfillment Milestones",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ClayTextPrimary
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        MilestoneStep(
-                            label = "Placed",
-                            isComplete = true,
-                            icon = Icons.Default.Check
-                        )
-                        MilestoneConnector(active = true)
-                        MilestoneStep(
-                            label = "Verified",
-                            isComplete = true,
-                            icon = Icons.Default.Check
-                        )
-                        MilestoneConnector(active = isApproved)
-                        MilestoneStep(
-                            label = "Approved",
-                            isComplete = isApproved,
-                            icon = if (isApproved) Icons.Default.Check else Icons.Default.HourglassTop
-                        )
-                        MilestoneConnector(active = isApproved)
-                        MilestoneStep(
-                            label = "Dispatched",
-                            isComplete = isApproved,
-                            icon = Icons.Default.LocalShipping
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── 3. VISUAL CLAY RECEIPT CARD ──────────────────────────────────
-        item {
-            ClayCard(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 28.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // Receipt Header
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            ClayNetworkImage(
-                                initial = order.productName.firstOrNull()?.uppercase() ?: "P",
-                                imageUrl = order.imageUrl,
-                                avatarSize = 42.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    text = order.productName.capitalizeEachWord(),
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = ClayTextPrimary
-                                )
-                                Text(
-                                    text = "Category: ${order.category.capitalizeEachWord()}",
-                                    fontSize = 12.sp,
-                                    color = ClayTextSecondary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-
-                        ClayStatusBadge(
-                            text = statusText,
-                            color = statusColor
-                        )
-                    }
-
-                    HorizontalDivider(
-                        color = ClayBorder.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-
-                    // Line Items
-                    ReceiptLineRow("Unit Price", "₹${order.price}")
-                    ReceiptLineRow("Quantity", "${order.quantity} units")
-                    ReceiptLineRow("Processing & Dispatch Fee", "₹0.00 (Free)")
-
-                    HorizontalDivider(
-                        color = ClayBorder.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(vertical = 4.dp)
-                    )
-
-                    // Grand Total Deck
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "TOTAL AMOUNT",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = ClayTextSecondary,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            text = "₹${NumberFormat.getInstance(Locale.Builder().setLanguage("en").setRegion("IN").build()).format(order.totalAmount)}",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                            color = ClayPrimary
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── 4. CUSTOMER & AUDIT METADATA CLUSTER ─────────────────────────
-        item {
-            ClayCard(
-                modifier = Modifier.fillMaxWidth(),
-                cornerRadius = 24.dp
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Text(
-                        text = "Customer & Audit Specifications",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ClayTextPrimary
-                    )
-
-                    MetadataClusterRow(Icons.Default.AccountCircle, "Buyer Name", order.userName)
-                    MetadataClusterRow(Icons.Default.Numbers, "Customer ID", order.userId)
-                    MetadataClusterRow(Icons.Default.QrCode, "Product ID", order.productId)
-                    MetadataClusterRow(Icons.Default.CalendarMonth, "Order Date", order.createdAt.toString())
-
-                    if (!order.message.isNullOrEmpty()) {
-                        HorizontalDivider(
-                            color = ClayBorder.copy(alpha = 0.4f),
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                        Text(
-                            text = "Special Dispatch Instructions:",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = ClayTextSecondary
-                        )
-                        Text(
-                            text = order.message,
-                            fontSize = 13.sp,
-                            color = ClayTextPrimary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-        }
-
-        // ── 5. FLOATING DISPATCH ACTION BAR ──────────────────────────────
-        item {
-            ClayPrimaryButton(
-                text = if (isApproved) "Revoke Approval (Set Pending)" else "Approve Order Dispatch",
-                onClick = {
-                    viewModel.isApproveOrder(order.orderId, !isApproved)
-                    // Refresh current order state
-                    viewModel.getOrderById(order.orderId)
-                },
-                gradient = if (isApproved) {
-                    Brush.horizontalGradient(listOf(Color(0xFFF59E0B), Color(0xFFD97706)))
-                } else {
-                    Brush.horizontalGradient(listOf(Color(0xFF10B981), Color(0xFF059669)))
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-    }
-}
-
-@Composable
-private fun MilestoneStep(label: String, isComplete: Boolean, icon: ImageVector) {
-    val tint = if (isComplete) ClayBadgeApproved else ClayBorder
-    val bg = if (isComplete) ClayBadgeApproved.copy(alpha = 0.14f) else ClayFieldBg
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(bg)
-                .border(1.5.dp, tint, CircleShape),
-            contentAlignment = Alignment.Center
+    if (status !in listOf(OrderStatus.PENDING, OrderStatus.APPROVED, OrderStatus.SOLD)) return
+    Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
+        Row(
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = tint,
-                modifier = Modifier.size(16.dp)
-            )
+            when (status) {
+                OrderStatus.PENDING -> {
+                    ShadeOutlinedButton("Reject", onReject, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = GS.Red600)
+                    ShadeButton("Approve", onApprove, Modifier.weight(1f), isLoading = busy, icon = Icons.Outlined.Check)
+                }
+                OrderStatus.APPROVED -> {
+                    ShadeOutlinedButton("Cancel", onCancel, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = GS.Red600)
+                    ShadeButton("Mark sold", onSell, Modifier.weight(1f), isLoading = busy, icon = Icons.Outlined.Sell)
+                }
+                else -> ShadeButton(
+                    "Return order", onReturn, Modifier.fillMaxWidth(), shade = Shades.RedSolid, isLoading = busy,
+                    icon = Icons.AutoMirrored.Outlined.AssignmentReturn,
+                )
+            }
         }
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            fontWeight = if (isComplete) FontWeight.Bold else FontWeight.Medium,
-            color = if (isComplete) ClayTextPrimary else ClayTextSecondary
-        )
-    }
-}
-
-@Composable
-private fun MilestoneConnector(active: Boolean) {
-    Box(
-        modifier = Modifier
-            .width(28.dp)
-            .height(2.dp)
-            .background(if (active) ClayBadgeApproved else ClayBorder.copy(alpha = 0.6f))
-    )
-}
-
-@Composable
-private fun ReceiptLineRow(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            color = ClayTextSecondary,
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = value,
-            fontSize = 14.sp,
-            color = ClayTextPrimary,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun MetadataClusterRow(icon: ImageVector, label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = ClayPrimary,
-            modifier = Modifier.size(18.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = "$label: ",
-            fontSize = 12.sp,
-            color = ClayTextSecondary,
-            fontWeight = FontWeight.Medium
-        )
-        Text(
-            text = value,
-            fontSize = 13.sp,
-            color = ClayTextPrimary,
-            fontWeight = FontWeight.SemiBold
-        )
     }
 }

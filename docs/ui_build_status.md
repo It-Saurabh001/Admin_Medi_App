@@ -26,24 +26,24 @@ Nav style: string routes (`Routes.X.route`, `@Serializable` objects); only `Veri
 | 16 | BatchDetail | ui/screens/BatchDetailScreen.kt | BatchDetailRoutes(batchId) | getBatch, batchDetail, updateBatch, writeOffBatch, batchAction, clearBatchAction | - | DONE | edit metadata (batch_no+expiry always sent, others if changed), DateField, write-off w/ note + ConfirmDialog, 'Adjust quantity' -> StockAdjust preselected; device: none |
 | 17 | StockPurchase | ui/screens/StockPurchaseScreen.kt | StockPurchaseRoutes(productId) | purchaseStock, stockPurchaseState | - | DONE | StockEntryFields + supplier name + invoice no; Idempotency-Key kept on retry; device: none |
 | 18 | StockAdjust | ui/screens/StockAdjustScreen.kt | StockAdjustRoutes(productId) | adjustStock, productBatches | - | DONE | batch dropdown (preselect via savedStateHandle `adjust_batch_id`), add/remove segmented, result preview, no below-zero, quick reasons; device: none |
-| 19 | StockMovements | - | - | VM missing | - | TODO | MISSING |
+| 19 | StockMovements | ui/screens/StockMovementsScreen.kt | StockMovementsRoutes(productId?, batchId?) | loadStockMovements, loadMoreStockMovements, stockMovements, stockMovementFilter | - | DONE | reason chips, removable product/batch scope chip, signed qty (Green in / Red out), row -> BatchDetail; entry: drawer, Product details, Batch details |
 | 20 | OrderList | ui/screens/OrderListScreen.kt | OrdersRoutes / EachUserOrderRoutes | getAllOrders, loadMoreOrders | - | DONE | M3 list: search, status chips, PagedLazyColumn (PTR, load-more); old NewOrder.kt/OrderDetailsScreen.kt now unused |
-| 21 | OrderDetail | ui/screens/SpecificOrderScreen.kt | SpecificOrderRoutes | getOrderById, isApproveOrder, recordSell, returnOrder, deleteOrder, verifyPrescription | - | TODO | EXISTS (Clay) |
-| 22 | PrescriptionViewer | - | - | verifyPrescription | - | TODO | MISSING |
-| 23 | Invoice | - | - | getInvoice, invoiceState | - | TODO | MISSING |
-| 24 | InventoryAlerts | - | - | VM missing | - | TODO | MISSING; nav tab slot pending |
+| 21 | OrderDetail | ui/screens/SpecificOrderScreen.kt | SpecificOrderRoutes | getOrderById, isApproveOrder, recordSell, returnOrder, deleteOrder, verifyPrescription | - | DONE | GreenShield; approve/reject only |
+| 22 | PrescriptionViewer | ui/screens/PrescriptionViewerScreen.kt | PrescriptionRoutes(orderId) | getOrderById, getOrderByIdState, verifyPrescription, verifyPrescriptionState | - | DONE | zoom (pinch/double-tap, Fit), PDF -> ACTION_VIEW, Verify primary, Unverify red link + confirm; entry: Order details "View prescription"; device: ACTION_VIEW |
+| 23 | Invoice | ui/screens/InvoiceScreen.kt | InvoiceRoutes(orderId) | getInvoice, invoiceState | - | DONE | header, bill-to, lines (Teal batch pill, expiry, GST), totals; Share = ACTION_SEND text; entry: Order details top bar (SOLD/RETURNED); device: ACTION_SEND |
+| 24 | InventoryAlerts | ui/screens/InventoryAlertsScreen.kt | InventoryAlertsRoutes(tab) | loadInventoryAlert, loadMoreInventoryAlert, lowStock, outOfStock, nearExpiry, expiredBatches | - | DONE | PrimaryTabRow 4 tabs with totals, near-expiry 30/60/90 d chips; products -> ProductDetail, batches (shared BatchRow) -> BatchDetail; entry: drawer + Dashboard stock tiles (deep-link tab); bottom-nav tab NOT changed |
 | 25 | MoreMenu | nav/NavApp.kt (AppDrawerSheet) | - | setAdminLoggedOut | - | DONE | ModalNavigationDrawer replaces the More sheet: header (admin), Manage (Reports, Top products, Scan, Admins), Account (Profile, Settings, About), Log out; opened by menu button, More tab, edge swipe on tab roots |
 | 26 | SalesHistory | ui/screens/SalesHistoryScreen.kt | HistoryRoutes | getAllSellHistory, loadMoreSellHistory | - | DONE | grouped by day with sticky headers, PTR, load-more; old HistroyScreen.kt unused |
-| 27 | UserList | ui/screens/HomeScreen.kt (UserListScreen1) | none (was HomeRoutes) | getAllUsers, loadMoreUsers | - | TODO | RENAME; unrouted since Part 2 |
-| 28 | UserDetail | ui/screens/UserDetailsScreen.kt | UserDetailsRoutes | isApprovedUser, unblockUser, deleteUser, getUsersOrders | - | TODO | EXISTS (Clay) |
-| 29 | UserEdit | ui/screens/UpdateUserDetailsScreen.kt | UpdateUserDetailsRoutes | updateUser | - | TODO | EXISTS (Clay) |
+| 27 | UserList | ui/screens/UserListScreen.kt | UsersRoutes | getAllUsers, loadMoreUsers | - | DONE | GreenShield; search + status chips; entry: drawer "Customers" |
+| 28 | UserDetail | ui/screens/UserDetailsScreen.kt | UserDetailsRoutes | isApprovedUser, unblockUser, deleteUser, getUsersOrders | - | DONE | GreenShield; approve/block/unblock/delete |
+| 29 | UserEdit | ui/screens/UpdateUserDetailsScreen.kt | UpdateUserDetailsRoutes | updateUser | - | DONE | GreenShield; profile fields only |
 | 30 | AdminList | ui/screens/AdminListScreen.kt | AdminListRoutes | getAllAdmin, loadMoreAdmins, approveAdmin, deleteAdmin, adminActionIds, loggedInAdminId | - | DONE | pending signups (Approve / Reject via ConfirmDialog) + admins; Owner/Pending/Disabled badges; owner & self not removable; entry: More sheet 'Admins'; device: none |
-| 31 | AdminDetailEdit | ui/screens/SignUp.kt (create only) | SignUpRoutes | createAdmin, updateAdmin (delete VM missing) | - | TODO | RENAME; move out of auth graph |
-| 32 | SupplierList | - | - | VM missing | - | TODO | MISSING |
-| 33 | SupplierDetailEdit | - | - | VM missing | - | TODO | MISSING |
-| 34 | AuditLog | - | - | VM missing | - | TODO | MISSING |
-| 35 | AdminProfile | ui/screens/ProfileScreen.kt | ProfileRoutes | getAllAdmin, updateAdmin, setAdminLoggedOut | - | TODO | EXISTS (Clay) |
-| 36 | Settings/About | ui/screens/SettingsScreen.kt, AboutScreen.kt | SettingsRoutes, AboutRoutes | - | - | TODO | EXISTS (Clay) |
+| 31 | AdminDetailEdit | ui/screens/AdminFormScreen.kt | AdminFormRoutes(adminId / "new") | getAllAdmin, updateAdmin, approveAdmin, deleteAdmin, adminActionIds, createAdmin, createAdminState | - | DONE | detail+edit (changed fields only), approve/reject pending, remove (not owner/self), create form; entry: Admins row / FAB; SignUp.kt untouched |
+| 32 | SupplierList | ui/screens/SupplierScreens.kt (SupplierListScreen) | SuppliersRoutes | loadSuppliers, loadMoreSuppliers, suppliers, supplierQuery | - | DONE | server search (400 ms), Active/Inactive/All, GsFab; entry: drawer |
+| 33 | SupplierDetailEdit | ui/screens/SupplierScreens.kt (SupplierFormScreen) | SupplierFormRoutes(id / "new") | getSupplier, supplierDetail, createSupplier, updateSupplier, deactivateSupplier, supplierAction, clearSupplierAction | - | DONE | GSTIN 15-char Ascii+CAPS check, changed fields only (name always), deactivate + confirm, inactive = read-only |
+| 34 | AuditLog | ui/screens/AuditLogScreen.kt | AuditLogRoutes | loadAuditLogs, loadMoreAuditLogs, auditLogs, auditFilter | - | DONE | entity chips, action pills by verb family, tap row expands details; entry: drawer |
+| 35 | AdminProfile | ui/screens/ProfileScreen.kt | ProfileRoutes | getAllAdmin, updateAdmin, setAdminLoggedOut | - | DONE | GreenShield; logout confirm |
+| 36 | Settings/About | ui/screens/SettingsScreen.kt, AboutScreen.kt | SettingsRoutes, AboutRoutes | - | - | DONE | GreenShield |
 
 ## Adaptive helpers (ui/adaptive/Adaptive.kt)
 - `enum WindowSize { COMPACT, MEDIUM, EXPANDED }`; `data class WindowInfo(size, isLandscape, widthDp)` with `isCompact`, `isExpanded`

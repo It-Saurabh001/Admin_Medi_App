@@ -25,6 +25,9 @@ fun StatusChip(status: OrderStatus, modifier: Modifier = Modifier) {
         Text(
             text = status.label(),
             style = MaterialTheme.typography.labelMedium,
+            // U14: Amber/Red labels are bold for contrast (3.6:1 / 4.0:1).
+            fontWeight = if (status == OrderStatus.PENDING || status == OrderStatus.CANCELLED) androidx.compose.ui.text.font.FontWeight.Bold else null,
+            softWrap = false,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),

@@ -37,7 +37,8 @@ import com.saurabh.mediadminapp.ui.components.EmptyState
 import com.saurabh.mediadminapp.ui.components.ErrorState
 import com.saurabh.mediadminapp.ui.components.PagedLazyColumn
 import com.saurabh.mediadminapp.ui.components.SkeletonList
-import com.saurabh.mediadminapp.ui.components.ThumbImage
+import com.saurabh.mediadminapp.ui.components.MedicineImage
+import com.saurabh.mediadminapp.ui.components.shadeRow
 import com.saurabh.mediadminapp.ui.components.dateTimeLabel
 import com.saurabh.mediadminapp.ui.components.dayLabel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
@@ -59,7 +60,7 @@ fun SalesHistoryScreen(
 
     AppScreenScaffold(
         title = "Sales history",
-        navigationIcon = { IconButton(onClick = onMenuClick) { Icon(Icons.Outlined.Menu, contentDescription = "Menu") } },
+        navigationIcon = { com.saurabh.mediadminapp.ui.components.TileIconButton(Icons.Outlined.Menu, "Menu", onMenuClick, Modifier.padding(start = 4.dp)) },
         scrollBehavior = scrollBehavior,
     ) { inner ->
         PagedLazyColumn(
@@ -101,7 +102,7 @@ fun SalesHistoryScreen(
 @Composable
 private fun SaleRow(s: Sale, onClick: () -> Unit) {
     ListItem(
-        leadingContent = { ThumbImage(s.imageUrl, Icons.Outlined.Medication) },
+        leadingContent = { MedicineImage(s.imageUrl, size = 56.dp) },
         headlineContent = { Text(s.productName.capitalizeEachWord(), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -110,7 +111,7 @@ private fun SaleRow(s: Sale, onClick: () -> Unit) {
             }
         },
         trailingContent = { Text("₹%.2f".format(s.totalAmount), style = MaterialTheme.typography.titleSmall, maxLines = 1) },
-        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick)
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.fillMaxWidth().shadeRow(onClick)
     )
 }

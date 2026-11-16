@@ -1,5 +1,17 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import com.saurabh.mediadminapp.ui.theme.GS
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.widthIn
@@ -16,6 +28,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -62,7 +75,12 @@ internal fun AuthFormColumn(
     verticalArrangement: Arrangement.Vertical = Arrangement.Center,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    BoxWithConstraints(modifier = modifier.fillMaxSize().imePadding()) {
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize().imePadding()
+            // Tap on empty area dismisses keyboard (Part 3 §3); no indication.
+            .pointerInput(Unit) { detectTapGestures(onTap = { focus.clearFocus() }) }
+    ) {
         val minHeight = maxHeight
         Column(
             modifier = Modifier
@@ -98,7 +116,7 @@ internal fun PasswordField(
     onDone: (() -> Unit)? = null,
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
-    OutlinedTextField(
+    GsTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
@@ -121,6 +139,24 @@ internal fun PasswordField(
         } else null,
         modifier = modifier.fillMaxWidth()
     )
+}
+
+/** Auth detail top bar (U9): White bar, Ink titleLarge, back arrow in an Icon-fill tile, Outline divider. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+internal fun AuthTopBar(title: String, onBack: () -> Unit) {
+    Column {
+        androidx.compose.material3.TopAppBar(
+            title = { Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            navigationIcon = {
+                com.saurabh.mediadminapp.ui.components.TileIconButton(
+                    Icons.AutoMirrored.Outlined.ArrowBack, "Back", onBack, Modifier.padding(start = 4.dp)
+                )
+            },
+            colors = com.saurabh.mediadminapp.ui.theme.GsUi.topBarColors(),
+        )
+        androidx.compose.material3.HorizontalDivider(color = MaterialTheme.colorScheme.outline)
+    }
 }
 
 /** Tonal icon badge + title + subtitle used at the top of auth forms. */
@@ -183,9 +219,7 @@ internal fun AuthFooterLink(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false)
         )
-        TextButton(onClick = onClick, modifier = Modifier.heightIn(min = 48.dp)) {
-            Text(action, style = MaterialTheme.typography.labelLarge, maxLines = 1)
-        }
+        com.saurabh.mediadminapp.ui.components.LinkButton(text = action, onClick = onClick)
     }
 }
 
@@ -196,8 +230,9 @@ internal fun AuthFormError(text: String?) {
     Spacer(modifier = Modifier.height(8.dp))
     Surface(
         shape = MaterialTheme.shapes.small,
+        // Guide §8: error message in Red 600 on the Red 50/100 error card.
         color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        contentColor = MaterialTheme.colorScheme.error,
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
@@ -216,21 +251,8 @@ internal fun AuthPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Button(
-        onClick = onClick,
-        enabled = !isLoading,
-        modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                strokeWidth = 2.dp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
-        } else {
-            Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
+    // Press = Green 600 -> 700, hold = 800; 0.97 scale; loading keeps 600 + white 18dp spinner (rules U13, guide §8).
+    com.saurabh.mediadminapp.ui.components.ShadeButton(
+        text = text, onClick = onClick, isLoading = isLoading, modifier = modifier.fillMaxWidth(),
+    )
 }

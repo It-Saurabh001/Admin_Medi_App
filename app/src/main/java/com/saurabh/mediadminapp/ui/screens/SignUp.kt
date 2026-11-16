@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -114,21 +115,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         contentColor = MaterialTheme.colorScheme.onBackground,
-        topBar = {
-            TopAppBar(
-                title = { Text("Create account", style = MaterialTheme.typography.titleLarge) },
-                navigationIcon = {
-                    IconButton(onClick = { goToSignIn() }) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    titleContentColor = MaterialTheme.colorScheme.onBackground,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            )
-        }
+        topBar = { AuthTopBar("Create account") { goToSignIn() } }
     ) { innerPadding ->
         AuthFormColumn(
             modifier = Modifier.padding(innerPadding),
@@ -136,7 +123,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
         ) {
             // ── Profile photo (optional) ──
             Surface(
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = androidx.compose.foundation.shape.CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(96.dp)
@@ -159,16 +146,10 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
-            OutlinedButton(
-                onClick = {
-                    launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }
-            ) {
-                Text(
-                    text = if (imageUri == null) "Add photo (optional)" else "Change photo",
-                    style = MaterialTheme.typography.labelLarge
-                )
-            }
+            com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton(
+                text = if (imageUri == null) "Add photo (optional)" else "Change photo",
+                onClick = { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = "Set up an admin account for your pharmacy.",
@@ -177,7 +158,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
             )
             Spacer(modifier = Modifier.height(24.dp))
 
-            OutlinedTextField(
+            GsTextField(
                 value = name,
                 onValueChange = { name = it; nameError = null; formError = null },
                 label = { Text("Full name") },
@@ -189,7 +170,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
+            GsTextField(
                 value = email,
                 onValueChange = { email = it; emailError = null; formError = null },
                 label = { Text("Email") },
@@ -201,7 +182,7 @@ fun SignUp(viewModel: MyViewModel, navController: NavHostController) {
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
-            OutlinedTextField(
+            GsTextField(
                 value = phoneNumber,
                 onValueChange = { phoneNumber = it; phoneError = null; formError = null },
                 label = { Text("Phone number") },

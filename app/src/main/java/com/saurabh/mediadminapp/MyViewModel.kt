@@ -364,6 +364,7 @@ class MyViewModel @Inject constructor(
         _verifyPrescriptionState.value = emptyMap()
         _invoiceState.value = UiState.Empty
         _dashboardSummaryState.value = UiState.Empty
+        resetInventoryAdminData()
         sellKeys.clear()
         resetEmail = null
         lastProductId = null
@@ -1469,5 +1470,230 @@ class MyViewModel @Inject constructor(
 
     fun clearVerifyOtpState() {
         _verifyOtpState.value = VerifyOtpState()
+    }
+
+    // =====================================================================
+    // INVENTORY ALERTS, STOCK MOVEMENTS, SUPPLIERS, AUDIT LOGS (Part 11)
+    // Endpoints verified against response.md #44-48, #63-67, #71.
+    // =====================================================================
+
+    /** One paged list: state + current page + the fetch bound to the current filter [key]. */
+    private class PagedSource<T>(val pageSize: Int = 20) {
+        val state = MutableStateFlow(PagedListState<T>())
+        var page = PageRequest(limit = pageSize)
+        var key: Any? = Unit // Unit = never loaded
+        var fetch: ((PageRequest) -> Flow<ResultState<PagedData<T>>>)? = null
+        var job: kotlinx.coroutines.Job? = null
+
+        fun reset() { job?.cancel(); state.value = PagedListState(); page = PageRequest(limit = pageSize); key = Unit; fetch = null }
+    }
+
+    /** First page for [key]; skipped when already loaded for the same key (unless [force]). Items clear when the key changes. */
+    private fun <T> PagedSource<T>.load(
+        key: Any?, force: Boolean, sort: String? = null, order: String? = null,
+        fetch: (PageRequest) -> Flow<ResultState<PagedData<T>>>,
+    ) {
+        val s = state.value
+        if (!force && key == this.key && s.loaded && s.error == null) return
+        val keyChanged = key != this.key
+        this.key = key
+        this.fetch = fetch
+        val p = PageRequest(limit = pageSize, sort = sort, order = order)
+        page = p
+        job?.cancel()
+        job = viewModelScope.launch(Dispatchers.IO) {
+            fetch(p).collectInto(
+                onLoading = {
+                    state.update {
+                        if (keyChanged) PagedListState(isLoading = true) else it.copy(isLoading = true, error = null, appError = null)
+                    }
+                },
+                onError = { m, e -> state.update { it.copy(isLoading = false, isLoadingMore = false, error = m ?: "Could not load", appError = e) } },
+                onSuccess = { d ->
+                    state.value = PagedListState(items = d.items, pagination = d.pagination, endReached = p.isLast(d.pagination), loaded = true)
+                }
+            )
+        }
+    }
+
+    /** Next page with the same filter; ignored while loading or at the end. */
+    private fun <T> PagedSource<T>.more() {
+        val s = state.value
+        val f = fetch ?: return
+        if (s.isLoading || s.isLoadingMore || s.endReached) return
+        val next = s.pagination?.let { page.loadMore(it) }
+        if (next == null) { state.update { it.copy(endReached = true) }; return }
+        val forKey = key
+        state.update { it.copy(isLoadingMore = true) }
+        viewModelScope.launch(Dispatchers.IO) {
+            f(next).collectInto(
+                onError = { m, _ -> state.update { it.copy(isLoadingMore = false) }; snackbar(m ?: "Load failed") },
+                onSuccess = { d ->
+                    if (key != forKey) return@collectInto // filter changed meanwhile
+                    page = next
+                    state.update {
+                        it.copy(items = it.items + d.items, pagination = d.pagination, isLoadingMore = false, endReached = next.isLast(d.pagination))
+                    }
+                }
+            )
+        }
+    }
+
+    // ── Stock movements (GET stock-movements, newest first) ──
+    private val stockMovementsSource = PagedSource<com.saurabh.mediadminapp.data.v1.dto.StockMovement>()
+    val stockMovements: StateFlow<PagedListState<com.saurabh.mediadminapp.data.v1.dto.StockMovement>> = stockMovementsSource.state.asStateFlow()
+    private val _stockMovementFilter = MutableStateFlow(com.saurabh.mediadminapp.data.v1.repository.StockMovementFilter())
+    val stockMovementFilter: StateFlow<com.saurabh.mediadminapp.data.v1.repository.StockMovementFilter> = _stockMovementFilter.asStateFlow()
+
+    /** [filter] null = keep the current one. reason: PURCHASE|SALE|ADJUSTMENT|EXPIRED_WRITEOFF|RETURN|CANCEL_RESTOCK. */
+    fun loadStockMovements(filter: com.saurabh.mediadminapp.data.v1.repository.StockMovementFilter? = null, force: Boolean = false) {
+        val f = filter ?: _stockMovementFilter.value
+        _stockMovementFilter.value = f
+        stockMovementsSource.load(f, force, sort = "created_at", order = "desc") { p -> repository.getStockMovements(f, p) }
+    }
+
+    fun loadMoreStockMovements() = stockMovementsSource.more()
+
+    // ── Inventory alerts (GET inventory/low-stock | out-of-stock | near-expiry | expired) ──
+    private val lowStockSource = PagedSource<com.saurabh.mediadminapp.data.v1.dto.Product>()
+    private val outOfStockSource = PagedSource<com.saurabh.mediadminapp.data.v1.dto.Product>()
+    private val nearExpirySource = PagedSource<com.saurabh.mediadminapp.data.v1.dto.Batch>()
+    private val expiredSource = PagedSource<com.saurabh.mediadminapp.data.v1.dto.Batch>()
+    val lowStock: StateFlow<PagedListState<com.saurabh.mediadminapp.data.v1.dto.Product>> = lowStockSource.state.asStateFlow()
+    val outOfStock: StateFlow<PagedListState<com.saurabh.mediadminapp.data.v1.dto.Product>> = outOfStockSource.state.asStateFlow()
+    val nearExpiry: StateFlow<PagedListState<com.saurabh.mediadminapp.data.v1.dto.Batch>> = nearExpirySource.state.asStateFlow()
+    val expiredBatches: StateFlow<PagedListState<com.saurabh.mediadminapp.data.v1.dto.Batch>> = expiredSource.state.asStateFlow()
+
+    /** Sorted per response.md: products by stock asc, batches by expiry_date asc. [nearExpiryDays] default 90 (server). */
+    fun loadInventoryAlert(type: InventoryAlertType, force: Boolean = false, nearExpiryDays: Int? = null) {
+        when (type) {
+            InventoryAlertType.LOW_STOCK -> lowStockSource.load(type, force, "stock", "asc") { p -> repository.getLowStock(p) }
+            InventoryAlertType.OUT_OF_STOCK -> outOfStockSource.load(type, force, "name", "asc") { p -> repository.getOutOfStock(p) }
+            InventoryAlertType.NEAR_EXPIRY -> nearExpirySource.load(nearExpiryDays, force, "expiry_date", "asc") { p -> repository.getNearExpiry(nearExpiryDays, p) }
+            InventoryAlertType.EXPIRED -> expiredSource.load(type, force, "expiry_date", "asc") { p -> repository.getExpired(p) }
+        }
+    }
+
+    fun loadMoreInventoryAlert(type: InventoryAlertType) = when (type) {
+        InventoryAlertType.LOW_STOCK -> lowStockSource.more()
+        InventoryAlertType.OUT_OF_STOCK -> outOfStockSource.more()
+        InventoryAlertType.NEAR_EXPIRY -> nearExpirySource.more()
+        InventoryAlertType.EXPIRED -> expiredSource.more()
+    }
+
+    // ── Suppliers (GET/POST suppliers, GET/PATCH suppliers/{id}, POST .../deactivate) ──
+    private val suppliersSource = PagedSource<com.saurabh.mediadminapp.data.v1.dto.Supplier>()
+    val suppliers: StateFlow<PagedListState<com.saurabh.mediadminapp.data.v1.dto.Supplier>> = suppliersSource.state.asStateFlow()
+    private val _supplierQuery = MutableStateFlow(SupplierQuery())
+    val supplierQuery: StateFlow<SupplierQuery> = _supplierQuery.asStateFlow()
+
+    fun loadSuppliers(query: SupplierQuery? = null, force: Boolean = false) {
+        val q = query ?: _supplierQuery.value
+        _supplierQuery.value = q
+        suppliersSource.load(q, force, "name", "asc") { p -> repository.getSuppliers(q.q.trim().ifBlank { null }, q.isActive, p) }
+    }
+
+    fun loadMoreSuppliers() = suppliersSource.more()
+
+    private val _supplierDetail = MutableStateFlow<UiState<com.saurabh.mediadminapp.data.v1.dto.Supplier>>(UiState.Empty)
+    val supplierDetail: StateFlow<UiState<com.saurabh.mediadminapp.data.v1.dto.Supplier>> = _supplierDetail.asStateFlow()
+
+    /** Shows the cached list row at once (if any) and refreshes from GET suppliers/{id}. */
+    fun getSupplier(supplierId: String, force: Boolean = false) {
+        val cur = _supplierDetail.value
+        if (!force && cur is UiState.Success && cur.data.supplierId == supplierId) return
+        val cached = suppliersSource.state.value.items.firstOrNull { it.supplierId == supplierId }
+        _supplierDetail.value = cached?.let { UiState.Success(it) } ?: UiState.Loading
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getSupplier(supplierId).collectInto(
+                onError = { m, e ->
+                    if (_supplierDetail.value !is UiState.Success) _supplierDetail.value = UiState.Error(e ?: AppError.Unknown(Exception(m)))
+                    else snackbar(m ?: "Could not refresh supplier")
+                },
+                onSuccess = { s -> _supplierDetail.value = UiState.Success(s) }
+            )
+        }
+    }
+
+    private val _supplierAction = MutableStateFlow(SupplierActionState())
+    val supplierAction: StateFlow<SupplierActionState> = _supplierAction.asStateFlow()
+
+    fun clearSupplierAction() { _supplierAction.value = SupplierActionState(seq = _supplierAction.value.seq) }
+
+    /** Puts the new/updated supplier into the list + detail so screens update without a reload. */
+    private fun onSupplierChanged(s: com.saurabh.mediadminapp.data.v1.dto.Supplier, created: Boolean) {
+        suppliersSource.state.update { st ->
+            val exists = st.items.any { it.supplierId == s.supplierId }
+            val q = _supplierQuery.value
+            val visible = q.isActive == null || q.isActive == s.isActive
+            val items = when {
+                exists && visible -> st.items.updateItem(s.supplierId, { it.supplierId }) { s }
+                exists -> st.items.filterNot { it.supplierId == s.supplierId }
+                created && visible -> listOf(s) + st.items
+                else -> st.items
+            }
+            st.copy(items = items)
+        }
+        _supplierDetail.update { d -> if (d is UiState.Success && d.data.supplierId != s.supplierId) d else UiState.Success(s) }
+    }
+
+    private fun runSupplierAction(
+        flow: Flow<ResultState<com.saurabh.mediadminapp.data.v1.dto.Supplier>>,
+        created: Boolean,
+        successMessage: String,
+    ) {
+        if (_supplierAction.value.isLoading) return
+        val seq = _supplierAction.value.seq + 1
+        _supplierAction.value = SupplierActionState(seq = seq, isLoading = true)
+        viewModelScope.launch(Dispatchers.IO) {
+            flow.collectInto(
+                onError = { m, e ->
+                    _supplierAction.value = SupplierActionState(seq = seq, error = m ?: "Request failed", appError = e)
+                    snackbar(m ?: "Request failed")
+                },
+                onSuccess = { s ->
+                    onSupplierChanged(s, created)
+                    _supplierAction.value = SupplierActionState(seq = seq, success = s)
+                    snackbar(successMessage)
+                }
+            )
+        }
+    }
+
+    /** POST suppliers. name required (max 200); gst_number = 15-char GSTIN. */
+    fun createSupplier(request: com.saurabh.mediadminapp.data.v1.dto.SupplierCreateRequest) =
+        runSupplierAction(repository.createSupplier(request), created = true, successMessage = "Supplier ${request.name} added")
+
+    /** PATCH suppliers/{id}: send only changed fields (name is always sent; response.md marks it required). */
+    fun updateSupplier(supplierId: String, request: com.saurabh.mediadminapp.data.v1.dto.SupplierUpdateRequest) =
+        runSupplierAction(repository.updateSupplier(supplierId, request), created = false, successMessage = "Supplier updated")
+
+    /** POST suppliers/{id}/deactivate (409 CONFLICT when already inactive; no reactivate endpoint). */
+    fun deactivateSupplier(supplierId: String) =
+        runSupplierAction(repository.deactivateSupplier(supplierId), created = false, successMessage = "Supplier deactivated")
+
+    // ── Audit logs (GET audit-logs, newest first) ──
+    private val auditSource = PagedSource<com.saurabh.mediadminapp.data.v1.dto.AuditLog>()
+    val auditLogs: StateFlow<PagedListState<com.saurabh.mediadminapp.data.v1.dto.AuditLog>> = auditSource.state.asStateFlow()
+    private val _auditFilter = MutableStateFlow(com.saurabh.mediadminapp.data.v1.repository.AuditFilter())
+    val auditFilter: StateFlow<com.saurabh.mediadminapp.data.v1.repository.AuditFilter> = _auditFilter.asStateFlow()
+
+    fun loadAuditLogs(filter: com.saurabh.mediadminapp.data.v1.repository.AuditFilter? = null, force: Boolean = false) {
+        val f = filter ?: _auditFilter.value
+        _auditFilter.value = f
+        auditSource.load(f, force, sort = "created_at", order = "desc") { p -> repository.getAuditLogs(f, p) }
+    }
+
+    fun loadMoreAuditLogs() = auditSource.more()
+
+    /** Called from [resetAllStatesOnLogout]. */
+    private fun resetInventoryAdminData() {
+        listOf(stockMovementsSource, lowStockSource, outOfStockSource, nearExpirySource, expiredSource, suppliersSource, auditSource)
+            .forEach { it.reset() }
+        _stockMovementFilter.value = com.saurabh.mediadminapp.data.v1.repository.StockMovementFilter()
+        _supplierQuery.value = SupplierQuery()
+        _supplierDetail.value = UiState.Empty
+        _supplierAction.value = SupplierActionState()
+        _auditFilter.value = com.saurabh.mediadminapp.data.v1.repository.AuditFilter()
     }
 }

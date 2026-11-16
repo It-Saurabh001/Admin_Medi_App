@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsFilterChip
+import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
@@ -74,6 +76,10 @@ import com.saurabh.mediadminapp.data.v1.core.UiState
 import com.saurabh.mediadminapp.data.v1.dto.Product
 import com.saurabh.mediadminapp.ui.adaptive.adaptiveGridCells
 import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
+import com.saurabh.mediadminapp.ui.components.MedicineImage
+import com.saurabh.mediadminapp.ui.components.Tone
+import com.saurabh.mediadminapp.ui.components.ToneChip
+import com.saurabh.mediadminapp.ui.components.shadeRow
 import com.saurabh.mediadminapp.ui.components.EmptyState
 import com.saurabh.mediadminapp.ui.components.ErrorState
 import com.saurabh.mediadminapp.ui.components.SkeletonList
@@ -125,15 +131,15 @@ fun ProductScreen(
 
     AppScreenScaffold(
         title = "Products",
-        navigationIcon = { IconButton(onClick = onMenuClick) { Icon(Icons.Outlined.Menu, contentDescription = "Menu") } },
+        navigationIcon = { com.saurabh.mediadminapp.ui.components.TileIconButton(Icons.Outlined.Menu, "Menu", onMenuClick, Modifier.padding(start = 4.dp)) },
         scrollBehavior = scrollBehavior,
         actions = {
-            IconButton(onClick = { navController.navigate(Routes.BarcodeScannerRoutes.route) { launchSingleTop = true } }) {
-                Icon(Icons.Outlined.QrCodeScanner, contentDescription = "Scan barcode")
-            }
+            com.saurabh.mediadminapp.ui.components.TileIconButton(
+                Icons.Outlined.QrCodeScanner, "Scan barcode", { navController.navigate(Routes.BarcodeScannerRoutes.route) { launchSingleTop = true } }
+            )
             Box {
-                IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = "Sort") }
-                DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
+                com.saurabh.mediadminapp.ui.components.TileIconButton(Icons.AutoMirrored.Outlined.Sort, "Sort", { sortMenu = true })
+                DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }, containerColor = MaterialTheme.colorScheme.surface) {
                     SORTS.forEach { (key, label) ->
                         DropdownMenuItem(
                             text = { Text(label) },
@@ -158,10 +164,9 @@ fun ProductScreen(
         },
         floatingActionButton = {
             AnimatedVisibility(visible = fabExpanded, enter = scaleIn(), exit = scaleOut()) {
-                ExtendedFloatingActionButton(
+                com.saurabh.mediadminapp.ui.components.GsFab(
+                    text = "Add product", icon = Icons.Outlined.Add,
                     onClick = { navController.navigate(Routes.AddProductRoutes.route) { launchSingleTop = true } },
-                    icon = { Icon(Icons.Outlined.Add, contentDescription = null) },
-                    text = { Text("Add product") }
                 )
             }
         }
@@ -181,7 +186,7 @@ fun ProductScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item(key = "search", span = { GridItemSpan(maxLineSpan) }, contentType = "search") {
-                    OutlinedTextField(
+                    GsTextField(
                         value = query,
                         onValueChange = { query = it },
                         placeholder = { Text("Search name, generic, brand, barcode") },
@@ -199,14 +204,14 @@ fun ProductScreen(
                 item(key = "filters", span = { GridItemSpan(maxLineSpan) }, contentType = "filters") {
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         item(key = "instock") {
-                            FilterChip(
+                            GsFilterChip(
                                 selected = filter.inStock == true,
                                 onClick = { viewModel.setProductFilter(filter.copy(inStock = if (filter.inStock == true) null else true)) },
                                 label = { Text("In stock") }
                             )
                         }
                         item(key = "active") {
-                            FilterChip(
+                            GsFilterChip(
                                 selected = filter.isActive != null,
                                 onClick = {
                                     // All -> Active -> Inactive -> All
@@ -217,7 +222,7 @@ fun ProductScreen(
                             )
                         }
                         items(SCHEDULES, key = { "s$it" }) { s ->
-                            FilterChip(
+                            GsFilterChip(
                                 selected = filter.scheduleType == s,
                                 onClick = { viewModel.setProductFilter(filter.copy(scheduleType = if (filter.scheduleType == s) null else s)) },
                                 label = { Text(if (s == "OTC") s else "Sch $s", maxLines = 1) }
@@ -225,7 +230,7 @@ fun ProductScreen(
                         }
                         val cats = (categories as? UiState.Success)?.data.orEmpty()
                         items(cats, key = { "c${it.name}" }) { c ->
-                            FilterChip(
+                            GsFilterChip(
                                 selected = filter.category.equals(c.name, ignoreCase = true),
                                 onClick = {
                                     val same = filter.category.equals(c.name, ignoreCase = true)
@@ -268,12 +273,12 @@ fun ProductScreen(
 
 @Composable
 private fun ProductRow(p: Product, onClick: () -> Unit) {
-    OutlinedCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxWidth().shadeRow(onClick)) {
         ListItem(
-            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
-            leadingContent = { ProductImage(p.imageUrl) },
+            colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+            leadingContent = { MedicineImage(p.imageUrl, size = 64.dp) },
             headlineContent = {
-                Text(p.name.capitalizeEachWord(), style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(p.name.capitalizeEachWord(), style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             },
             supportingContent = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -282,14 +287,13 @@ private fun ProductRow(p: Product, onClick: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        val (label, warn) = when {
-                            !p.inStock -> "Out of stock" to true
-                            p.stock <= p.reorderLevel -> "Low · ${p.stock}" to true
-                            else -> "Stock ${p.stock}" to false
+                        when {
+                            !p.inStock -> ToneChip("Out of stock", Tone.Danger)
+                            p.stock <= p.reorderLevel -> ToneChip("Low stock · ${p.stock}", Tone.Warning)
+                            else -> ToneChip("In stock · ${p.stock}", Tone.Success)
                         }
-                        Tag(label, warn)
-                        if (p.requiresPrescription) Tag("Rx ${p.scheduleType}", warn = false)
-                        if (!p.isActive) Tag("Inactive", warn = true)
+                        if (p.requiresPrescription) ToneChip("Rx ${p.scheduleType}", Tone.Info)
+                        if (!p.isActive) ToneChip("Inactive", Tone.Danger)
                     }
                 }
             },
@@ -300,35 +304,3 @@ private fun ProductRow(p: Product, onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun Tag(text: String, warn: Boolean) {
-    val bg = if (warn) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer
-    val fg = if (warn) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer
-    Text(
-        text,
-        style = MaterialTheme.typography.labelSmall,
-        color = fg,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.clip(MaterialTheme.shapes.small).background(bg).padding(horizontal = 8.dp, vertical = 4.dp)
-    )
-}
-
-@Composable
-private fun ProductImage(url: String?) {
-    val placeholder = @Composable {
-        Box(
-            Modifier.size(56.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center
-        ) { Icon(Icons.Outlined.Medication, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-    }
-    if (url.isNullOrBlank()) { placeholder(); return }
-    SubcomposeAsyncImage(
-        model = url,
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.size(56.dp).clip(MaterialTheme.shapes.small),
-        loading = { placeholder() },
-        error = { placeholder() }
-    )
-}
