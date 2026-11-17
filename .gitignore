@@ -1,21 +1,84 @@
-*.iml
-.gradle
-/local.properties
-/secrets.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-response.md
-app_update_plan.md
-AIWork.md
-project.md
+```gitignore
+# =============================================================================
+# PUBLIC WHITELIST MODE
+# Everything ignored by default.
+# Only explicitly allowed files are shared publicly.
+# =============================================================================
 
-screens and navigation.md
+*
+!*/
+
+# --- Public project files ---
+!.gitignore
+!LICENSE
+!README.md
+
+# --- Root Gradle files ---
+!build.gradle.kts
+!settings.gradle.kts
+!gradle.properties
+!gradlew
+!gradlew.bat
+
+# --- Gradle wrapper ---
+!gradle/
+!gradle/**
+!gradle/wrapper/gradle-wrapper.properties
+
+# --- Android app source ---
+!app/
+!app/build.gradle.kts
+!app/proguard-rules.pro
+!app/src/
+!app/src/**
+
+# --- Keep internal documentation private ---
+*.md
+!README.md
+
+# --- Secrets and private configuration ---
+*.properties
+!gradle.properties
+!gradle/wrapper/gradle-wrapper.properties
+
+secrets.properties
+local.properties
+*.env
+.env*
+!.env.example
+
+# --- Signing files and certificates ---
+*.jks
+*.keystore
+*.key
+*.pem
+*.p12
+*.pfx
+
+# --- Firebase configuration ---
+google-services.json
+GoogleService-Info.plist
+
+# --- IDE files ---
+.idea/
+*.iml
+.vscode/
+
+# --- Gradle and build outputs ---
+.gradle/
+build/
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Temporary files ---
+*.log
+*.tmp
+*.bak
+*.swp
