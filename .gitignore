@@ -1,9 +1,4 @@
 ```gitignore
-# =============================================================================
-# PUBLIC WHITELIST MODE
-# Everything ignored by default.
-# Only explicitly allowed files are shared publicly.
-# =============================================================================
 
 *
 !*/
@@ -82,3 +77,5 @@ desktop.ini
 *.tmp
 *.bak
 *.swp
+
+*UI_ARCHITECTURE_DOCUMENTATION.md
