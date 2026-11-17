@@ -649,7 +649,9 @@ private fun androidx.compose.foundation.layout.RowScope.GsNavBarItem(
     Column(
         Modifier
             .weight(1f)
-            .fillMaxHeight()
+            // Fixed M3 bar height: the Scaffold bottomBar slot is unbounded, so fillMaxHeight()
+            // here stretched the bar over the whole screen and hid the content.
+            .height(80.dp)
             .clickable(
                 interactionSource = source, indication = null,
                 role = androidx.compose.ui.semantics.Role.Tab, onClick = onClick,

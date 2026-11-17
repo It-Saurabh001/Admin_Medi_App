@@ -194,3 +194,7 @@ VM (MyViewModel.kt, additive, end of class): private generic `PagedSource<T>` + 
 New state file: app/.../InventoryState.kt (`PagedListState<T>`, `InventoryAlertType`, `SupplierQuery`, `SupplierActionState`).
 Files changed (LOCKED): MyViewModel.kt, InventoryState.kt (new), ui/screens/InventoryAlertsScreen.kt, StockMovementsScreen.kt, SupplierScreens.kt, AuditLogScreen.kt (new), nav/Routes.kt (+InventoryAlertsRoutes(tab), StockMovementsRoutes(productId?, batchId?), SuppliersRoutes, SupplierFormRoutes(id), AuditLogRoutes), nav/NavApp.kt (5 composables + drawer: Inventory alerts, Stock movements, Suppliers, Audit log), nav/dashboard.kt (stock tiles -> Inventory alerts tab, plain forward nav), SpecificProductScreen.kt (+ "Stock movements" teal row), BatchDetailScreen.kt (+ link to batch movements).
 Not changed: bottom-nav tabs (History still in slot 3; swapping in Inventory alters tab structure, ask first). Stock purchase still takes a free-text supplier name (no supplier picker; StockPurchaseRequest has supplier_id? check before wiring).
+
+## Part 12 - Bottom nav layout fix | Status: DONE (build OK)
+Bug: GsNavBarItem used fillMaxHeight() inside NavigationBar; the Scaffold bottomBar slot is unbounded, so the bar filled the whole screen (tabs in the middle, screen content hidden). Fix: item height fixed to 80.dp (M3 NavigationBar height). Other fillMaxHeight uses checked: all inside bounded screen content, no change.
+Files changed: nav/NavApp.kt.

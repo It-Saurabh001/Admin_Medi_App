@@ -344,13 +344,18 @@ private fun OrderBody(order: Order, verifying: Boolean, onVerifyRx: () -> Unit, 
                         Icon(Icons.AutoMirrored.Outlined.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 } else {
-                    InfoTile("Prescription", "No prescription uploaded")
+                    val selfRx = order.doctorName.trim().equals("Self prescribed", ignoreCase = true)
+                    InfoTile("Prescription", if (selfRx) "Self prescribed by the customer (no file)" else "No prescription uploaded")
                 }
                 if (order.prescriptionVerified) {
                     ToneChip("Verified", Tone.Success)
                 } else if (order.status == OrderStatus.PENDING || order.status == OrderStatus.APPROVED) {
                     ShadeOutlinedButton(
-                        text = if (verifying) "Verifying..." else "Mark prescription verified",
+                        text = when {
+                            verifying -> "Verifying..."
+                            order.prescriptionUrl.isNullOrBlank() -> "Accept without prescription"
+                            else -> "Mark prescription verified"
+                        },
                         onClick = onVerifyRx, enabled = !verifying, icon = Icons.Outlined.Check,
                         contentColor = GS.Green600, modifier = Modifier.fillMaxWidth(),
                     )
