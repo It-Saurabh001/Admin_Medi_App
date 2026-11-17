@@ -27,7 +27,8 @@ data class OrderFilter(
     val productId: String? = null,
     val userId: String? = null,
     val dateRange: DateRange = DateRange(),
-    val updatedSince: Instant? = null
+    val updatedSince: Instant? = null,
+    val checkoutId: String? = null
 )
 
 /** GET sales query params. */

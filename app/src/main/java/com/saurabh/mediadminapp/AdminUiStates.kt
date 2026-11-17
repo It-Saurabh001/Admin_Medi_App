@@ -19,3 +19,13 @@ data class RegisterAdminState(
     val error: String? = null,
     val appError: AppError? = null,
 )
+
+/** Orders of one checkout (GET orders?checkout_id=) and the last group action result. */
+data class CheckoutGroupState(
+    val isLoading: Boolean = false,
+    val orders: List<com.saurabh.mediadminapp.data.v1.dto.Order> = emptyList(),
+    val total: Int = 0,
+    val error: String? = null,
+    val actionRunning: Boolean = false,
+    val actionSummary: String? = null,
+)

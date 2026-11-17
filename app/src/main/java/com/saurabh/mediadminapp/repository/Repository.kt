@@ -267,7 +267,7 @@ class Repository @Inject constructor(
         val q = filter.toQuery()
         ordersApi.listOrders(
             status = q["status"], productId = q["product_id"], userId = q["user_id"], from = q["from"],
-            to = q["to"], updatedSince = q["updated_since"], page = page.toQueryMap()
+            to = q["to"], updatedSince = q["updated_since"], checkoutId = q["checkout_id"], page = page.toQueryMap()
         )
     }
 
@@ -301,6 +301,9 @@ class Repository @Inject constructor(
 
     /** NEW. GET orders/{order_id}/invoice (sold/returned only). */
     fun getInvoice(orderId: String) = v1Flow { ordersApi.getInvoice(orderId) }
+
+    /** GET checkouts/{checkout_id}/invoice (combined; sold/returned orders of the group). */
+    fun getCheckoutInvoice(checkoutId: String) = v1Flow { ordersApi.getCheckoutInvoice(checkoutId) }
 
     // ----------------------------
     // SALES

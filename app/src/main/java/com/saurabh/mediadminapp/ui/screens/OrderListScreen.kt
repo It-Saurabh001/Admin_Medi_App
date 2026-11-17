@@ -4,6 +4,7 @@ import com.saurabh.mediadminapp.ui.components.GsFilterChip
 import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.Search
@@ -73,6 +76,7 @@ fun OrderListScreen(
     LaunchedEffect(Unit) { viewModel.getAllOrders() }
     var query by rememberSaveable { mutableStateOf("") }
     var status by rememberSaveable { mutableStateOf<String?>(null) }
+    var expanded by rememberSaveable { mutableStateOf(setOf<String>()) }
 
     val all = state.success?.items
     val shown = remember(all, query, status) {
@@ -132,8 +136,26 @@ fun OrderListScreen(
                         message = if (all.isEmpty()) "New customer orders appear here." else "Try another search or status."
                     )
                 }
-                else -> items(shown, key = { it.orderId }, contentType = { "order" }) { o ->
-                    OrderRow(o) { navController.navigate(Routes.SpecificOrderRoutes.invoke(o.orderId)) { launchSingleTop = true } }
+                else -> {
+                    val open: (Order) -> Unit = { o ->
+                        navController.navigate(Routes.SpecificOrderRoutes.invoke(o.orderId)) { launchSingleTop = true }
+                    }
+                    shown.groupedByCheckout().forEach { entry ->
+                        if (entry.size == 1) {
+                            val o = entry.first()
+                            item(key = o.orderId, contentType = "order") { OrderRow(o) { open(o) } }
+                        } else {
+                            val cid = entry.first().checkoutId.orEmpty()
+                            item(key = "chk_$cid", contentType = "group") {
+                                CheckoutGroupRow(entry, expanded = cid in expanded, onToggle = {
+                                    expanded = if (cid in expanded) expanded - cid else expanded + cid
+                                })
+                            }
+                            if (cid in expanded) items(entry, key = { "${cid}_${it.orderId}" }, contentType = { "order" }) { o ->
+                                Box(Modifier.padding(start = 16.dp)) { OrderRow(o) { open(o) } }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -159,5 +181,47 @@ private fun OrderRow(o: Order, onClick: () -> Unit) {
         },
         colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         modifier = Modifier.fillMaxWidth().shadeRow(onClick)
+    )
+}
+
+/** Orders with the same checkoutId (multi-item checkout) become one group; others stay single. Order kept. */
+private fun List<Order>.groupedByCheckout(): List<List<Order>> {
+    val groups = LinkedHashMap<String, MutableList<Order>>()
+    forEach { o -> groups.getOrPut(o.checkoutId?.let { "c:$it" } ?: "o:${o.orderId}") { mutableListOf() } += o }
+    return groups.values.toList()
+}
+
+/** Status counts, e.g. "2 approved, 1 cancelled". */
+internal fun List<Order>.statusSummary(): String =
+    groupBy { it.status }.entries.joinToString(", ") { (s, list) -> "${list.size} ${s.label().lowercase()}" }
+
+/** Expandable header row for a multi-item checkout: N items, total, combined status summary. */
+@Composable
+private fun CheckoutGroupRow(orders: List<Order>, expanded: Boolean, onToggle: () -> Unit) {
+    ListItem(
+        leadingContent = { MedicineImage(orders.first().imageUrl, size = 56.dp) },
+        headlineContent = {
+            Text("Checkout · ${orders.size} items", style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        },
+        supportingContent = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "${orders.first().userName} · ${orders.joinToString { it.productName.capitalizeEachWord() }}",
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+                Text(orders.statusSummary(), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        },
+        trailingContent = {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("₹%.2f".format(orders.sumOf { it.totalAmount }), style = MaterialTheme.typography.titleSmall, maxLines = 1)
+                Icon(
+                    if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand"
+                )
+            }
+        },
+        colors = ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.fillMaxWidth().shadeRow(onToggle)
     )
 }

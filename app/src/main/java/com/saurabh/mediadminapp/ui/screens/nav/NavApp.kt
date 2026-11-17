@@ -501,6 +501,13 @@ fun NavApp(viewModel: MyViewModel) {
                 com.saurabh.mediadminapp.ui.screens.InvoiceScreen(id, viewModel, navController)
             }
             composable(
+                Routes.CheckoutInvoiceRoutes.route,
+                arguments = listOf(navArgument("checkoutId") { type = NavType.StringType })
+            ) { b ->
+                val id = b.arguments?.getString("checkoutId") ?: return@composable
+                com.saurabh.mediadminapp.ui.screens.InvoiceScreen("", viewModel, navController, checkoutId = id)
+            }
+            composable(
                 Routes.PrescriptionRoutes.route,
                 arguments = listOf(navArgument("orderId") { type = NavType.StringType })
             ) { b ->

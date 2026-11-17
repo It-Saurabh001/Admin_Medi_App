@@ -6,6 +6,7 @@ import com.saurabh.mediadminapp.common.ResultState
 import com.saurabh.mediadminapp.data.v1.core.AppEvent
 import com.saurabh.mediadminapp.data.v1.core.AppEvents
 import com.saurabh.mediadminapp.data.v1.core.IdempotencyKeyProvider
+import com.saurabh.mediadminapp.data.v1.core.OrderStatus
 import com.saurabh.mediadminapp.data.v1.core.PageRequest
 import com.saurabh.mediadminapp.data.v1.dto.StockPurchaseRequest
 import com.saurabh.mediadminapp.data.v1.repository.ProductFilter
@@ -1080,6 +1081,83 @@ class MyViewModel @Inject constructor(
                 onError = { m, e -> _invoiceState.value = UiState.Error(e ?: AppError.Unknown(Exception(m))) },
                 onSuccess = { _invoiceState.value = UiState.Success(it) }
             )
+        }
+    }
+
+    /** Combined invoice of a checkout (shares [invoiceState]; InvoiceScreen matches it by checkoutId). */
+    fun getCheckoutInvoice(checkoutId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getCheckoutInvoice(checkoutId).collectInto(
+                onLoading = { _invoiceState.value = UiState.Loading },
+                onError = { m, e -> _invoiceState.value = UiState.Error(e ?: AppError.Unknown(Exception(m))) },
+                onSuccess = { _invoiceState.value = UiState.Success(it) }
+            )
+        }
+    }
+
+    private val _checkoutGroups = MutableStateFlow(emptyMap<String, CheckoutGroupState>())
+
+    /** Orders of each loaded checkout (key = checkoutId). */
+    val checkoutGroups: StateFlow<Map<String, CheckoutGroupState>> = _checkoutGroups.asStateFlow()
+
+    fun loadCheckoutOrders(checkoutId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.getAllOrders(
+                com.saurabh.mediadminapp.data.v1.repository.OrderFilter(checkoutId = checkoutId),
+                PageRequest(limit = 100, sort = "created_at", order = "asc")
+            ).collectInto(
+                onLoading = { _checkoutGroups.update { it + (checkoutId to (it[checkoutId] ?: CheckoutGroupState()).copy(isLoading = true, error = null)) } },
+                onError = { m, _ -> _checkoutGroups.update { it + (checkoutId to (it[checkoutId] ?: CheckoutGroupState()).copy(isLoading = false, error = m)) } },
+                onSuccess = { page ->
+                    _checkoutGroups.update {
+                        it + (checkoutId to (it[checkoutId] ?: CheckoutGroupState()).copy(
+                            isLoading = false, orders = page.items, total = page.pagination?.total ?: page.items.size, error = null
+                        ))
+                    }
+                }
+            )
+        }
+    }
+
+    /** Approve every pending order of a checkout (one call per order); continues on failure. */
+    fun approveCheckout(checkoutId: String) = runCheckoutAction(checkoutId, "approved", OrderStatus.PENDING) { id ->
+        repository.approveOrder(id, true)
+    }
+
+    /** Sell every approved order of a checkout (new Idempotency-Key per order); continues on failure. */
+    fun sellCheckout(checkoutId: String) = runCheckoutAction(checkoutId, "sold", OrderStatus.APPROVED) { id ->
+        repository.recordSellHistory(id, idempotencyKeyProvider.newKey())
+    }
+
+    private fun runCheckoutAction(
+        checkoutId: String,
+        verb: String,
+        from: OrderStatus,
+        call: (String) -> Flow<ResultState<Order>>,
+    ) {
+        val group = _checkoutGroups.value[checkoutId] ?: return
+        if (group.actionRunning) return
+        val targets = group.orders.filter { it.status == from }
+        if (targets.isEmpty()) return
+        _checkoutGroups.update { it + (checkoutId to group.copy(actionRunning = true, actionSummary = null)) }
+        viewModelScope.launch(Dispatchers.IO) {
+            var ok = 0
+            val failed = mutableListOf<String>()
+            for (order in targets) {
+                call(order.orderId).collectInto(
+                    onError = { m, _ -> failed += "${order.productName}: ${m ?: "failed"}" },
+                    onSuccess = { ok++ }
+                )
+            }
+            val summary = buildString {
+                append("$ok $verb")
+                if (failed.isNotEmpty()) append(", ${failed.size} failed (${failed.joinToString("; ")})")
+            }
+            _checkoutGroups.update { it + (checkoutId to (it[checkoutId] ?: group).copy(actionRunning = false, actionSummary = summary)) }
+            snackbar(summary)
+            loadCheckoutOrders(checkoutId)
+            getAllOrders(force = true)
+            if (verb == "sold") getAllProduct(force = true)
         }
     }
 

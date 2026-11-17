@@ -71,7 +71,8 @@ fun ProductFilter.toQuery() = queryOf(
 )
 
 fun OrderFilter.toQuery() = queryOf(
-    "status" to status, "product_id" to productId, "user_id" to userId, "updated_since" to updatedSince
+    "status" to status, "product_id" to productId, "user_id" to userId, "updated_since" to updatedSince,
+    "checkout_id" to checkoutId
 ) + dateRange.toQuery()
 
 fun SalesFilter.toQuery() = queryOf(

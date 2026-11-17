@@ -47,6 +47,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.QrCode
 import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.Sell
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -111,6 +112,8 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
     var dialog by rememberSaveable { mutableStateOf<String?>(null) } // reject | cancel | return | edit
 
     LaunchedEffect(orderId) { viewModel.getOrderById(orderId) }
+    val checkoutGroups by viewModel.checkoutGroups.collectAsState()
+    LaunchedEffect(order?.checkoutId, order?.status) { order?.checkoutId?.let(viewModel::loadCheckoutOrders) }
     // Order actions only patch the list row; reload this order so status / Rx state update here.
     LaunchedEffect(approveState?.success, sellState?.success, returnState?.success, rxState?.success, editState?.success, cancelState.success) {
         val any = listOf(approveState?.success, sellState?.success, returnState?.success, rxState?.success, editState?.success, cancelState.success)
@@ -165,6 +168,12 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
                             verifying = rxState?.isLoading == true,
                             onVerifyRx = { viewModel.verifyPrescription(order.orderId, true) },
                             onOpenRx = { navController.navigate(Routes.PrescriptionRoutes.invoke(order.orderId)) { launchSingleTop = true } },
+                            checkout = order.checkoutId?.let { checkoutGroups[it] ?: com.saurabh.mediadminapp.CheckoutGroupState(isLoading = true) },
+                            onOpenCheckoutInvoice = {
+                                order.checkoutId?.let { navController.navigate(Routes.CheckoutInvoiceRoutes.invoke(it)) { launchSingleTop = true } }
+                            },
+                            onApproveAll = { order.checkoutId?.let(viewModel::approveCheckout) },
+                            onSellAll = { order.checkoutId?.let(viewModel::sellCheckout) },
                         )
                     }
                 }
@@ -261,7 +270,16 @@ private fun EditOrderDialog(order: Order, onSave: (String?, String?) -> Unit, on
 }
 
 @Composable
-private fun OrderBody(order: Order, verifying: Boolean, onVerifyRx: () -> Unit, onOpenRx: () -> Unit) {
+private fun OrderBody(
+    order: Order,
+    verifying: Boolean,
+    onVerifyRx: () -> Unit,
+    onOpenRx: () -> Unit,
+    checkout: com.saurabh.mediadminapp.CheckoutGroupState? = null,
+    onOpenCheckoutInvoice: () -> Unit = {},
+    onApproveAll: () -> Unit = {},
+    onSellAll: () -> Unit = {},
+) {
     val inr = rememberInrFormat()
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -290,6 +308,10 @@ private fun OrderBody(order: Order, verifying: Boolean, onVerifyRx: () -> Unit, 
                     InfoTile(label = "Cancel reason", value = order.cancelReason)
                 }
             }
+        }
+
+        if (checkout != null) item(key = "checkout") {
+            CheckoutCard(checkout, onOpenCheckoutInvoice, onApproveAll, onSellAll)
         }
 
         item(key = "product") {
@@ -449,6 +471,44 @@ private fun OrderActionBar(
                     icon = Icons.AutoMirrored.Outlined.AssignmentReturn,
                 )
             }
+        }
+    }
+}
+
+/** Multi-item checkout this order belongs to: item count + status summary, combined invoice, approve/sell all. */
+@Composable
+private fun CheckoutCard(
+    group: com.saurabh.mediadminapp.CheckoutGroupState,
+    onOpenInvoice: () -> Unit,
+    onApproveAll: () -> Unit,
+    onSellAll: () -> Unit,
+) {
+    val pending = group.orders.count { it.status == OrderStatus.PENDING }
+    val approved = group.orders.count { it.status == OrderStatus.APPROVED }
+    val billed = group.orders.any { it.status == OrderStatus.SOLD || it.status == OrderStatus.RETURNED }
+    DetailCard(title = "Checkout", icon = Icons.Outlined.ShoppingCart) {
+        com.saurabh.mediadminapp.ui.components.NavRow(
+            title = if (group.isLoading && group.orders.isEmpty()) "Part of a checkout" else "Part of checkout, ${group.total} items",
+            subtitle = when {
+                group.error != null -> group.error
+                billed -> "${group.orders.statusSummary()} · open combined invoice"
+                else -> group.orders.statusSummary().ifBlank { "Loading…" }
+            },
+            onClick = { if (billed) onOpenInvoice() },
+            icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+        )
+        if (pending > 0) ShadeOutlinedButton(
+            text = if (group.actionRunning) "Working…" else "Approve all pending ($pending)",
+            onClick = onApproveAll, enabled = !group.actionRunning, icon = Icons.Outlined.Check,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (approved > 0) ShadeOutlinedButton(
+            text = if (group.actionRunning) "Working…" else "Sell all approved ($approved)",
+            onClick = onSellAll, enabled = !group.actionRunning, icon = Icons.Outlined.Sell,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        group.actionSummary?.let {
+            Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

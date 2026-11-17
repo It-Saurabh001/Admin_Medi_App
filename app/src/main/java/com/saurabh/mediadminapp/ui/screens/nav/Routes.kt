@@ -241,6 +241,15 @@ class SpecificOrderRoutes(val orderId: String){
         operator fun invoke() = route
     }
 
+    /** Combined invoice of a multi-item checkout. Entry: Order details checkout card. */
+    @Serializable
+    class CheckoutInvoiceRoutes(val checkoutId: String) {
+        companion object {
+            const val route = "checkoutInvoiceRoutes/{checkoutId}"
+            operator fun invoke(checkoutId: String) = "checkoutInvoiceRoutes/$checkoutId"
+        }
+    }
+
     /** Invoice of a sold / returned order. Entry: Order details top bar. */
     @Serializable
     class InvoiceRoutes(val orderId: String) {

@@ -37,6 +37,7 @@ interface OrdersApi {
         @Query("from") from: String? = null,
         @Query("to") to: String? = null,
         @Query("updated_since") updatedSince: String? = null,
+        @Query("checkout_id") checkoutId: String? = null,
         @QueryMap page: Map<String, String> = emptyMap()
     ): Response<PagedEnvelope<Order>>
 
@@ -84,6 +85,10 @@ interface OrdersApi {
 
     @GET("orders/{order_id}/invoice")
     suspend fun getInvoice(@Path("order_id") orderId: String): Response<ApiEnvelope<Invoice>>
+
+    /** Combined invoice of the sold/returned orders of one checkout. */
+    @GET("checkouts/{checkout_id}/invoice")
+    suspend fun getCheckoutInvoice(@Path("checkout_id") checkoutId: String): Response<ApiEnvelope<Invoice>>
 }
 
 interface SalesApi {

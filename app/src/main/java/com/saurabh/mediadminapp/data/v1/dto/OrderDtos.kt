@@ -31,7 +31,9 @@ data class Order(
     @SerializedName("updated_at") val updatedAt: Instant?,
     val sales: List<Sale>?,
     val restocked: List<RestockedLine>?,
-    @SerializedName("not_restocked") val notRestocked: List<RestockedLine>? // unverified: element shape (empty in examples)
+    @SerializedName("not_restocked") val notRestocked: List<RestockedLine>?, // unverified: element shape (empty in examples)
+    /** Set when the order was placed via POST checkouts (multi-item); null otherwise. */
+    @SerializedName("checkout_id") val checkoutId: String? = null
 )
 
 data class RestockedLine(
