@@ -7,6 +7,8 @@
 !.gitignore
 !LICENSE
 !README.md
+!screenshots/
+!screenshots/**
 
 # --- Root Gradle files ---
 !build.gradle.kts
