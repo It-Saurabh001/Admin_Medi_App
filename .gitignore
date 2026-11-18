@@ -1,5 +1,3 @@
-```gitignore
-
 *
 !*/
 
@@ -81,3 +79,7 @@ desktop.ini
 *.swp
 
 *UI_ARCHITECTURE_DOCUMENTATION.md
+
+# --- Private docs folder ---
+docs/
+**/docs/
