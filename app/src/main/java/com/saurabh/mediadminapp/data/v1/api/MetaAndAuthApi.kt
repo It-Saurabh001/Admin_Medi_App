@@ -8,6 +8,7 @@ import com.saurabh.mediadminapp.data.v1.dto.ApiIndex
 import com.saurabh.mediadminapp.data.v1.dto.AppConfig
 import com.saurabh.mediadminapp.data.v1.dto.EmailOtpRequest
 import com.saurabh.mediadminapp.data.v1.dto.EmailVerifyData
+import com.saurabh.mediadminapp.data.v1.dto.GoogleLoginRequest
 import com.saurabh.mediadminapp.data.v1.dto.LoginData
 import com.saurabh.mediadminapp.data.v1.dto.LoginRequest
 import com.saurabh.mediadminapp.data.v1.dto.LogoutData
@@ -50,6 +51,9 @@ interface HealthApi {
 interface AuthApi {
     @POST("auth/login")
     suspend fun login(@Body body: LoginRequest): Response<ApiEnvelope<LoginData>>
+
+    @POST("auth/google")
+    suspend fun googleLogin(@Body body: GoogleLoginRequest): Response<ApiEnvelope<LoginData>>
 
     @POST("auth/verify-otp")
     suspend fun verifyOtp(@Body body: VerifyOtpRequest): Response<ApiEnvelope<TokenData>>

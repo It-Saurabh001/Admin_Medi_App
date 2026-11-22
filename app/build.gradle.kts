@@ -23,6 +23,8 @@ val wirelessDeviceUrl = secretProperties.getProperty(
     "WirelessPhysicalDevice",
     "http://10.0.2.2:5000/"
 )
+// TODO: set GOOGLE_WEB_CLIENT_ID (the Web OAuth client ID, not an Android one) in secrets.properties.
+val googleWebClientId = secretProperties.getProperty("GOOGLE_WEB_CLIENT_ID", "YOUR_WEB_CLIENT_ID")
 android {
     namespace = "com.saurabh.mediadminapp"
     compileSdk = 37
@@ -41,6 +43,7 @@ android {
             "WirelessPhysicalDevice",
             "\"$wirelessDeviceUrl\""
         )
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 
     buildTypes {
@@ -114,4 +117,7 @@ dependencies {
     implementation(libs.androidx.camera.view)
     implementation(libs.mlkit.barcode.scanning)
     implementation(libs.dotenv.kotlin)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 }

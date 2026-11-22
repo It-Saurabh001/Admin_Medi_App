@@ -394,6 +394,17 @@ class MyViewModel @Inject constructor(
         }
     }
 
+    fun loginAdminWithGoogle(idToken: String) {
+        if (_loginAdminState.value.isLoading) return
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.loginAdminWithGoogle(idToken).collectInto(
+                onLoading = { _loginAdminState.value = LoginAdminState(isLoading = true) },
+                onError = { m, e -> _loginAdminState.value = LoginAdminState(error = m, appError = e) },
+                onSuccess = { _loginAdminState.value = LoginAdminState(success = it) }
+            )
+        }
+    }
+
     fun loginAdmin(email: String, password: String) {
         if (_loginAdminState.value.isLoading) return
         viewModelScope.launch(Dispatchers.IO) {

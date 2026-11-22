@@ -14,7 +14,9 @@ data class Admin(
     @SerializedName("created_at") val createdAt: Instant?,
     /** null on servers before admin signup; treat null as approved. */
     @SerializedName("is_approved") val isApproved: Boolean? = null,
-    @SerializedName("is_owner") val isOwner: Boolean? = null
+    @SerializedName("is_owner") val isOwner: Boolean? = null,
+    /** Google-linked admins cannot change their email (server returns 400 on email). */
+    @SerializedName("google_linked") val googleLinked: Boolean? = null
 )
 
 /** POST admins/register (public). Server rejects role/is_approved/is_owner here. */

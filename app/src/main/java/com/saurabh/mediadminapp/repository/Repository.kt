@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.repository
 
+import android.content.Context
 import com.google.gson.JsonObject
 import com.saurabh.mediadminapp.common.ResultState
 import com.saurabh.mediadminapp.data.v1.api.AdminsApi
@@ -31,6 +32,9 @@ import com.saurabh.mediadminapp.data.v1.dto.BatchUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.CancelOrderRequest
 import com.saurabh.mediadminapp.data.v1.dto.DeviceRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.EmailOtpRequest
+import com.saurabh.mediadminapp.ui.screens.GoogleCredentials
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.saurabh.mediadminapp.data.v1.dto.GoogleLoginRequest
 import com.saurabh.mediadminapp.data.v1.dto.LoginRequest
 import com.saurabh.mediadminapp.data.v1.dto.LogoutData
 import com.saurabh.mediadminapp.data.v1.dto.LogoutRequest
@@ -86,7 +90,8 @@ class Repository @Inject constructor(
     private val suppliersApi: SuppliersApi,
     private val reportsApi: ReportsApi,
     private val auditApi: AuditApi,
-    private val tokenManager: TokenManager
+    private val tokenManager: TokenManager,
+    @ApplicationContext private val appContext: Context
 ) {
 
     // ----------------------------
@@ -96,6 +101,10 @@ class Repository @Inject constructor(
     /** POST auth/login (emails an OTP). Both. */
     fun loginAdmin(email: String, password: String) =
         v1Flow { authApi.login(LoginRequest(email, password, ADMIN)) }
+
+    /** POST auth/google (existing admins only; emails the login OTP like [loginAdmin]). */
+    fun loginAdminWithGoogle(idToken: String) =
+        v1Flow { authApi.googleLogin(GoogleLoginRequest(idToken, ADMIN)) }
 
     /** POST auth/verify-otp; persists the session on success. */
     fun verifyAdminOtp(accountId: String, otp: String) =
@@ -130,6 +139,7 @@ class Repository @Inject constructor(
             }
         } finally {
             tokenManager.clear()
+            GoogleCredentials.clear(appContext)
         }
     }
 

@@ -149,6 +149,7 @@ fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
     if (editing && admin != null) {
         EditAdminDialog(
             name0 = admin.name, email0 = admin.email, phone0 = admin.phoneNumber.orEmpty(),
+            emailEditable = admin.googleLinked != true,
             onSave = { n, e, p ->
                 editing = false
                 viewModel.updateAdmin(
@@ -175,7 +176,7 @@ fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
 
 /** Own admin record: name / email / phone (updateAdmin sends only changed fields). */
 @Composable
-private fun EditAdminDialog(name0: String, email0: String, phone0: String, onSave: (String, String, String) -> Unit, onDismiss: () -> Unit) {
+private fun EditAdminDialog(name0: String, email0: String, phone0: String, emailEditable: Boolean, onSave: (String, String, String) -> Unit, onDismiss: () -> Unit) {
     var name by rememberSaveable { mutableStateOf(name0) }
     var email by rememberSaveable { mutableStateOf(email0) }
     var phone by rememberSaveable { mutableStateOf(phone0) }
@@ -195,7 +196,10 @@ private fun EditAdminDialog(name0: String, email0: String, phone0: String, onSav
                 )
                 GsTextField(
                     value = email, onValueChange = { email = it }, label = { Text("Email") }, singleLine = true,
-                    isError = emailError != null, supportingText = emailError?.let { { Text(it) } },
+                    enabled = emailEditable,
+                    isError = emailError != null,
+                    supportingText = (emailError ?: "Linked to Google; email can't be changed".takeIf { !emailEditable })
+                        ?.let { { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email, imeAction = ImeAction.Next),
                     modifier = Modifier.fillMaxWidth(),
                 )

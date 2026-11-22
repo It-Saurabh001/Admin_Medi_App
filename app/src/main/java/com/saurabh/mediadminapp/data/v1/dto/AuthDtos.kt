@@ -16,6 +16,12 @@ data class LoginData(
     @SerializedName("otp_expires_in") val otpExpiresIn: Int
 )
 
+/** POST auth/google (admin: response is [LoginData]; the login OTP step follows). */
+data class GoogleLoginRequest(
+    @SerializedName("id_token") val idToken: String,
+    @SerializedName("account_type") val accountType: String = "user"
+)
+
 /** POST auth/verify-otp */
 data class VerifyOtpRequest(
     @SerializedName("account_id") val accountId: String,

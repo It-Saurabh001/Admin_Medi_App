@@ -25,9 +25,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
@@ -41,6 +43,7 @@ import com.saurabh.mediadminapp.R
 import com.saurabh.mediadminapp.data.v1.error.AppError
 import com.saurabh.mediadminapp.data.v1.error.ErrorCode
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
+import kotlinx.coroutines.launch
 
 /** Admin-only login: email + password; always account_type = admin (VM). No sign-up. */
 @Composable
@@ -52,6 +55,8 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
     var formError by rememberSaveable { mutableStateOf<String?>(null) }
     var emailError by rememberSaveable { mutableStateOf<String?>(null) }
     var passwordError by rememberSaveable { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // Message handed back from Otp/Reset (e.g. "Admin account required", "Password updated").
     val handle = navController.currentBackStackEntry?.savedStateHandle
@@ -76,6 +81,10 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
             }
             ErrorCode.RATE_LIMITED ->
                 formError = "Too many attempts. Please wait a moment and try again."
+            ErrorCode.ADMIN_ACCOUNT_NOT_REGISTERED ->
+                formError = "No admin account uses this Google email. Create an account first."
+            ErrorCode.GOOGLE_ACCOUNT_MISMATCH ->
+                formError = "This account is linked to a different Google account. Use that one or your password."
             else -> {
                 emailError = appError.fieldError("email")
                 passwordError = appError.fieldError("password")
@@ -108,6 +117,19 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
         focusManager.clearFocus()
         formError = null
         viewModel.loginAdmin(e, password)
+    }
+
+    fun googleSignIn() {
+        if (state.isLoading) return
+        focusManager.clearFocus()
+        formError = null
+        scope.launch {
+            when (val result = GoogleCredentials.requestIdToken(context)) {
+                is GoogleSignInResult.Success -> viewModel.loginAdminWithGoogle(result.idToken)
+                is GoogleSignInResult.Failure -> formError = result.message
+                GoogleSignInResult.Cancelled -> Unit
+            }
+        }
     }
 
     Scaffold(
@@ -170,6 +192,8 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
 
             Spacer(modifier = Modifier.height(16.dp))
             AuthPrimaryButton(text = "Sign in", isLoading = state.isLoading, onClick = ::submit)
+            Spacer(modifier = Modifier.height(12.dp))
+            GoogleSignInButton(enabled = !state.isLoading, onClick = ::googleSignIn)
             // Shown unless app-config says admin signup is disabled.
             if (viewModel.adminSignupConfig()?.enabled != false) {
                 Spacer(modifier = Modifier.height(16.dp))
