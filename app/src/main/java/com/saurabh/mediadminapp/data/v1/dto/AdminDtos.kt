@@ -28,6 +28,13 @@ data class AdminRegisterRequest(
     @SerializedName("signup_code") val signupCode: String? = null
 )
 
+/** POST admins/register/google (public). Name and email come from the Google token. */
+data class AdminGoogleRegisterRequest(
+    @SerializedName("id_token") val idToken: String,
+    @SerializedName("signup_code") val signupCode: String? = null,
+    @SerializedName("phone_number") val phoneNumber: String? = null
+)
+
 data class AdminCreateRequest(
     val name: String,
     val email: String,

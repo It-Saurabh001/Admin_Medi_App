@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.components
 
+import com.saurabh.mediadminapp.ui.theme.isLight
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -139,7 +140,13 @@ enum class Tone { Success, Warning, Danger, Info }
 /** Semantic pill for non-order states (approved, blocked, Rx required, role...). Same families as StatusChip. */
 @Composable
 fun ToneChip(text: String, tone: Tone, modifier: Modifier = Modifier) {
-    val (bg, fg) = when (tone) {
+    val cs = MaterialTheme.colorScheme
+    val (bg, fg) = if (!MaterialTheme.isLight) when (tone) {
+        Tone.Success -> cs.primaryContainer to cs.onPrimaryContainer
+        Tone.Warning -> cs.tertiaryContainer to cs.onTertiaryContainer
+        Tone.Danger -> cs.errorContainer to cs.onErrorContainer
+        Tone.Info -> cs.secondaryContainer to cs.onSecondaryContainer
+    } else when (tone) {
         Tone.Success -> GS.Green100 to GS.Green600
         Tone.Warning -> GS.Amber100 to GS.Amber600
         Tone.Danger -> GS.Red100 to GS.Red600
@@ -160,8 +167,11 @@ fun ToneChip(text: String, tone: Tone, modifier: Modifier = Modifier) {
 fun PersonAvatar(url: String?, name: String, modifier: Modifier = Modifier, size: Dp = 96.dp) {
     val initial = name.trim().firstOrNull()?.uppercase() ?: "?"
     val fallback = @Composable {
-        Box(Modifier.size(size).clip(CircleShape).background(GS.Green100), contentAlignment = Alignment.Center) {
-            Text(initial, style = MaterialTheme.typography.headlineMedium, color = GS.Green600)
+        val light = MaterialTheme.isLight
+        val bg = if (light) GS.Green100 else MaterialTheme.colorScheme.primaryContainer
+        val fg = if (light) GS.Green600 else MaterialTheme.colorScheme.onPrimaryContainer
+        Box(Modifier.size(size).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
+            Text(initial, style = MaterialTheme.typography.headlineMedium, color = fg)
         }
     }
     if (url.isNullOrBlank()) { Box(modifier) { fallback() }; return }
@@ -177,14 +187,18 @@ fun PersonAvatar(url: String?, name: String, modifier: Modifier = Modifier, size
 fun MedicineImage(url: String?, modifier: Modifier = Modifier, size: Dp = 64.dp) {
     val shape = MaterialTheme.shapes.small
     val fallback = @Composable {
-        Box(Modifier.size(size).clip(shape).background(GS.Teal100), contentAlignment = Alignment.Center) {
-            Icon(Icons.Outlined.Medication, contentDescription = null, tint = GS.Teal600, modifier = Modifier.size(size / 2))
+        val light = MaterialTheme.isLight
+        val bg = if (light) GS.Teal100 else MaterialTheme.colorScheme.secondaryContainer
+        val fg = if (light) GS.Teal600 else MaterialTheme.colorScheme.onSecondaryContainer
+        Box(Modifier.size(size).clip(shape).background(bg), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.Medication, contentDescription = null, tint = fg, modifier = Modifier.size(size / 2))
         }
     }
     if (url.isNullOrBlank()) { Box(modifier) { fallback() }; return }
     SubcomposeAsyncImage(
         model = url, contentDescription = null, contentScale = ContentScale.Fit,
-        modifier = modifier.size(size).clip(shape).background(GS.White).border(1.dp, GS.Outline, shape).padding(4.dp),
+        modifier = modifier.size(size).clip(shape).background(GS.White)
+            .border(1.dp, MaterialTheme.colorScheme.outline, shape).padding(4.dp),
         loading = { fallback() }, error = { fallback() }
     )
 }

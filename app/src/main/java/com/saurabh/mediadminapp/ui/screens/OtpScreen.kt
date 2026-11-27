@@ -211,7 +211,11 @@ fun OtpScreen(flow: OtpFlow, viewModel: MyViewModel, navController: NavHostContr
                     }
                 }
 
-            code == ErrorCode.ACCOUNT_NOT_APPROVED -> backToLogin("This admin account is awaiting approval.")
+            code == ErrorCode.ACCOUNT_NOT_APPROVED ->
+                navController.navigate(Routes.PendingApprovalRoutes.route) {
+                    popUpTo(Routes.SignInRoutes.route) { inclusive = false }
+                    launchSingleTop = true
+                }
             code == ErrorCode.RATE_LIMITED -> backToLogin("Too many attempts. Sign in again.")
             else -> {
                 failedAttempts++

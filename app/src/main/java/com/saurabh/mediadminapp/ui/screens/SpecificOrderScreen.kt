@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
 import androidx.compose.foundation.layout.heightIn
 import com.saurabh.mediadminapp.ui.components.shadeRow
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
@@ -54,7 +55,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -88,7 +88,6 @@ import com.saurabh.mediadminapp.ui.components.StatusChip
 import com.saurabh.mediadminapp.ui.components.Tone
 import com.saurabh.mediadminapp.ui.components.ToneChip
 import com.saurabh.mediadminapp.ui.components.dateTimeLabel
-import com.saurabh.mediadminapp.ui.theme.GS
 import com.saurabh.mediadminapp.ui.theme.Shades
 import com.saurabh.mediadminapp.utils.utilityFunctions.capitalizeEachWord
 
@@ -157,7 +156,7 @@ fun SpecificOrderScreen(orderId: String, viewModel: MyViewModel, navController: 
                     onRetry = { viewModel.getOrderById(orderId, force = true) },
                 )
                 order == null -> LoadingState()
-                else -> PullToRefreshBox(
+                else -> GsPullToRefreshBox(
                     isRefreshing = state.isLoading,
                     onRefresh = { viewModel.getOrderById(orderId, force = true) },
                     modifier = Modifier.fillMaxSize(),
@@ -356,9 +355,9 @@ private fun OrderBody(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Box(
-                            Modifier.size(36.dp).clip(MaterialTheme.shapes.small).background(GS.Teal100),
+                            Modifier.size(36.dp).clip(MaterialTheme.shapes.small).background(MaterialTheme.colorScheme.secondaryContainer),
                             contentAlignment = Alignment.Center,
-                        ) { Icon(Icons.Outlined.Description, contentDescription = null, tint = GS.Teal600, modifier = Modifier.size(20.dp)) }
+                        ) { Icon(Icons.Outlined.Description, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(20.dp)) }
                         Column(Modifier.weight(1f)) {
                             Text("View prescription", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
                             Text("Zoom, open file, verify", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -379,7 +378,7 @@ private fun OrderBody(
                             else -> "Mark prescription verified"
                         },
                         onClick = onVerifyRx, enabled = !verifying, icon = Icons.Outlined.Check,
-                        contentColor = GS.Green600, modifier = Modifier.fillMaxWidth(),
+                        contentColor = MaterialTheme.colorScheme.primary, modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }
@@ -417,10 +416,12 @@ private fun ProgressTrack(status: OrderStatus) {
 private fun TrackStep(label: String, icon: ImageVector, done: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
-            Modifier.size(32.dp).clip(CircleShape).background(if (done) GS.Green100 else GS.FieldFill),
+            Modifier.size(32.dp).clip(CircleShape).background(
+                if (done) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+            ),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = if (done) GS.Green600 else GS.Muted, modifier = Modifier.size(16.dp))
+            Icon(icon, contentDescription = null, tint = if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
         }
         Text(
             label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
@@ -433,7 +434,7 @@ private fun TrackStep(label: String, icon: ImageVector, done: Boolean) {
 private fun TrackLine(active: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier.padding(horizontal = 4.dp).padding(bottom = 18.dp).height(2.dp)
-            .background(if (active) GS.Green600 else GS.Outline)
+            .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline)
     )
 }
 
@@ -459,11 +460,11 @@ private fun OrderActionBar(
         ) {
             when (status) {
                 OrderStatus.PENDING -> {
-                    ShadeOutlinedButton("Reject", onReject, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = GS.Red600)
+                    ShadeOutlinedButton("Reject", onReject, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = MaterialTheme.colorScheme.error)
                     ShadeButton("Approve", onApprove, Modifier.weight(1f), isLoading = busy, icon = Icons.Outlined.Check)
                 }
                 OrderStatus.APPROVED -> {
-                    ShadeOutlinedButton("Cancel", onCancel, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = GS.Red600)
+                    ShadeOutlinedButton("Cancel", onCancel, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = MaterialTheme.colorScheme.error)
                     ShadeButton("Mark sold", onSell, Modifier.weight(1f), isLoading = busy, icon = Icons.Outlined.Sell)
                 }
                 else -> ShadeButton(

@@ -74,7 +74,7 @@ fun SignIn(viewModel: MyViewModel, navController: NavHostController) {
             ErrorCode.ACCOUNT_BLOCKED ->
                 navController.navigate(Routes.AccountBlockedRoutes.route) { launchSingleTop = true }
             ErrorCode.ACCOUNT_NOT_APPROVED ->
-                formError = "This admin account is awaiting approval."
+                navController.navigate(Routes.PendingApprovalRoutes.route) { launchSingleTop = true }
             ErrorCode.EMAIL_NOT_VERIFIED -> {
                 viewModel.resendAdminEmailOtp(email.trim())
                 navController.navigate(Routes.VerifyEmailRoutes(email.trim())) { launchSingleTop = true }

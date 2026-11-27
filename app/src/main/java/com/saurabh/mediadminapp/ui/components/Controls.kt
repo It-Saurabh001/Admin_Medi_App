@@ -1,5 +1,14 @@
 package com.saurabh.mediadminapp.ui.components
 
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ProvideTextStyle
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.text.KeyboardActions
@@ -29,6 +38,10 @@ import com.saurabh.mediadminapp.ui.theme.isLight
  * GreenShield OutlinedTextField (U9 / Part 3 §3): White fill, Outline 1dp unfocused, Green 500 2dp focused,
  * Red 600 error, label Muted -> Green 600. Same parameters as M3 OutlinedTextField(String).
  */
+/** True inside auth forms: [GsTextField] renders a shorter 48dp field. */
+val LocalCompactFields = staticCompositionLocalOf { false }
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GsTextField(
     value: String,
@@ -55,6 +68,48 @@ fun GsTextField(
     shape: Shape = MaterialTheme.shapes.small,
     colors: TextFieldColors = GsUi.fieldColors(),
 ) {
+    if (LocalCompactFields.current) {
+        val source = interactionSource ?: remember { MutableInteractionSource() }
+        val focused by source.collectIsFocusedAsState()
+        val compactStyle = MaterialTheme.typography.bodyMedium.copy(
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            // Top padding leaves room for the floating label, as OutlinedTextField does.
+            modifier = modifier.padding(top = if (label != null) 6.dp else 0.dp)
+                .defaultMinSize(minWidth = OutlinedTextFieldDefaults.MinWidth, minHeight = 48.dp),
+            enabled = enabled, readOnly = readOnly, textStyle = compactStyle,
+            cursorBrush = SolidColor(if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary),
+            visualTransformation = visualTransformation, keyboardOptions = keyboardOptions,
+            keyboardActions = keyboardActions, singleLine = singleLine, maxLines = maxLines, minLines = minLines,
+            interactionSource = source,
+            decorationBox = { inner ->
+                OutlinedTextFieldDefaults.DecorationBox(
+                    value = value, innerTextField = inner, enabled = enabled, singleLine = singleLine,
+                    visualTransformation = visualTransformation, interactionSource = source, isError = isError,
+                    // The resting label is smaller too, so it sits centred in the shorter box.
+                    label = label?.let { text ->
+                        {
+                            if (focused || value.isNotEmpty()) text()
+                            else ProvideTextStyle(MaterialTheme.typography.bodyMedium, text)
+                        }
+                    },
+                    placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon,
+                    prefix = prefix, suffix = suffix, supportingText = supportingText, colors = colors,
+                    contentPadding = OutlinedTextFieldDefaults.contentPadding(top = 12.dp, bottom = 12.dp),
+                    container = {
+                        OutlinedTextFieldDefaults.Container(
+                            enabled = enabled, isError = isError, interactionSource = source,
+                            colors = colors, shape = shape,
+                        )
+                    },
+                )
+            },
+        )
+        return
+    }
     OutlinedTextField(
         value = value, onValueChange = onValueChange, modifier = modifier, enabled = enabled, readOnly = readOnly,
         textStyle = textStyle, label = label, placeholder = placeholder, leadingIcon = leadingIcon, trailingIcon = trailingIcon,

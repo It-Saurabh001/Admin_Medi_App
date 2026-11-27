@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.LocationOn
@@ -23,7 +23,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,7 +54,6 @@ import com.saurabh.mediadminapp.ui.components.Tone
 import com.saurabh.mediadminapp.ui.components.ToneChip
 import com.saurabh.mediadminapp.ui.components.dateTimeLabel
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
-import com.saurabh.mediadminapp.ui.theme.GS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,13 +88,6 @@ fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: Na
     AppScreenScaffold(
         title = "User details",
         onBack = { navController.popBackStack() },
-        actions = {
-            if (user != null) {
-                com.saurabh.mediadminapp.ui.components.TileIconButton(
-                    Icons.Outlined.Edit, "Edit user", { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.userId)) }
-                )
-            }
-        },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
@@ -109,7 +100,7 @@ fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: Na
                     title = "User not found",
                     message = "This user may have been deleted.",
                 )
-                else -> PullToRefreshBox(
+                else -> GsPullToRefreshBox(
                     isRefreshing = usersState.isLoading,
                     onRefresh = { viewModel.getAllUsers(force = true) },
                     modifier = Modifier.fillMaxSize(),
@@ -122,7 +113,6 @@ fun UserDetailsScreen(user_id: String, viewModel: MyViewModel, navController: Na
                             onApprove = { viewModel.isApprovedUser(user.userId, true) },
                             onUnblock = { viewModel.unblockUser(user.userId) },
                             onBlock = { confirmBlock = true },
-                            onEdit = { navController.navigate(Routes.UpdateUserDetailsRoutes.invoke(user.userId)) },
                             onDelete = { confirmDelete = true },
                         )
                     }
@@ -159,7 +149,6 @@ private fun UserDetailsHub(
     onApprove: () -> Unit,
     onUnblock: () -> Unit,
     onBlock: () -> Unit,
-    onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val none = "Not provided"
@@ -204,11 +193,10 @@ private fun UserDetailsHub(
                     user.isBlocked -> ShadeButton("Unblock user", onUnblock, Modifier.fillMaxWidth(), isLoading = busy)
                     !user.isApproved -> ShadeButton("Approve user", onApprove, Modifier.fillMaxWidth(), isLoading = busy)
                 }
-                ShadeOutlinedButton("Edit profile", onEdit, Modifier.fillMaxWidth(), enabled = !isDeleting, icon = Icons.Outlined.Edit)
                 if (!user.isBlocked) {
-                    ShadeOutlinedButton("Block user", onBlock, Modifier.fillMaxWidth(), enabled = !busy && !isDeleting, contentColor = GS.Red600)
+                    ShadeOutlinedButton("Block user", onBlock, Modifier.fillMaxWidth(), enabled = !busy && !isDeleting, contentColor = MaterialTheme.colorScheme.error)
                 }
-                ShadeOutlinedButton("Delete user", onDelete, Modifier.fillMaxWidth(), enabled = !isDeleting, contentColor = GS.Red600)
+                ShadeOutlinedButton("Delete user", onDelete, Modifier.fillMaxWidth(), enabled = !isDeleting, contentColor = MaterialTheme.colorScheme.error)
             }
         }
     }

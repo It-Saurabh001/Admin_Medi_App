@@ -1,5 +1,8 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.width
+import com.saurabh.mediadminapp.ui.components.LocalCompactFields
 import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -69,6 +72,10 @@ internal fun AppError?.fieldError(key: String): String? = (this as? AppError.Api
 internal const val AUTH_MESSAGE_KEY = "auth_message"
 
 /** Scrollable, centred auth form body with 16dp margins. */
+/** One size for every auth action, so "Sign in" / "Create account" match the Google button. */
+internal val AUTH_BUTTON_WIDTH = 240.dp
+internal val AUTH_BUTTON_HEIGHT = 48.dp
+
 @Composable
 internal fun AuthFormColumn(
     modifier: Modifier = Modifier,
@@ -92,8 +99,10 @@ internal fun AuthFormColumn(
                 .padding(horizontal = 16.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = verticalArrangement,
-            content = content
-        )
+        ) {
+            val scope = this
+            CompositionLocalProvider(LocalCompactFields provides true) { scope.content() }
+        }
     }
 }
 
@@ -252,7 +261,10 @@ internal fun AuthPrimaryButton(
     modifier: Modifier = Modifier,
 ) {
     // Press = Green 600 -> 700, hold = 800; 0.97 scale; loading keeps 600 + white 18dp spinner (rules U13, guide §8).
-    com.saurabh.mediadminapp.ui.components.ShadeButton(
-        text = text, onClick = onClick, isLoading = isLoading, modifier = modifier.fillMaxWidth(),
-    )
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        com.saurabh.mediadminapp.ui.components.ShadeButton(
+            text = text, onClick = onClick, isLoading = isLoading,
+            modifier = Modifier.width(AUTH_BUTTON_WIDTH).height(AUTH_BUTTON_HEIGHT),
+        )
+    }
 }

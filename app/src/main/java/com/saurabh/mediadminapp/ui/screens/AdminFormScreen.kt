@@ -65,7 +65,6 @@ import com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton
 import com.saurabh.mediadminapp.ui.components.Tone
 import com.saurabh.mediadminapp.ui.components.ToneChip
 import com.saurabh.mediadminapp.ui.components.dateTimeLabel
-import com.saurabh.mediadminapp.ui.theme.GS
 import kotlinx.coroutines.delay
 
 /** Route argument that opens the create form instead of an existing admin. */
@@ -146,7 +145,7 @@ private fun AdminDetailForm(adminId: String, viewModel: MyViewModel, navControll
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     if (pending) {
-                        ShadeOutlinedButton("Reject", { confirmRemove = true }, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = GS.Red600)
+                        ShadeOutlinedButton("Reject", { confirmRemove = true }, Modifier.weight(1f), enabled = !busy, icon = Icons.Outlined.Close, contentColor = MaterialTheme.colorScheme.error)
                         ShadeButton("Approve", { viewModel.approveAdmin(adminId) }, Modifier.weight(1f), isLoading = busy, icon = Icons.Outlined.Check)
                     } else {
                         ShadeButton("Save changes", ::save, Modifier.fillMaxWidth(), enabled = dirty, isLoading = saving)
@@ -218,7 +217,7 @@ private fun AdminDetailForm(adminId: String, viewModel: MyViewModel, navControll
                     if (!pending && !isOwner && !isMe) {
                         ShadeOutlinedButton(
                             "Remove admin", { confirmRemove = true }, Modifier.fillMaxWidth(),
-                            enabled = !busy && !removing, contentColor = GS.Red600,
+                            enabled = !busy && !removing, contentColor = MaterialTheme.colorScheme.error,
                         )
                     }
                 }

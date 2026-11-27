@@ -4,6 +4,7 @@ import com.saurabh.mediadminapp.data.v1.core.ApiEnvelope
 import com.saurabh.mediadminapp.data.v1.core.PagedEnvelope
 import com.saurabh.mediadminapp.data.v1.dto.Admin
 import com.saurabh.mediadminapp.data.v1.dto.AdminCreateRequest
+import com.saurabh.mediadminapp.data.v1.dto.AdminGoogleRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.AdminRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.AdminUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.Device
@@ -92,6 +93,10 @@ interface AdminsApi {
     /** Public admin signup; first admin = approved owner, later ones unapproved. */
     @POST("admins/register")
     suspend fun registerAdmin(@Body body: AdminRegisterRequest): Response<ApiEnvelope<Admin>>
+
+    /** Public admin signup with a Google ID token. */
+    @POST("admins/register/google")
+    suspend fun registerAdminWithGoogle(@Body body: AdminGoogleRegisterRequest): Response<ApiEnvelope<Admin>>
 
     @Multipart
     @POST("admins/register")

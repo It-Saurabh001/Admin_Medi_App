@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
 import com.saurabh.mediadminapp.ui.components.GsFilterChip
 import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.animation.AnimatedVisibility
@@ -49,7 +50,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -172,7 +172,7 @@ fun ProductScreen(
         }
     ) { inner ->
         val items = state.success?.items
-        PullToRefreshBox(
+        GsPullToRefreshBox(
             isRefreshing = state.isLoading && items != null,
             onRefresh = { viewModel.getAllProduct(force = true); viewModel.loadProductCategories(force = true) },
             modifier = Modifier.padding(inner).fillMaxSize()

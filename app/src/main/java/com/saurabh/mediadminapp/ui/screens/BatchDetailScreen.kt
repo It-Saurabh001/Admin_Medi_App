@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
 import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -17,7 +18,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -59,7 +59,7 @@ fun BatchDetailScreen(batchId: String, viewModel: MyViewModel, navController: Na
     val batch = (state as? UiState.Success)?.data?.takeIf { it.batchId == batchId }
 
     AppScreenScaffold(title = batch?.let { "Batch ${it.batchNo}" } ?: "Batch", onBack = { navController.navigateUp() }) { inner ->
-        PullToRefreshBox(
+        GsPullToRefreshBox(
             isRefreshing = state is UiState.Loading && batch != null,
             onRefresh = { viewModel.getBatch(batchId, force = true) },
             modifier = Modifier.padding(inner).fillMaxSize()
@@ -195,7 +195,7 @@ private fun BatchEditor(b: Batch, viewModel: MyViewModel, navController: NavCont
                     )
                     com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton(
                         text = "Write off ${b.quantity} units", onClick = { confirmWriteOff = true }, enabled = !busy,
-                        contentColor = com.saurabh.mediadminapp.ui.theme.GS.Red600, modifier = Modifier.fillMaxWidth(),
+                        contentColor = MaterialTheme.colorScheme.error, modifier = Modifier.fillMaxWidth(),
                     )
                 }
             }

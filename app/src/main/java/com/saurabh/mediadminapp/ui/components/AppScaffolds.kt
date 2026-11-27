@@ -52,7 +52,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -212,7 +211,7 @@ fun PagedLazyColumn(
             info.totalItemsCount > 0 && last >= info.totalItemsCount - 4
         }.distinctUntilChanged().filter { it && !guard }.collect { loadMore() }
     }
-    PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
+    GsPullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = modifier.fillMaxSize()) {
         AdaptiveContent(maxWidth = AdaptiveWidths.List) {
             LazyColumn(
                 state = state,

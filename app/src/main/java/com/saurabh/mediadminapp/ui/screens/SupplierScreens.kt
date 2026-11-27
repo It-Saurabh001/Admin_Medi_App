@@ -357,7 +357,7 @@ fun SupplierFormScreen(supplierId: String, viewModel: MyViewModel, navController
                     if (supplier != null) {
                         if (supplier.isActive) ShadeOutlinedButton(
                             text = "Deactivate supplier", onClick = { confirmDeactivate = true }, modifier = Modifier.fillMaxWidth(),
-                            enabled = !busy, contentColor = GS.Red600,
+                            enabled = !busy, contentColor = MaterialTheme.colorScheme.error,
                         )
                     }
                 }

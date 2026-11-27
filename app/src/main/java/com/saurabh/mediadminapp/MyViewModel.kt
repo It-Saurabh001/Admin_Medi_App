@@ -463,6 +463,11 @@ class MyViewModel @Inject constructor(
 
     fun clearEmailVerifyState() { _emailVerifyState.value = EmailVerifyState() }
 
+    fun clearPasswordResetStates() {
+        _passwordResetState.value = PasswordResetState()
+        _passwordResetOtpState.value = PasswordResetOtpState()
+    }
+
     /** Email last used for requestPasswordReset (prefills ResetPassword). */
     fun lastResetEmail(): String? = resetEmail
 
@@ -516,6 +521,21 @@ class MyViewModel @Inject constructor(
         )
         viewModelScope.launch(Dispatchers.IO) {
             repository.registerAdmin(request, image).collectInto(
+                onLoading = { _registerAdminState.value = RegisterAdminState(isLoading = true) },
+                onError = { m, e -> _registerAdminState.value = RegisterAdminState(error = m ?: "Sign up failed", appError = e) },
+                onSuccess = { _registerAdminState.value = RegisterAdminState(success = it) }
+            )
+        }
+    }
+
+    fun registerAdminWithGoogle(idToken: String, signupCode: String? = null, phoneNumber: String? = null) {
+        if (_registerAdminState.value.isLoading) return
+        val request = com.saurabh.mediadminapp.data.v1.dto.AdminGoogleRegisterRequest(
+            idToken = idToken, signupCode = signupCode?.trim()?.ifBlank { null },
+            phoneNumber = phoneNumber?.trim()?.ifBlank { null }
+        )
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.registerAdminWithGoogle(request).collectInto(
                 onLoading = { _registerAdminState.value = RegisterAdminState(isLoading = true) },
                 onError = { m, e -> _registerAdminState.value = RegisterAdminState(error = m ?: "Sign up failed", appError = e) },
                 onSuccess = { _registerAdminState.value = RegisterAdminState(success = it) }

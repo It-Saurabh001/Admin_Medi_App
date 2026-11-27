@@ -169,6 +169,10 @@ class Repository @Inject constructor(
         else adminsApi.registerAdminMultipart(request.parts(), image.toPart())
     }
 
+    /** POST admins/register/google (public). */
+    fun registerAdminWithGoogle(request: com.saurabh.mediadminapp.data.v1.dto.AdminGoogleRegisterRequest) =
+        v1Flow { adminsApi.registerAdminWithGoogle(request) }
+
     /** POST admins/{admin_id}/approve. Admin. Idempotent. */
     fun approveAdmin(adminId: String) = v1Flow { adminsApi.approveAdmin(adminId) }
 

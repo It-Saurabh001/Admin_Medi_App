@@ -1,5 +1,7 @@
 package com.saurabh.mediadminapp.ui.screens.nav
 
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.outlined.DarkMode
 import com.saurabh.mediadminapp.ui.components.shadeColor
 import com.saurabh.mediadminapp.ui.theme.isLight
 import androidx.compose.ui.draw.clip
@@ -14,8 +16,6 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
@@ -51,18 +51,14 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Medication
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.LocalShipping
-import androidx.compose.material.icons.outlined.SwapVert
-import androidx.compose.material.icons.outlined.NotificationImportant
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Medication
-import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.ShoppingBag
@@ -119,6 +115,7 @@ import com.saurabh.mediadminapp.ui.screens.BarcodeScannerScreen
 import com.saurabh.mediadminapp.ui.screens.ReportsScreen
 import com.saurabh.mediadminapp.ui.screens.TopProductsScreen
 import com.saurabh.mediadminapp.ui.screens.AccountBlockedScreen
+import com.saurabh.mediadminapp.ui.screens.PendingApprovalScreen
 import com.saurabh.mediadminapp.ui.screens.ForgotPasswordScreen
 import com.saurabh.mediadminapp.ui.screens.ResetPasswordScreen
 import com.saurabh.mediadminapp.ui.screens.UpgradeRequiredScreen
@@ -135,7 +132,7 @@ import com.saurabh.mediadminapp.ui.screens.SpecificOrderScreen
 import com.saurabh.mediadminapp.ui.screens.SpecificProductScreen
 import com.saurabh.mediadminapp.ui.screens.SplashScreen
 import com.saurabh.mediadminapp.ui.screens.UpdateProductScreen
-import com.saurabh.mediadminapp.ui.screens.UpdateUserDetailsScreen
+import com.saurabh.mediadminapp.ui.screens.ChangePasswordScreen
 import com.saurabh.mediadminapp.ui.screens.UserDetailsScreen
 import com.saurabh.mediadminapp.utils.UiEvent
 
@@ -202,6 +199,7 @@ fun NavApp(viewModel: MyViewModel) {
             currentRoute.contains("ForgotPasswordRoutes", ignoreCase = true) -> true
             currentRoute.contains("ResetPasswordRoutes", ignoreCase = true) -> true
             currentRoute.contains("AccountBlockedRoutes", ignoreCase = true) -> true
+            currentRoute.contains("PendingApprovalRoutes", ignoreCase = true) -> true
             else -> false
         }
     }
@@ -258,7 +256,7 @@ fun NavApp(viewModel: MyViewModel) {
         }
     }
 
-    // Screens' menu buttons and the More tab open the navigation drawer.
+    // Screens' menu buttons open the navigation drawer.
     val openDrawer: () -> Unit = remember(isTopLevelRoute) {
         { if (isTopLevelRoute) drawerScope.launch { drawerState.open() } }
     }
@@ -266,18 +264,14 @@ fun NavApp(viewModel: MyViewModel) {
     val windowInfo = rememberWindowSize()
     val tabRoutes = listOf(Routes.HomeRoutes.route, Routes.ProductRoutes.route, Routes.OrdersRoutes.route, Routes.HistoryRoutes.route)
     val onTabSelected: (Int) -> Unit = { index ->
-        if (index == MORE_TAB) {
-            drawerScope.launch { drawerState.open() }
-        } else {
-            val targetRoute = tabRoutes.getOrElse(index) { Routes.HomeRoutes.route }
-            when {
-                currentRoute == targetRoute -> Unit
-                selectedTab == index -> navController.popBackStack(targetRoute, inclusive = false) // re-tap: pop to tab root
-                else -> navController.navigate(targetRoute) {
-                    launchSingleTop = true
-                    restoreState = true
-                    popUpTo(Routes.HomeRoutes.route) { saveState = true }
-                }
+        val targetRoute = tabRoutes.getOrElse(index) { Routes.HomeRoutes.route }
+        when {
+            currentRoute == targetRoute -> Unit
+            selectedTab == index -> navController.popBackStack(targetRoute, inclusive = false) // re-tap: pop to tab root
+            else -> navController.navigate(targetRoute) {
+                launchSingleTop = true
+                restoreState = true
+                popUpTo(Routes.HomeRoutes.route) { saveState = true }
             }
         }
     }
@@ -287,6 +281,17 @@ fun NavApp(viewModel: MyViewModel) {
             popUpTo(Routes.HomeRoutes.route) { inclusive = false }
             launchSingleTop = true
         }
+    }
+
+    val themeController = com.saurabh.mediadminapp.ui.theme.LocalThemeController.current
+    var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+    if (showThemeDialog && themeController != null) {
+        val currentMode by themeController.mode.collectAsStateWithLifecycle()
+        com.saurabh.mediadminapp.ui.components.ThemeDialog(
+            current = currentMode,
+            onSelect = themeController::set,
+            onDismiss = { showThemeDialog = false },
+        )
     }
 
     ModalNavigationDrawer(
@@ -300,6 +305,10 @@ fun NavApp(viewModel: MyViewModel) {
                     drawerScope.launch { drawerState.close() }
                     navController.navigate(route) { launchSingleTop = true }
                 },
+                onTheme = {
+                    drawerScope.launch { drawerState.close() }
+                    showThemeDialog = true
+                },
                 onLogout = {
                     drawerScope.launch { drawerState.close() }
                     viewModel.setAdminLoggedOut()
@@ -312,13 +321,15 @@ fun NavApp(viewModel: MyViewModel) {
         contentColor = MaterialTheme.colorScheme.onBackground,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+        // Only tab roots have the collapsing top bar. Elsewhere this connection would consume every
+        // upward swipe (its limit is never set), which stopped forms such as sign up from scrolling.
         modifier = Modifier
             .fillMaxSize()
-            .nestedScroll(scrollBehavior.nestedScrollConnection),
+            .then(if (isTopLevelRoute) Modifier.nestedScroll(scrollBehavior.nestedScrollConnection) else Modifier),
         bottomBar = {
             if (isTopLevelRoute && windowInfo.isCompact) {
                 AppNavigationBar(
-                    selected = if (drawerOpen) MORE_TAB else selectedTab,
+                    selected = selectedTab,
                     onItemSelected = onTabSelected
                 )
             }
@@ -338,7 +349,7 @@ fun NavApp(viewModel: MyViewModel) {
         ) {
         if (isTopLevelRoute && !windowInfo.isCompact) {
             AppNavigationRail(
-                selected = if (drawerOpen) MORE_TAB else selectedTab,
+                selected = selectedTab,
                 onItemSelected = onTabSelected
             )
         }
@@ -382,6 +393,9 @@ fun NavApp(viewModel: MyViewModel) {
             }
             composable(Routes.UpgradeRequiredRoutes.route) {
                 UpgradeRequiredScreen(viewModel)
+            }
+            composable(Routes.PendingApprovalRoutes.route) {
+                PendingApprovalScreen(navController)
             }
             composable(Routes.AccountBlockedRoutes.route) {
                 AccountBlockedScreen(viewModel, navController)
@@ -458,6 +472,7 @@ fun NavApp(viewModel: MyViewModel) {
                 )
             }
             composable(Routes.ProfileRoutes.route) { ProfileScreen(viewModel, navController) }
+            composable(Routes.ChangePasswordRoutes.route) { ChangePasswordScreen(viewModel, navController) }
             composable(Routes.SettingsRoutes.route) { SettingsScreen(viewModel, navController) }
             composable(Routes.AboutRoutes.route) { AboutScreen(viewModel, navController) }
             composable(Routes.ReportsRoutes.route) { ReportsScreen(viewModel, navController) }
@@ -561,13 +576,6 @@ fun NavApp(viewModel: MyViewModel) {
                     val userId = b.arguments?.getString("userId") ?: return@composable
                     UserDetailsScreen(userId, viewModel, navController)
                 }
-                composable(
-                    Routes.UpdateUserDetailsRoutes.route,
-                    arguments = listOf(navArgument("userId") { type = NavType.StringType })
-                ) { b ->
-                    val userId = b.arguments?.getString("userId") ?: return@composable
-                    UpdateUserDetailsScreen(userId, viewModel, navController)
-                }
             }
         }
         }
@@ -576,7 +584,6 @@ fun NavApp(viewModel: MyViewModel) {
     } // ModalNavigationDrawer
 }
 
-private const val MORE_TAB = 4
 
 private data class TopLevelTab(
     val label: String,
@@ -590,7 +597,6 @@ private val topLevelTabs = listOf(
     TopLevelTab("Products", Icons.Filled.Medication, Icons.Outlined.Medication),
     TopLevelTab("Orders", Icons.Filled.ShoppingBag, Icons.Outlined.ShoppingBag),
     TopLevelTab("History", Icons.Filled.History, Icons.Outlined.History),
-    TopLevelTab("More", Icons.Filled.MoreHoriz, Icons.Outlined.MoreHoriz),
 )
 
 // =============================================================================
@@ -616,6 +622,7 @@ private fun AppNavigationBar(
             contentColor = MaterialTheme.colorScheme.onSurface,
             tonalElevation = 0.dp,
         ) {
+            Spacer(Modifier.width(8.dp))
             topLevelTabs.forEachIndexed { index, tab ->
                 GsNavBarItem(
                     selected = selected == index,
@@ -625,6 +632,7 @@ private fun AppNavigationBar(
                     label = tab.label,
                 )
             }
+            Spacer(Modifier.width(8.dp))
         }
     }
 }
@@ -716,14 +724,11 @@ private fun AppDrawerSheet(
     admin: Admin?,
     currentRoute: String?,
     onNavigate: (String) -> Unit,
+    onTheme: () -> Unit,
     onLogout: () -> Unit,
 ) {
     val manage = listOf(
-        DrawerEntry("Reports", Icons.Outlined.Insights, Routes.ReportsRoutes.route),
-        DrawerEntry("Top products", Icons.AutoMirrored.Outlined.TrendingUp, Routes.TopProductsRoutes.route),
         DrawerEntry("Scan barcode", Icons.Outlined.QrCodeScanner, Routes.BarcodeScannerRoutes.route),
-        DrawerEntry("Inventory alerts", Icons.Outlined.NotificationImportant, Routes.InventoryAlertsRoutes.invoke()),
-        DrawerEntry("Stock movements", Icons.Outlined.SwapVert, Routes.StockMovementsRoutes.invoke()),
         DrawerEntry("Suppliers", Icons.Outlined.LocalShipping, Routes.SuppliersRoutes.route),
         DrawerEntry("Customers", Icons.Outlined.Groups, Routes.UsersRoutes.route),
         DrawerEntry("Admins", Icons.Outlined.AdminPanelSettings, Routes.AdminListRoutes.route),
@@ -748,6 +753,16 @@ private fun AppDrawerSheet(
             HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outline)
             Text("Account", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp, top = 8.dp, bottom = 4.dp))
             account.forEach { e -> DrawerRow(e, currentRoute == e.route) { onNavigate(e.route) } }
+            val themeMode = com.saurabh.mediadminapp.ui.theme.LocalThemeController.current
+                ?.mode?.collectAsStateWithLifecycle()?.value
+            NavigationDrawerItem(
+                label = { Text("Theme") },
+                icon = { Icon(Icons.Outlined.DarkMode, contentDescription = null) },
+                badge = { themeMode?.let { Text(it.label, style = MaterialTheme.typography.labelMedium) } },
+                selected = false,
+                onClick = onTheme,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
             HorizontalDivider(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.outline)
             NavigationDrawerItem(
                 label = { Text("Log out", color = MaterialTheme.colorScheme.error) },

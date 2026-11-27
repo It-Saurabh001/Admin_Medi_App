@@ -100,19 +100,21 @@ fun ReportsScreen(viewModel: MyViewModel, navController: NavController) {
     AppScreenScaffold(
         title = "Sales report",
         onBack = { navController.navigateUp() },
-        actions = {
-            com.saurabh.mediadminapp.ui.components.TileIconButton(
-                Icons.AutoMirrored.Outlined.TrendingUp, "Top products", { navController.navigate(Routes.TopProductsRoutes.route) { launchSingleTop = true } }
-            )
-        }
     ) { inner ->
         val retry = { viewModel.loadSalesReport(force = true) }
+        val topProducts: @Composable () -> Unit = {
+            com.saurabh.mediadminapp.ui.components.NavRow(
+                "Top products", { navController.navigate(Routes.TopProductsRoutes.route) { launchSingleTop = true } },
+                subtitle = "Best sellers for a date range", icon = Icons.AutoMirrored.Outlined.TrendingUp
+            )
+        }
         if (window.isExpanded) {
             Row(Modifier.padding(inner).fillMaxSize()) {
                 Column(
                     Modifier.width(360.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    topProducts()
                     ReportFilters(state.query, onQuery, showGroupBy = true, sortOptions = SALES_SORTS)
                     SalesSummary(state)
                 }
@@ -122,6 +124,8 @@ fun ReportsScreen(viewModel: MyViewModel, navController: NavController) {
         } else {
             Column(Modifier.padding(inner).fillMaxSize()) {
                 SalesRows(state, retry, viewModel::loadMoreSalesReport) {
+                    topProducts()
+                    Spacer(Modifier.height(12.dp))
                     ReportFilters(state.query, onQuery, showGroupBy = true, sortOptions = SALES_SORTS)
                     Spacer(Modifier.height(12.dp))
                     SalesSummary(state)

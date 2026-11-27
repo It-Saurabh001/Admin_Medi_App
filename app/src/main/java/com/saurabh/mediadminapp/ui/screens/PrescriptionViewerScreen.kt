@@ -215,7 +215,8 @@ private fun ZoomableImage(url: String) {
 @Composable
 private fun PdfCard(onOpen: () -> Unit) {
     Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Surface(shape = MaterialTheme.shapes.medium, color = GS.Teal100, contentColor = GS.Teal600, modifier = Modifier.size(72.dp)) {
+        Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(72.dp)) {
             Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Description, contentDescription = null, modifier = Modifier.size(36.dp)) }
         }
         Text("PDF prescription", style = MaterialTheme.typography.titleMedium)

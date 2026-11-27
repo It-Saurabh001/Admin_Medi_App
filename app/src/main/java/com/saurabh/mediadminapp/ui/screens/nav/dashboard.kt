@@ -1,5 +1,10 @@
 package com.saurabh.mediadminapp.ui.screens.nav
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
+import androidx.compose.material.icons.outlined.NotificationImportant
+import androidx.compose.material.icons.outlined.SwapVert
+import com.saurabh.mediadminapp.ui.components.DetailCard
+import com.saurabh.mediadminapp.ui.components.NavRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +32,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,7 +87,7 @@ fun DashboardScreen(
     // Card taps open tab roots with tab semantics (saved state, single top);
     // inventory alert tiles are a normal forward navigation to a detail screen.
     val openTab: (String) -> Unit = { route ->
-        if (route.startsWith("inventoryAlertsRoutes")) {
+        if (route.startsWith("inventoryAlertsRoutes") || route == Routes.StockMovementsRoutes.invoke()) {
             navController.navigate(route) { launchSingleTop = true }
         } else navController.navigate(route) {
             launchSingleTop = true
@@ -102,7 +106,7 @@ fun DashboardScreen(
     ) { inner ->
         val s = state
         val data = (s as? UiState.Success)?.data ?: lastData
-        PullToRefreshBox(
+        GsPullToRefreshBox(
             isRefreshing = s is UiState.Loading && data != null,
             onRefresh = { viewModel.getDashboardSummary() },
             modifier = Modifier.padding(inner).fillMaxSize()
@@ -200,6 +204,18 @@ private fun DashboardGrid(d: DashboardSummary, refreshError: String?, onOpen: (S
             }
             items(stock, key = { it.key }, contentType = { "stat" }) { t ->
                 StatCard(t.label, t.value, t.icon, onClick = { onOpen(t.route) }, modifier = Modifier.fillMaxWidth(), tone = t.tone)
+            }
+            item(key = "stockTools", span = { GridItemSpan(maxLineSpan) }, contentType = "tools") {
+                DetailCard(title = "Stock tools", icon = Icons.Outlined.Inventory2) {
+                    NavRow(
+                        "Inventory alerts", { onOpen(Routes.InventoryAlertsRoutes.invoke()) },
+                        subtitle = "Low stock, out of stock and expiry", icon = Icons.Outlined.NotificationImportant
+                    )
+                    NavRow(
+                        "Stock movements", { onOpen(Routes.StockMovementsRoutes.invoke()) },
+                        subtitle = "Purchases, sales and adjustments", icon = Icons.Outlined.SwapVert
+                    )
+                }
             }
         }
     }

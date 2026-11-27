@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
 import com.saurabh.mediadminapp.ui.components.GsTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,8 @@ import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Lock
+import com.saurabh.mediadminapp.ui.screens.nav.Routes
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,7 +34,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.saurabh.mediadminapp.ui.components.ShadeButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -60,7 +62,6 @@ import com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton
 import com.saurabh.mediadminapp.ui.components.Tone
 import com.saurabh.mediadminapp.ui.components.ToneChip
 import com.saurabh.mediadminapp.ui.components.dateTimeLabel
-import com.saurabh.mediadminapp.ui.theme.GS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,9 +91,9 @@ fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
                 admin == null -> EmptyState(
                     title = "Profile unavailable",
                     message = "Your admin record was not found.",
-                    action = { ShadeOutlinedButton("Log out", { confirmLogout = true }, contentColor = GS.Red600) },
+                    action = { ShadeOutlinedButton("Log out", { confirmLogout = true }, contentColor = MaterialTheme.colorScheme.error) },
                 )
-                else -> PullToRefreshBox(
+                else -> GsPullToRefreshBox(
                     isRefreshing = adminState.isLoading,
                     onRefresh = { viewModel.getAllAdmin(force = true) },
                     modifier = Modifier.fillMaxSize(),
@@ -132,10 +133,18 @@ fun ProfileScreen(viewModel: MyViewModel, navController: NavController) {
                             item(key = "edit") {
                                 ShadeButton("Edit profile", { editing = true }, Modifier.fillMaxWidth(), icon = Icons.Outlined.Edit)
                             }
+                            item(key = "password") {
+                                ShadeOutlinedButton(
+                                    text = "Change password",
+                                    onClick = { navController.navigate(Routes.ChangePasswordRoutes.route) { launchSingleTop = true } },
+                                    icon = Icons.Outlined.Lock, contentColor = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.fillMaxWidth(),
+                                )
+                            }
                             item(key = "logout") {
                                 ShadeOutlinedButton(
                                     text = "Log out", onClick = { confirmLogout = true },
-                                    icon = Icons.AutoMirrored.Outlined.Logout, contentColor = GS.Red600,
+                                    icon = Icons.AutoMirrored.Outlined.Logout, contentColor = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                             }

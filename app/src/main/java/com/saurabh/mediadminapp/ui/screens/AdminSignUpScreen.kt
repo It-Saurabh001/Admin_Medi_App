@@ -1,39 +1,38 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.R
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.text.style.TextAlign
 import com.saurabh.mediadminapp.ui.components.GsTextField
 import android.util.Patterns
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Phone
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -59,6 +58,8 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
     val config = remember { viewModel.adminSignupConfig() }
     val codeRequired = config?.codeRequired == true
     val focus = LocalFocusManager.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -82,6 +83,8 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
 
     LaunchedEffect(state.success) {
         val created = state.success ?: return@LaunchedEffect
+        // Google already verified the address: show the result below instead of asking for an email code.
+        if (created.googleLinked == true) return@LaunchedEffect
         navController.navigate(Routes.VerifyEmailRoutes(created.email)) { launchSingleTop = true }
     }
 
@@ -106,8 +109,28 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
         formError = when {
             api?.code == ErrorCode.RATE_LIMITED -> "Too many sign-up attempts. Try again later."
             api?.code == ErrorCode.FORBIDDEN && !codeRequired -> "Sign up is not allowed on this server. Ask the owner for a signup code."
+            api?.code == ErrorCode.CONFLICT -> msg
             errors.isEmpty() -> msg
             else -> null
+        }
+    }
+
+    fun googleSignUp() {
+        if (state.isLoading) return
+        errors = buildMap {
+            if (codeRequired && code.isBlank()) put("code", "Enter the signup code")
+            if (phone.isNotBlank() && !PHONE_REGEX.matches(phone.trim())) put("phone", "7-15 digits, optional +")
+        }
+        if (errors.isNotEmpty()) return
+        focus.clearFocus()
+        formError = null
+        scope.launch {
+            when (val result = GoogleCredentials.requestIdToken(context)) {
+                is GoogleSignInResult.Success ->
+                    viewModel.registerAdminWithGoogle(result.idToken, code.takeIf { it.isNotBlank() }, phone)
+                is GoogleSignInResult.Failure -> formError = result.message
+                GoogleSignInResult.Cancelled -> Unit
+            }
         }
     }
 
@@ -132,8 +155,7 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        topBar = { AuthTopBar("Create account") { navController.navigateUp() } }
+        contentColor = MaterialTheme.colorScheme.onBackground
     ) { inner ->
         val created = state.success
         if (created != null) {
@@ -153,18 +175,33 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
                     text = "Back to sign in",
                     isLoading = false,
                     onClick = {
-                        backToLogin(if (approved) "Account created. Sign in with ${created.email}." else "Account created. Awaiting approval by an admin.")
+                        val how = if (created.googleLinked == true) "Use Continue with Google" else "Sign in with ${created.email}"
+                        backToLogin(if (approved) "Account created. $how." else "Account created. Awaiting approval by an admin.")
                     }
                 )
             }
             return@Scaffold
         }
 
-        AuthFormColumn(modifier = Modifier.padding(inner), verticalArrangement = Arrangement.Top) {
-            AuthHeader(
-                icon = Icons.Outlined.PersonAdd,
-                title = "New admin account",
-                subtitle = "The first account becomes the owner. Later accounts need approval by an admin."
+        AuthFormColumn(modifier = Modifier.padding(inner)) {
+            Image(
+                painter = painterResource(R.drawable.ic_logo),
+                contentDescription = null,
+                modifier = Modifier.size(96.dp)
+            )
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = "Create account",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Set up an admin account for your pharmacy",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
             )
             Spacer(Modifier.height(24.dp))
             SignUpField(name, { name = it; errors = errors - "name" }, "Full name", Icons.Outlined.Person, errors["name"], KeyboardType.Text, !state.isLoading)
@@ -194,6 +231,8 @@ fun AdminSignUpScreen(viewModel: MyViewModel, navController: NavHostController) 
             AuthFormError(formError)
             Spacer(Modifier.height(16.dp))
             AuthPrimaryButton(text = "Create account", isLoading = state.isLoading, onClick = ::submit)
+            Spacer(Modifier.height(12.dp))
+            GoogleSignInButton(enabled = !state.isLoading, onClick = ::googleSignUp)
             AuthFooterLink(prompt = "Already have an account?", action = "Sign in", onClick = { if (!state.isLoading) backToLogin() })
         }
     }

@@ -49,6 +49,18 @@ sealed class Routes{
     }
 
     @Serializable
+    object PendingApprovalRoutes {
+        const val route = "PendingApprovalRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
+    object ChangePasswordRoutes {
+        const val route = "ChangePasswordRoutes"
+        operator fun invoke() = route
+    }
+
+    @Serializable
     object ProfileRoutes {
         const val route = "ProfileRoutes"
         operator fun invoke() = route
@@ -149,13 +161,6 @@ sealed class Routes{
     }
 
 
-    @Serializable
-    class UpdateUserDetailsRoutes(val userId: String){
-        companion object {
-            const val route = "update_user_details/{userId}"
-            operator fun invoke(userId: String) = "update_user_details/$userId"
-        }
-    }
 
 @Serializable
 class BatchListRoutes(val productId: String){

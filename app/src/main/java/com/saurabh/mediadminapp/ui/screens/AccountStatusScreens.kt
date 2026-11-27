@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.HourglassTop
 import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -79,6 +80,28 @@ private fun StatusMessageScreen(
             AuthPrimaryButton(text = actionText, isLoading = false, onClick = onAction)
         }
     }
+}
+
+/** 403 ACCOUNT_NOT_APPROVED at sign-in: no session exists yet, so checking again means signing in again. */
+@Composable
+fun PendingApprovalScreen(navController: NavHostController) {
+    fun backToSignIn() {
+        if (!navController.popBackStack(Routes.SignInRoutes.route, inclusive = false)) {
+            navController.navigate(Routes.SignInRoutes.route) {
+                popUpTo(0) { inclusive = true }
+                launchSingleTop = true
+            }
+        }
+    }
+    BackHandler { backToSignIn() }
+    StatusMessageScreen(
+        icon = Icons.Outlined.HourglassTop,
+        tone = com.saurabh.mediadminapp.ui.components.Tone.Warning,
+        title = "Awaiting approval",
+        message = "Your admin account has not been approved yet. Ask the pharmacy owner to approve it, then sign in again.",
+        actionText = "Back to sign in",
+        onAction = ::backToSignIn
+    )
 }
 
 /** Blocking update screen (426 / min_app_version). Back is disabled. */

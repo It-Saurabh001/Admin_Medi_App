@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -110,7 +110,7 @@ fun SpecificProductScreen(productId: String, viewModel: MyViewModel, navControll
             }
         },
     ) { inner ->
-        PullToRefreshBox(
+        GsPullToRefreshBox(
             isRefreshing = state.isLoading && product != null,
             onRefresh = { viewModel.getSpecificProduct(productId, force = true) },
             modifier = Modifier.padding(inner).fillMaxSize()
@@ -214,9 +214,9 @@ private fun ProductDetail(p: Product, busy: Boolean, onDeactivate: () -> Unit, o
         )
 
         if (p.isActive) {
-            ShadeOutlinedButton("Deactivate product", { confirm = true }, Modifier.fillMaxWidth(), enabled = !busy, contentColor = GS.Red600)
+            ShadeOutlinedButton("Deactivate product", { confirm = true }, Modifier.fillMaxWidth(), enabled = !busy, contentColor = MaterialTheme.colorScheme.error)
         } else {
-            ShadeOutlinedButton("Reactivate product", onReactivate, Modifier.fillMaxWidth(), enabled = !busy, contentColor = GS.Green600)
+            ShadeOutlinedButton("Reactivate product", onReactivate, Modifier.fillMaxWidth(), enabled = !busy, contentColor = MaterialTheme.colorScheme.primary)
         }
     }
 

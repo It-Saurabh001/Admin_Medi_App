@@ -1,5 +1,9 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import androidx.compose.material3.MaterialTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.saurabh.mediadminapp.ui.components.ThemeDialog
+import com.saurabh.mediadminapp.ui.theme.LocalThemeController
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,16 +33,20 @@ import com.saurabh.mediadminapp.ui.adaptive.AdaptiveWidths
 import com.saurabh.mediadminapp.ui.components.AppScreenScaffold
 import com.saurabh.mediadminapp.ui.components.ConfirmDialog
 import com.saurabh.mediadminapp.ui.components.DetailCard
-import com.saurabh.mediadminapp.ui.components.InfoTile
 import com.saurabh.mediadminapp.ui.components.NavRow
 import com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton
 import com.saurabh.mediadminapp.ui.screens.nav.Routes
-import com.saurabh.mediadminapp.ui.theme.GS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(viewModel: MyViewModel, navController: NavController) {
     var confirmLogout by rememberSaveable { mutableStateOf(false) }
+    var showTheme by rememberSaveable { mutableStateOf(false) }
+    val themeController = LocalThemeController.current
+    val themeMode = themeController?.mode?.collectAsStateWithLifecycle()?.value
+    if (showTheme && themeController != null && themeMode != null) {
+        ThemeDialog(themeMode, themeController::set) { showTheme = false }
+    }
     val go: (String) -> Unit = { route -> navController.navigate(route) { launchSingleTop = true } }
 
     AppScreenScaffold(title = "Settings", onBack = { navController.popBackStack() }) { padding ->
@@ -62,14 +70,17 @@ fun SettingsScreen(viewModel: MyViewModel, navController: NavController) {
                 }
                 item(key = "app") {
                     DetailCard(title = "App", icon = Icons.Outlined.Info) {
-                        InfoTile("Appearance", "Follows your device light / dark setting", icon = Icons.Outlined.DarkMode)
+                        NavRow(
+                            "Theme", { showTheme = true },
+                            subtitle = themeMode?.label ?: "System default", icon = Icons.Outlined.DarkMode
+                        )
                         NavRow("About", { go(Routes.AboutRoutes.route) }, subtitle = "Version and app details", icon = Icons.Outlined.Info)
                     }
                 }
                 item(key = "logout") {
                     ShadeOutlinedButton(
                         text = "Log out", onClick = { confirmLogout = true },
-                        icon = Icons.AutoMirrored.Outlined.Logout, contentColor = GS.Red600,
+                        icon = Icons.AutoMirrored.Outlined.Logout, contentColor = MaterialTheme.colorScheme.error,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

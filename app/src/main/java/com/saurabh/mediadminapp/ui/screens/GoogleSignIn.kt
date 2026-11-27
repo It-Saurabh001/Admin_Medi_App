@@ -1,5 +1,21 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
+import com.saurabh.mediadminapp.R
 import android.content.Context
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -74,12 +90,39 @@ object GoogleCredentials {
 
 @Composable
 internal fun GoogleSignInButton(enabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = enabled,
-        shape = MaterialTheme.shapes.medium,
-        modifier = modifier.fillMaxWidth().heightIn(min = 52.dp),
-    ) {
-        Text("Continue with Google", style = MaterialTheme.typography.labelLarge)
+    // Google's sign-in button: pill, fixed light / dark colours, gradient "G".
+    val light = MaterialTheme.colorScheme.background.luminance() > 0.5f
+    val container = if (light) Color(0xFFFFFFFF) else Color(0xFF131314)
+    val content = if (light) Color(0xFF1F1F1F) else Color(0xFFE3E3E3)
+    val outline = if (light) Color(0xFF747775) else Color(0xFF8E918F)
+    Box(modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        OutlinedButton(
+            onClick = onClick,
+            enabled = enabled,
+            shape = CircleShape,
+            border = BorderStroke(1.dp, outline),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = container,
+                contentColor = content,
+                disabledContainerColor = container,
+                disabledContentColor = content.copy(alpha = 0.38f),
+            ),
+            modifier = Modifier.width(AUTH_BUTTON_WIDTH).height(AUTH_BUTTON_HEIGHT),
+        ) {
+            Image(
+                painter = painterResource(R.drawable.ic_google_logo),
+                contentDescription = null,
+                alpha = if (enabled) 1f else 0.38f,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(12.dp))
+            Text(
+                "Sign in with Google",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
     }
 }

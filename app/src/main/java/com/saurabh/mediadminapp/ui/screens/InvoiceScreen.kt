@@ -1,5 +1,6 @@
 package com.saurabh.mediadminapp.ui.screens
 
+import com.saurabh.mediadminapp.ui.components.GsPullToRefreshBox
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.widget.Toast
@@ -23,7 +24,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -110,7 +110,7 @@ fun InvoiceScreen(orderId: String, viewModel: MyViewModel, navController: NavCon
         Box(Modifier.padding(inner).fillMaxSize()) {
             val s = state
             when {
-                invoice != null -> PullToRefreshBox(
+                invoice != null -> GsPullToRefreshBox(
                     isRefreshing = s is UiState.Loading,
                     onRefresh = reload,
                     modifier = Modifier.fillMaxSize(),

@@ -100,7 +100,7 @@ fun AdminListScreen(viewModel: MyViewModel, navController: NavController) {
                         items(pending, key = { "p_${it.adminId}" }, contentType = { "pending" }) { a ->
                             AdminRow(a, isMe = false, busy = a.adminId in busyIds, onOpen = { openAdmin(a.adminId) }) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton("Reject", { confirmDelete = a.adminId }, enabled = a.adminId !in busyIds, icon = Icons.Outlined.Close, contentColor = com.saurabh.mediadminapp.ui.theme.GS.Red600)
+                                    com.saurabh.mediadminapp.ui.components.ShadeOutlinedButton("Reject", { confirmDelete = a.adminId }, enabled = a.adminId !in busyIds, icon = Icons.Outlined.Close, contentColor = MaterialTheme.colorScheme.error)
                                     com.saurabh.mediadminapp.ui.components.ShadeButton(
                                         text = "Approve", onClick = { viewModel.approveAdmin(a.adminId) },
                                         enabled = a.adminId !in busyIds, icon = Icons.Outlined.Check,
