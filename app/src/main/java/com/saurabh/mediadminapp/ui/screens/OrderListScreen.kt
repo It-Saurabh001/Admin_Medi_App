@@ -103,7 +103,7 @@ fun OrderListScreen(
             item(key = "search", contentType = "search") {
                 GsTextField(
                     value = query, onValueChange = { query = it },
-                    placeholder = { Text("Search product, customer or order id") },
+                    placeholder = { Text("Search product, customer or order id", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
                     trailingIcon = if (query.isNotEmpty()) {
                         { IconButton(onClick = { query = "" }) { Icon(Icons.Outlined.Close, contentDescription = "Clear search") } }

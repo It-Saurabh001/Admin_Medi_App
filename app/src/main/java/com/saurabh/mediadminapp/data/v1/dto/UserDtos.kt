@@ -17,12 +17,3 @@ data class User(
     @SerializedName("is_deleted") val isDeleted: Boolean,
     @SerializedName("created_at") val createdAt: Instant?
 )
-
-/** PATCH users/{user_id} (admin). Password/status fields are rejected by the server. */
-data class UserUpdateRequest(
-    val name: String? = null,
-    val email: String? = null,
-    @SerializedName("phone_number") val phoneNumber: String? = null,
-    val address: String? = null,
-    @SerializedName("pin_code") val pinCode: String? = null
-)

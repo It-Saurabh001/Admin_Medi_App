@@ -50,7 +50,6 @@ import com.saurabh.mediadminapp.data.v1.dto.StockAdjustRequest
 import com.saurabh.mediadminapp.data.v1.dto.StockPurchaseRequest
 import com.saurabh.mediadminapp.data.v1.dto.SupplierCreateRequest
 import com.saurabh.mediadminapp.data.v1.dto.SupplierUpdateRequest
-import com.saurabh.mediadminapp.data.v1.dto.UserUpdateRequest
 import com.saurabh.mediadminapp.data.v1.dto.VerifyOtpRequest
 import com.saurabh.mediadminapp.data.v1.dto.VerifyPrescriptionRequest
 import com.saurabh.mediadminapp.data.v1.dto.WriteOffRequest
@@ -202,12 +201,6 @@ class Repository @Inject constructor(
             q = q["q"], isApproved = filter.isApproved, isBlocked = filter.isBlocked,
             includeDeleted = filter.includeDeleted, updatedSince = q["updated_since"], page = page.toQueryMap()
         )
-    }
-
-    /** PATCH users/{user_id} (admin edit; multipart when image != null). Admin. */
-    fun updateUser(userId: String, request: UserUpdateRequest, image: ImagePart? = null) = v1Flow {
-        if (image == null) usersApi.updateUser(userId, request)
-        else usersApi.updateUserMultipart(userId, request.parts(), image.toPart())
     }
 
     /** true -> POST users/{id}/approve; false -> POST users/{id}/block. Admin. */
@@ -486,10 +479,6 @@ class Repository @Inject constructor(
     private fun AdminUpdateRequest.parts() = textParts(
         "name" to name, "email" to email, "phone_number" to phoneNumber, "password" to password,
         "role" to role, "current_password" to currentPassword
-    )
-
-    private fun UserUpdateRequest.parts() = textParts(
-        "name" to name, "email" to email, "phone_number" to phoneNumber, "address" to address, "pin_code" to pinCode
     )
 
     private fun ProductCreateRequest.parts() = textParts(

@@ -11,7 +11,6 @@ import com.saurabh.mediadminapp.data.v1.dto.Device
 import com.saurabh.mediadminapp.data.v1.dto.DeviceRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.Order
 import com.saurabh.mediadminapp.data.v1.dto.User
-import com.saurabh.mediadminapp.data.v1.dto.UserUpdateRequest
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
@@ -41,20 +40,6 @@ interface UsersApi {
 
     @GET("users/{user_id}")
     suspend fun getUser(@Path("user_id") userId: String): Response<ApiEnvelope<User>>
-
-    @PATCH("users/{user_id}")
-    suspend fun updateUser(
-        @Path("user_id") userId: String,
-        @Body body: UserUpdateRequest
-    ): Response<ApiEnvelope<User>>
-
-    @Multipart
-    @PATCH("users/{user_id}")
-    suspend fun updateUserMultipart(
-        @Path("user_id") userId: String,
-        @PartMap fields: Map<String, @JvmSuppressWildcards RequestBody>,
-        @Part image: MultipartBody.Part? = null
-    ): Response<ApiEnvelope<User>>
 
     /** Soft delete. */
     @DELETE("users/{user_id}")

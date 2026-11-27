@@ -9,7 +9,6 @@ import com.saurabh.mediadminapp.data.v1.dto.Device
 import com.saurabh.mediadminapp.data.v1.dto.DeviceRegisterRequest
 import com.saurabh.mediadminapp.data.v1.dto.Order
 import com.saurabh.mediadminapp.data.v1.dto.User
-import com.saurabh.mediadminapp.data.v1.dto.UserUpdateRequest
 
 interface UserRepository {
     /** GET users (paginated). Admin. */
@@ -17,9 +16,6 @@ interface UserRepository {
 
     /** GET users/{user_id}. Admin (any user) / customer (own id only, else NOT_FOUND). */
     suspend fun get(userId: String): ApiResult<User>
-
-    /** PATCH users/{user_id} (multipart when [image] != null). Admin. */
-    suspend fun adminUpdate(userId: String, request: UserUpdateRequest, image: ImagePart? = null): ApiResult<User>
 
     /** DELETE users/{user_id} (soft delete). Admin. */
     suspend fun delete(userId: String): ApiResult<User>

@@ -20,7 +20,6 @@ import com.saurabh.mediadminapp.data.v1.dto.Invoice
 import com.saurabh.mediadminapp.data.v1.dto.Order
 import com.saurabh.mediadminapp.data.v1.dto.ProductCreateRequest
 import com.saurabh.mediadminapp.data.v1.dto.ProductUpdateRequest
-import com.saurabh.mediadminapp.data.v1.dto.UserUpdateRequest
 import com.saurabh.mediadminapp.data.v1.error.AppError
 import com.saurabh.mediadminapp.data.v1.repository.ImagePart
 import com.saurabh.mediadminapp.repository.AppException
@@ -50,7 +49,6 @@ import com.saurabh.mediadminapp.utils.ScreensState.PasswordResetState
 import com.saurabh.mediadminapp.utils.ScreensState.RecordSellHistoryState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateOrderState
 import com.saurabh.mediadminapp.utils.ScreensState.UpdateProductState
-import com.saurabh.mediadminapp.utils.ScreensState.UpdateUserState
 import com.saurabh.mediadminapp.utils.ScreensState.VerifyOtpState
 import com.saurabh.mediadminapp.utils.UiEvent
 import com.saurabh.mediadminapp.utils.removeItem
@@ -145,9 +143,6 @@ class MyViewModel @Inject constructor(
 
     private val _deleteUserState = MutableStateFlow(DeleteUserState())
     val deleteUserState = _deleteUserState.asStateFlow()
-
-    private val _updateUserState = MutableStateFlow(UpdateUserState())
-    val updateUserState = _updateUserState.asStateFlow()
 
     private val _getAllOrderState = MutableStateFlow(GetAllOrdersState())
     val getAllOrderState = _getAllOrderState.asStateFlow()
@@ -844,36 +839,6 @@ class MyViewModel @Inject constructor(
                 onSuccess = {
                     _deleteUserState.value = DeleteUserState(success = it)
                     snackbar("User deleted successfully")
-                }
-            )
-        }
-    }
-
-    /** Admin edit of profile fields only (password/approval/block/role are not editable here). */
-    fun updateUser(
-        userId: String,
-        name: String? = null,
-        address: String? = null,
-        email: String? = null,
-        phonenumber: String? = null,
-        pincode: String? = null,
-        image: ImagePart? = null
-    ) {
-        val request = UserUpdateRequest(name = name, email = email, phoneNumber = phonenumber, address = address, pinCode = pincode)
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.updateUser(userId, request, image).collectInto(
-                onLoading = { _updateUserState.value = UpdateUserState(isLoading = true) },
-                onError = { m, e ->
-                    _updateUserState.value = UpdateUserState(error = m, appError = e)
-                    snackbar(m ?: "Update failed")
-                },
-                onSuccess = { user ->
-                    _getAllUserState.update { s ->
-                        val d = s.success ?: return@update s
-                        s.copy(success = d.copy(items = d.items.updateItem(userId, { it.userId }) { user }))
-                    }
-                    _updateUserState.value = UpdateUserState(success = user)
-                    snackbar("User updated")
                 }
             )
         }

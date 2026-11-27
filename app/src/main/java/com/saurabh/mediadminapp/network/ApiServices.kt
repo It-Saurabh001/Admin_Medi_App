@@ -28,7 +28,6 @@ import com.saurabh.mediadminapp.network.response.RefreshTokenResponse
 import com.saurabh.mediadminapp.network.response.UpdateAdminResponse
 import com.saurabh.mediadminapp.network.response.UpdateOrderResponse
 import com.saurabh.mediadminapp.network.response.UpdateProductResponse
-import com.saurabh.mediadminapp.network.response.UpdateUserResponse
 import com.saurabh.mediadminapp.network.response.VerifyOtpResponse
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -153,21 +152,6 @@ interface ApiServices {
     suspend fun deleteUser(
         @Field("user_id") userId: String
     ): Response<DeleteUserResponse>
-
-    @FormUrlEncoded
-    @PATCH("admin/updateUser")
-    suspend fun updateUser(
-        @Field("user_id") userId: String,
-        @Field("name") name: String? = null,
-        @Field("password") password : String?=null,
-        @Field("isApproved") isApproved: Boolean? = null,
-        @Field("block") block : Boolean?=null,
-        @Field("address") address : String?=null,
-        @Field("email") email: String? = null,
-        @Field("phone_number") phonenumber: String? = null,
-        @Field("pin_code") pincode: String? = null,
-        @Field("role") role: String? = "user"
-    ) : Response<UpdateUserResponse>
 
     // ----------------------------
     // PRODUCT MANAGEMENT
